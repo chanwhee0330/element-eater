@@ -1,0 +1,32 @@
+# Private artifact build and review files
+/work/
+/이어가기.md
+/outputs/*
+!/outputs/엘리먼트_이터_기획서_허찬휘.pptx
+!/outputs/엘리먼트_이터_1차발표_허찬휘.pptx
+!/outputs/엘리먼트_이터_90초_발표대본_허찬휘.pdf
+
+# Python and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+build/
+dist/
+*.egg-info/
+
+# Editor, system and Office temporary files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+~$*
+*.tmp
+*.log

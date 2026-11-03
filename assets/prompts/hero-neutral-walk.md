@@ -1,5 +1,7 @@
 # 기본 상태 캐릭터 스프라이트 생성 기록
 
+- 결과: [스프라이트 시트](../sprites/hero/neutral/hero-neutral-walk.png), [프레임 데이터](../sprites/hero/neutral/hero-neutral-walk.json).
+- 참조: [기본 주인공](../concepts/character-cover.png), [원소별 외형](../concepts/hero-element-forms.png).
 - 도구: 내장 이미지 생성 도구 (image_gen), 투명 배경 사용.
 - 기준: 기존 character-cover.png의 아이보리 몸, 초록 잎 귀와 hero-element-forms.png의 도트 스타일.
 - 기본 무속성 캐릭터만 포함. 원소별 변신 스프라이트는 추후 제작.

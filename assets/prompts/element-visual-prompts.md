@@ -4,8 +4,8 @@
 
 ## 주인공 원소별 외형
 
-- 결과: [hero-element-forms.png](../../assets/concepts/hero-element-forms.png)
-- 참조: [기존 표지 주인공](../../assets/concepts/character-cover.png)
+- 결과: [hero-element-forms.png](../concepts/hero-element-forms.png)
+- 참조: [기존 표지 주인공](../concepts/character-cover.png)
 - 투명 배경을 요청했습니다.
 - 최종 프롬프트:
 
@@ -15,9 +15,9 @@ Use case: stylized-concept. Asset type: one wide character appearance comparison
 
 ## 물 주인공과 불 속성 적의 전투
 
-- 결과: [gameplay-element-matchup.png](../../assets/concepts/gameplay-element-matchup.png)
-- 참조 1: [이전 플레이 화면](../../assets/concepts/gameplay-concept.png)
-- 참조 2: [원소별 주인공](../../assets/concepts/hero-element-forms.png)
+- 결과: [gameplay-element-matchup.png](../concepts/gameplay-element-matchup.png)
+- 참조 1: [이전 플레이 화면](../concepts/archive/gameplay-concept.png)
+- 참조 2: [원소별 주인공](../concepts/hero-element-forms.png)
 - 최종 프롬프트:
 
 ```text
@@ -26,9 +26,9 @@ Use case: precise-object-edit. Edit reference image 1, the pixel-art top-down du
 
 ## 흙 섭취 전후의 외형과 엄폐 지형
 
-- 결과: [earth-form-cover-example.png](../../assets/concepts/earth-form-cover-example.png)
-- 참조 1: [이전 엄폐 비교](../../assets/concepts/earth-cover-example.png)
-- 참조 2: [원소별 주인공](../../assets/concepts/hero-element-forms.png)
+- 결과: [earth-form-cover-example.png](../concepts/earth-form-cover-example.png)
+- 참조 1: [이전 엄폐 비교](../concepts/archive/earth-cover-example.png)
+- 참조 2: [원소별 주인공](../concepts/hero-element-forms.png)
 - 최종 프롬프트:
 
 ```text

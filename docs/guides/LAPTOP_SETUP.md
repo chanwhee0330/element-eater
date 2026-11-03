@@ -11,10 +11,10 @@ cd element-eater
 ```
 
 3. 복제한 `element-eater` 폴더를 편집기나 Codex에서 엽니다.
-4. `PROJECT_CONTEXT.md`와 `docs/GAME_DESIGN.md`를 확인합니다.
+4. `PROJECT_CONTEXT.md`와 `docs/design/GAME_DESIGN.md`를 확인합니다.
 5. Codex에 다음처럼 요청하면 됩니다.
 
-> PROJECT_CONTEXT.md와 docs/GAME_DESIGN.md를 읽고 엘리먼트 이터 작업을 이어가줘. 현재 기획을 기준으로 다음 작업을 진행해줘.
+> PROJECT_CONTEXT.md와 docs/design/GAME_DESIGN.md를 읽고 엘리먼트 이터 작업을 이어가줘. 현재 기획을 기준으로 다음 작업을 진행해줘.
 
 GitHub Desktop을 사용한다면 `File > Clone repository`에서 저장소 URL을 입력해도 됩니다.
 
@@ -47,3 +47,5 @@ git push
 게임 코드가 아직 없으므로 지금은 실행할 게임이나 설치할 게임 의존성이 없습니다. PPTX와 PDF, 기획 문서와 컨셉 이미지를 확인하고 수정할 수 있습니다. 첫 프로토타입을 만들 때 Python과 pico2d 설치 및 실행 명령을 이 문서에 추가합니다.
 
 이 저장소에는 원래 대화 전체가 아니라, 이어서 작업하는 데 필요한 기획과 현재 상태를 정리해 두었습니다.
+
+기획 PPT는 `outputs/planning/`, 1차 발표 PPT·대본·영상은 `outputs/presentations/first/`, 실제 스프라이트는 `assets/sprites/`에서 찾습니다.

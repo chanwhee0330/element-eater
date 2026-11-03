@@ -44,12 +44,15 @@ export function makeHero(core, state = 'walk', direction = 'down') {
     // Side silhouettes mirror; highlights remain in world-space upper-left.
     const facing = direction === 'left' ? -1 : 1;
     const tr = (x, y) => [Math.round(x * (side ? facing : 1) + sway), Math.round(y + bob)];
-    const bodyRX = side ? 15.5 : 17.5;
+    // A rounded body keeps its volume in profile instead of narrowing into a thin oval.
+    const bodyRX = side ? 19 : 17.5;
+    const bodyRY = side ? 17.5 : 16.5;
+    const bodyCY = side ? -21 : -20;
     function insideBody(x, y) {
-      const [X,Y] = tr(0,-20);
-      return ((x+0.5-X)/bodyRX)**2 + ((y+0.5-Y)/16.5)**2 <= 1;
+      const [X,Y] = tr(0,bodyCY);
+      return ((x+0.5-X)/bodyRX)**2 + ((y+0.5-Y)/bodyRY)**2 <= 1;
     }
-    function shape(cx, cy, rx, ry, palette, shade = true, moving = true, clipBody = false) {
+    function shape(cx, cy, rx, ry, palette, shade = true, moving = true, clipBody = false, roundLight = false) {
       const [X, Y] = moving ? tr(cx, cy) : [cx, cy];
       for (let y = Math.floor(Y - ry); y <= Math.ceil(Y + ry); y++) {
         for (let x = Math.floor(X - rx); x <= Math.ceil(X + rx); x++) {
@@ -59,6 +62,10 @@ export function makeHero(core, state = 'walk', direction = 'down') {
           const edge = ((x + 0.5 - X) / (rx - 1.2)) ** 2 + ((y + 0.5 - Y) / (ry - 1.2)) ** 2 > 1;
           let k = edge ? 0 : !shade ? palette.length - 1 : dy > 0.62 || dx > 0.72 ? 2 : dy > 0.22 || dx > 0.46 ? 3 : 4;
           if (!edge && shade && ((dx + 0.34) / 0.66) ** 2 + ((dy + 0.38) / 0.64) ** 2 < 1) k = 5;
+          if (!edge && roundLight) {
+            const falloff = ((dx + 0.25) / 0.92) ** 2 + ((dy + 0.32) / 0.97) ** 2;
+            k = falloff < 0.4 ? 5 : falloff < 1.05 ? 4 : falloff < 1.75 ? 3 : 2;
+          }
           p.px(x, y, palette[Math.min(k, palette.length - 1)]);
         }
       }
@@ -89,6 +96,11 @@ export function makeHero(core, state = 'walk', direction = 'down') {
     // Far limbs are drawn first, with grounded feet independent of body bounce.
     const foot = (x, y, near = true) => shape(x, y - 3, side ? 5 : 4.5, 4, near ? C : [C[0], C[1], C[2], C[2], C[3], C[4]], true, false);
     if (side) {
+      // Short legs bridge the raised body to each foot during passing poses.
+      for (const s of [-1,1]) {
+        shape(Math.round((s * 5 - s * stride * 4) * facing),
+          -6 - Math.round(Math.max(0,s * stride) * 2), 3.2, 5.5, C, true, false);
+      }
       foot(Math.round((-5 + stride * 4) * facing), -Math.round(Math.max(0, -stride) * 3), false);
       shape(-10, -14 - stride * 2, 4, 5, C);
     } else {
@@ -109,20 +121,20 @@ export function makeHero(core, state = 'walk', direction = 'down') {
     line([[0,-34],[0,-30]], L[2]);
 
     // Round body, creamy highlight and warm stepped lower-right shadow.
-    shape(0, -20, bodyRX, 16.5, C);
+    shape(0, bodyCY, bodyRX, bodyRY, C, true, true, false, side);
     // Small forehead reflection, drawn as a cluster rather than scattered pixels.
     if (!rear) { block(-8, -29, 4, 1, C[5]); block(-9, -28, 3, 1, C[5]); }
 
     if (!rear) {
       if (side) {
         // Profile: one happy eye, a large mouth at the leading edge, near hand below the cheek.
-        line([[6,-25],[7,-27],[9,-27],[10,-25]], F.dark);
-        line([[6,-24],[6,-26],[8,-28],[10,-26],[10,-24]], F.dark);
-        line([[7,-25],[8,-26],[9,-25]], F.dark);
-        shape(8.5, -17, 4.8, 5.8, [F.dark], false, true, true);
-        shape(9, -14, 2.8, 1.8, [F.tongue], false, true, true);
-        block(7, -15, 3, 1, F.tongueLight);
-        shape(1, -19, 2.8, 1.4, [F.blush], false);
+        line([[8,-25],[9,-27],[11,-27],[12,-25]], F.dark);
+        line([[8,-24],[8,-26],[10,-28],[12,-26],[12,-24]], F.dark);
+        line([[9,-25],[10,-26],[11,-25]], F.dark);
+        shape(10, -17, 6, 5.8, [F.dark], false, true, true);
+        shape(10, -14, 3.5, 1.8, [F.tongue], false, true, true);
+        block(8, -15, 4, 1, F.tongueLight);
+        shape(3, -19, 2.8, 1.4, [F.blush], false);
       } else {
         for (const sx of [-1, 1]) {
           line([[sx*5,-25],[sx*6,-27],[sx*8,-27],[sx*10,-25]], F.dark);
@@ -137,7 +149,7 @@ export function makeHero(core, state = 'walk', direction = 'down') {
       }
     }
     if (side) {
-      shape(-2 - stride * 2, -11 + stride, 4.6, 4.8, C);
+      shape(-4 - stride * 2, -11 + stride, 4.8, 5.1, C);
       foot(Math.round((5 - stride * 4) * facing), -Math.round(Math.max(0, stride) * 3));
     }
   }

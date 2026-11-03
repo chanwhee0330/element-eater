@@ -229,7 +229,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 3,
-        "x1": 47,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -253,7 +253,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 3,
-        "x1": 47,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -277,7 +277,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 2,
-        "x1": 46,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -301,7 +301,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 2,
-        "x1": 46,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -325,7 +325,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 2,
-        "x1": 46,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -349,7 +349,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 2,
-        "x1": 47,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -373,7 +373,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 3,
-        "x1": 48,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -397,7 +397,7 @@
       "opaqueBoundsInCell": {
         "x0": 10,
         "y0": 3,
-        "x1": 48,
+        "x1": 50,
         "y1": 58
       },
       "pico2dClip": {
@@ -419,7 +419,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 16,
+        "x0": 13,
         "y0": 3,
         "x1": 53,
         "y1": 58
@@ -443,7 +443,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 16,
+        "x0": 13,
         "y0": 3,
         "x1": 53,
         "y1": 58
@@ -467,7 +467,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 17,
+        "x0": 13,
         "y0": 2,
         "x1": 53,
         "y1": 58
@@ -491,7 +491,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 17,
+        "x0": 13,
         "y0": 2,
         "x1": 53,
         "y1": 58
@@ -515,7 +515,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 17,
+        "x0": 13,
         "y0": 2,
         "x1": 53,
         "y1": 58
@@ -539,7 +539,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 16,
+        "x0": 13,
         "y0": 2,
         "x1": 53,
         "y1": 58
@@ -563,7 +563,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 15,
+        "x0": 13,
         "y0": 3,
         "x1": 53,
         "y1": 58
@@ -587,7 +587,7 @@
         "y": 58
       },
       "opaqueBoundsInCell": {
-        "x0": 15,
+        "x0": 13,
         "y0": 3,
         "x1": 53,
         "y1": 58
@@ -850,7 +850,7 @@
       "loop": true
     }
   },
-  "sha256": "38291d1ae7ab5ff0f71c19746e121362008c56ba385b493bd9b995db891c71f8",
+  "sha256": "4872196a6e3c6e4581f884fdb509c0e01b5494a5994dd764e8c50add0883e473",
   "generator": {
     "tool": "pixelfx",
     "version": "0.3.0",

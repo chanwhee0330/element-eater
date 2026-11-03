@@ -37,6 +37,7 @@ export function makeHero(core, state = 'walk', direction = 'down') {
     const C = fit(o.palette ?? BODY, 6);
     const frame = Math.floor(((time % meta.duration) / meta.duration) * 8 + 1e-6) % 8;
     const phase = frame / 8 * TAU, walking = state === 'walk';
+    const puff = o.expression === 'puff', spit = o.expression === 'spit';
     const stride = walking ? Math.sin(phase) : 0;
     const bob = walking ? [0, -1, -2, -1, 0, -1, -2, -1][frame] : [0, 0, -1, -1, -1, -1, 0, 0][frame];
     const sway = walking ? Math.round(Math.sin(phase) * 0.65) : 0;
@@ -111,7 +112,7 @@ export function makeHero(core, state = 'walk', direction = 'down') {
     }
 
     // Two asymmetric leaves keep the silhouette identifiable at a glance.
-    const lag = walking ? Math.round(Math.sin(phase - Math.PI / 3) * 2) : [0, 0, 1, 1, 1, 0, -1, -1][frame];
+    const lag = (walking ? Math.round(Math.sin(phase - Math.PI / 3) * 2) : [0, 0, 1, 1, 1, 0, -1, -1][frame]) + (o.leafOffset ?? 0);
     const rear = direction === 'up';
     const left = [[-3,-32],[-10,-38],[-16+lag,-47],[-16+lag,-53],[-12+lag,-55],[-6,-52],[-1,-46],[-1,-38]];
     const right = [[-1,-33],[1,-41],[8,-47-lag],[17,-47-lag],[22,-43-lag],[22,-39],[17,-35],[7,-34]];
@@ -131,26 +132,32 @@ export function makeHero(core, state = 'walk', direction = 'down') {
         line([[8,-25],[9,-27],[11,-27],[12,-25]], F.dark);
         line([[8,-24],[8,-26],[10,-28],[12,-26],[12,-24]], F.dark);
         line([[9,-25],[10,-26],[11,-25]], F.dark);
-        shape(10, -17, 6, 5.8, [F.dark], false, true, true);
-        shape(10, -14, 3.5, 1.8, [F.tongue], false, true, true);
-        block(8, -15, 4, 1, F.tongueLight);
-        shape(3, -19, 2.8, 1.4, [F.blush], false);
+        shape(puff ? 13 : 10, -17, puff ? 2.5 : spit ? 7 : 6, puff ? 3 : spit ? 6.8 : 5.8, [F.dark], false, true, true);
+        if (!puff) {
+          shape(10, spit ? -13 : -14, 3.5, 1.8, [F.tongue], false, true, true);
+          block(8, spit ? -14 : -15, 4, 1, F.tongueLight);
+        }
+        shape(3, -19, puff ? 4 : 2.8, puff ? 2.2 : 1.4, [F.blush], false);
       } else {
         for (const sx of [-1, 1]) {
           line([[sx*5,-25],[sx*6,-27],[sx*8,-27],[sx*10,-25]], F.dark);
           line([[sx*5,-24],[sx*5,-26],[sx*7,-28],[sx*9,-27],[sx*10,-25]], F.dark);
           line([[sx*6,-25],[sx*7,-26],[sx*9,-25]], F.dark);
-          shape(sx * 12, -20, 2.8, 1.4, [F.blush], false);
+          shape(sx * 12, -20, puff ? 3.7 : 2.8, puff ? 2.1 : 1.4, [F.blush], false);
         }
         const inhale = !walking && (frame===3 || frame===4) ? 1 : 0;
-        shape(0, -16, 7.3, 6.3 + inhale, [F.dark], false);
-        shape(0, -13 + inhale, 4, 2.2, [F.tongue], false);
-        block(-2, -14 + inhale, 4, 1, F.tongueLight);
+        shape(0, -16, puff ? 2.8 : spit ? 8.5 : 7.3, puff ? 3 : spit ? 7.5 : 6.3 + inhale, [F.dark], false);
+        if (!puff) {
+          shape(0, spit ? -12 : -13 + inhale, 4, 2.2, [F.tongue], false);
+          block(-2, spit ? -13 : -14 + inhale, 4, 1, F.tongueLight);
+        }
       }
     }
     if (side) {
-      shape(-4 - stride * 2, -11 + stride, 4.8, 5.1, C);
+      shape(-4 - stride * 2 + (o.handReach ?? 0), -11 + stride - (o.handLift ?? 0), 4.8, 5.1, C);
       foot(Math.round((5 - stride * 4) * facing), -Math.round(Math.max(0, stride) * 3));
+    } else if (o.handLift) {
+      for (const s of [-1,1]) shape(s * 14, -10 - o.handLift, 4, 4.5, C);
     }
   }
   return { meta, draw };

@@ -1,0 +1,860 @@
+{
+  "schema": "element-eater.sprite-atlas.v1",
+  "image": "neutral-projectile-sheet.png",
+  "imageSize": {
+    "width": 256,
+    "height": 128
+  },
+  "state": "neutral",
+  "animationState": "projectile",
+  "layout": {
+    "rows": [
+      "down",
+      "left",
+      "right",
+      "up"
+    ],
+    "columns": 8
+  },
+  "frameSize": {
+    "width": 32,
+    "height": 32
+  },
+  "coordinateSystem": "frame and pivot use image top-left origin; pico2dClip uses bottom-left origin",
+  "recommendedDrawScale": 1,
+  "frames": {
+    "down_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 3,
+        "x1": 21,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_1": {
+      "frame": {
+        "x": 32,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 13,
+        "y0": 3,
+        "x1": 20,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 32,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_2": {
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 13,
+        "y0": 3,
+        "x1": 20,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 64,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_3": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 13,
+        "y0": 3,
+        "x1": 20,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 96,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_4": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 3,
+        "x1": 21,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_5": {
+      "frame": {
+        "x": 160,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 3,
+        "x1": 21,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 160,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_6": {
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 3,
+        "x1": 21,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 192,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "down_7": {
+      "frame": {
+        "x": 224,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 3,
+        "x1": 21,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 224,
+        "bottom": 96,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_0": {
+      "frame": {
+        "x": 0,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 12,
+        "x1": 29,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_1": {
+      "frame": {
+        "x": 32,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 13,
+        "x1": 29,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 32,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_2": {
+      "frame": {
+        "x": 64,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 13,
+        "x1": 29,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 64,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_3": {
+      "frame": {
+        "x": 96,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 13,
+        "x1": 29,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 96,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_4": {
+      "frame": {
+        "x": 128,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 12,
+        "x1": 29,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_5": {
+      "frame": {
+        "x": 160,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 12,
+        "x1": 29,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 160,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_6": {
+      "frame": {
+        "x": 192,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 12,
+        "x1": 29,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 192,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "left_7": {
+      "frame": {
+        "x": 224,
+        "y": 32,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 12,
+        "x1": 29,
+        "y1": 21
+      },
+      "pico2dClip": {
+        "left": 224,
+        "bottom": 64,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_0": {
+      "frame": {
+        "x": 0,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 11,
+        "x1": 20,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_1": {
+      "frame": {
+        "x": 32,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 12,
+        "x1": 21,
+        "y1": 19
+      },
+      "pico2dClip": {
+        "left": 32,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_2": {
+      "frame": {
+        "x": 64,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 12,
+        "x1": 21,
+        "y1": 19
+      },
+      "pico2dClip": {
+        "left": 64,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_3": {
+      "frame": {
+        "x": 96,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 12,
+        "x1": 21,
+        "y1": 19
+      },
+      "pico2dClip": {
+        "left": 96,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_4": {
+      "frame": {
+        "x": 128,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 11,
+        "x1": 20,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_5": {
+      "frame": {
+        "x": 160,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 11,
+        "x1": 20,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 160,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_6": {
+      "frame": {
+        "x": 192,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 11,
+        "x1": 20,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 192,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "right_7": {
+      "frame": {
+        "x": 224,
+        "y": 64,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 3,
+        "y0": 11,
+        "x1": 20,
+        "y1": 20
+      },
+      "pico2dClip": {
+        "left": 224,
+        "bottom": 32,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_0": {
+      "frame": {
+        "x": 0,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 12,
+        "x1": 20,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_1": {
+      "frame": {
+        "x": 32,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 11,
+        "x1": 19,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 32,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_2": {
+      "frame": {
+        "x": 64,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 11,
+        "x1": 19,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 64,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_3": {
+      "frame": {
+        "x": 96,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 12,
+        "y0": 11,
+        "x1": 19,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 96,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_4": {
+      "frame": {
+        "x": 128,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 12,
+        "x1": 20,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_5": {
+      "frame": {
+        "x": 160,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 12,
+        "x1": 20,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 160,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_6": {
+      "frame": {
+        "x": 192,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 12,
+        "x1": 20,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 192,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    },
+    "up_7": {
+      "frame": {
+        "x": 224,
+        "y": 96,
+        "w": 32,
+        "h": 32
+      },
+      "pivotPixelsTopLeft": {
+        "x": 16,
+        "y": 16
+      },
+      "opaqueBoundsInCell": {
+        "x0": 11,
+        "y0": 12,
+        "x1": 20,
+        "y1": 29
+      },
+      "pico2dClip": {
+        "left": 224,
+        "bottom": 0,
+        "width": 32,
+        "height": 32
+      }
+    }
+  },
+  "animations": {
+    "projectile_down": {
+      "frames": [
+        "down_0",
+        "down_1",
+        "down_2",
+        "down_3",
+        "down_4",
+        "down_5",
+        "down_6",
+        "down_7"
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    "projectile_left": {
+      "frames": [
+        "left_0",
+        "left_1",
+        "left_2",
+        "left_3",
+        "left_4",
+        "left_5",
+        "left_6",
+        "left_7"
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    "projectile_right": {
+      "frames": [
+        "right_0",
+        "right_1",
+        "right_2",
+        "right_3",
+        "right_4",
+        "right_5",
+        "right_6",
+        "right_7"
+      ],
+      "fps": 12,
+      "loop": true
+    },
+    "projectile_up": {
+      "frames": [
+        "up_0",
+        "up_1",
+        "up_2",
+        "up_3",
+        "up_4",
+        "up_5",
+        "up_6",
+        "up_7"
+      ],
+      "fps": 12,
+      "loop": true
+    }
+  },
+  "sha256": "8df66935ccc4f39141b0be3ed0a717f54c68e99b39f60095443301523fa7ba00",
+  "generator": {
+    "tool": "pixelfx",
+    "version": "0.3.0",
+    "command": "node tools/render_neutral_attack.mjs"
+  },
+  "staticImage": "neutral-projectile.png"
+}

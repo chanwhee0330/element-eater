@@ -4,14 +4,17 @@ import { resolve,dirname,join } from 'node:path';
 import { pathToFileURL,fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { makeHeroAttack,ATTACK_TIMING,MUZZLES } from '../assets/sprites/hero/neutral/source/hero-attack.mjs';
+import { makeHeroAttack,ATTACK_TIMING,MUZZLES } from '../assets/sprites/hero/neutral/source/legacy/hero-attack.mjs';
 import { makeNeutralFx } from '../assets/effects/neutral/source/neutral-fx.mjs';
-import { DIRECTIONS } from '../assets/sprites/hero/neutral/source/hero-neutral.mjs';
+import { DIRECTIONS } from '../assets/sprites/hero/neutral/source/legacy/hero-neutral.mjs';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..'), args=process.argv.slice(2);
 const value=(key,fallback)=>args.includes(key)?args[args.indexOf(key)+1]:fallback;
 const FX=resolve(ROOT,value('--pixelfx','../pixelfx'));
 const DRAFT=args.includes('--draft')?resolve(ROOT,value('--draft')):null;
 const HERO=DRAFT?join(DRAFT,'hero'):join(ROOT,'assets/sprites/hero/neutral');
+if(!DRAFT&&existsSync(join(ROOT,'assets/sprites/hero/neutral/source/raster/manifest.json'))) {
+  throw new Error('Current hero uses AI source sheets. Use python tools/build_hero_sprites.py; archived procedural hero/effects exports require --draft DIR.');
+}
 const EFFECTS=DRAFT?join(DRAFT,'effects'):join(ROOT,'assets/effects/neutral');
 const PREVIEW=DRAFT?join(DRAFT,'preview'):join(ROOT,'outputs/previews/neutral-attack');
 if(!existsSync(join(FX,'tools/lib/fxlib.mjs')))throw new Error('pixelfx checkout not found');
@@ -80,7 +83,7 @@ writeFileSync(join(PREVIEW,'neutral-attack-contact.png'),review.png());
 if(args.includes('--check')){
   const name='element-eater-attack-check-'+process.pid,folder=join(FX,'src/fx',name);mkdirSync(folder);
   try{
-    const heroURL=pathToFileURL(join(ROOT,'assets/sprites/hero/neutral/source/hero-attack.mjs')).href;
+    const heroURL=pathToFileURL(join(ROOT,'assets/sprites/hero/neutral/source/legacy/hero-attack.mjs')).href;
     const fxURL=pathToFileURL(join(ROOT,'assets/effects/neutral/source/neutral-fx.mjs')).href;
     for(const {name:id,kind,direction} of modules){
       const factory=kind==='attack'?`makeHeroAttack(core,${JSON.stringify(direction)})`:`makeNeutralFx(core,${JSON.stringify(kind)},${JSON.stringify(direction)})`;

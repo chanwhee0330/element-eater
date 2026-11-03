@@ -4,13 +4,16 @@ import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { makeHero, DIRECTIONS, FRAME_SIZE as S, PIVOT, FRAME_COUNT as N } from '../assets/sprites/hero/neutral/source/hero-neutral.mjs';
+import { makeHero, DIRECTIONS, FRAME_SIZE as S, PIVOT, FRAME_COUNT as N } from '../assets/sprites/hero/neutral/source/legacy/hero-neutral.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const value = (key, fallback) => args.includes(key) ? args[args.indexOf(key) + 1] : fallback;
 const FX = resolve(ROOT, value('--pixelfx', '../pixelfx'));
 const OUT = resolve(ROOT, value('--out', 'assets/sprites/hero/neutral'));
+if (existsSync(join(ROOT,'assets/sprites/hero/neutral/source/raster/manifest.json')) && OUT === resolve(ROOT,'assets/sprites/hero/neutral')) {
+  throw new Error('Current hero art uses AI source sheets. Run python tools/build_hero_sprites.py. Archived procedural drafts require --out DIR outside the canonical asset folder.');
+}
 const PREVIEW = resolve(ROOT, value('--preview-out', args.includes('--out') ? OUT : 'outputs/previews/hero-neutral'));
 if (!existsSync(join(FX, 'tools/lib/fxlib.mjs'))) throw new Error('pixelfx checkout not found; pass --pixelfx PATH');
 const core = await import(pathToFileURL(join(FX, 'src/core/index.js')));
@@ -112,7 +115,7 @@ if(args.includes('--check')) {
   const name='element-eater-check-'+process.pid, folder=join(FX,'src/fx',name);
   mkdirSync(folder);
   try {
-    const heroURL=pathToFileURL(join(ROOT,'assets/sprites/hero/neutral/source/hero-neutral.mjs')).href;
+    const heroURL=pathToFileURL(join(ROOT,'assets/sprites/hero/neutral/source/legacy/hero-neutral.mjs')).href;
     for(const state of ['idle','walk']) for(const dir of DIRECTIONS) {
       writeFileSync(join(folder,`${state}-${dir}.js`),`import * as core from '../../core/index.js';\nimport { makeHero } from ${JSON.stringify(heroURL)};\nconst hero=makeHero(core,${JSON.stringify(state)},${JSON.stringify(dir)});\nexport const meta=hero.meta;\nexport const draw=hero.draw;\n`);
     }

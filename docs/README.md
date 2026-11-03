@@ -8,5 +8,6 @@
 | [design/STAGES_AND_BOSS.md](design/STAGES_AND_BOSS.md) | 10개 방과 원소 변환 최종 보스의 상세 설계 |
 | [development/ROADMAP.md](development/ROADMAP.md) | 개발 순서, 완료 현황과 확인할 작업 |
 | [guides/LAPTOP_SETUP.md](guides/LAPTOP_SETUP.md) | 다른 PC에서 저장소를 가져오고 작업을 이어가는 방법 |
+| [guides/PIXELFX_USAGE.md](guides/PIXELFX_USAGE.md) | Codex에서 픽셀 이펙트를 만들고 PNG·JSON으로 내보내는 방법 |
 
 현재 기획 기준은 [30쪽 상세 기획 PPT](../outputs/planning/엘리먼트_이터_기획서_허찬휘.pptx)입니다. 고정된 방 10개, 일반 적 행동 2종, 원소 변환 보스 1종과 원소 환경 퍼즐을 포함합니다. 세부 수치와 배치는 초기안이며, 게임 실행 코드는 아직 없습니다.

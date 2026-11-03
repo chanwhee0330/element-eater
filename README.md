@@ -20,6 +20,7 @@
 - [현재 작업 맥락](PROJECT_CONTEXT.md)
 - [1차 발표 영상](outputs/presentations/first/2023184037_허찬휘_엘리먼트이터_1차발표영상.mp4)
 - [무속성 주인공 스프라이트](assets/sprites/hero/neutral/README.md)
+- [pixelfx 이펙트 도구 사용법](docs/guides/PIXELFX_USAGE.md)
 
 ## 원소 능력
 

@@ -33,7 +33,7 @@
 - 체력 0 또는 R은 현재 방을 초기화합니다. 정상 방 이동 때는 체력과 남은 원소 횟수를 유지합니다.
 - 상세 수치와 예외 처리는 [게임 기획](docs/design/GAME_DESIGN.md)을 기준으로 확인합니다.
 
-상세 기획서는 `outputs/planning/`의 30쪽 PPT, 1차 발표 PPT·대본·영상은 `outputs/presentations/first/`에 있습니다. 무속성 주인공 4방향 걷기 시트와 JSON을 준비했으며 실행 가능한 게임은 아직 없습니다. 이미지 생성 기록은 `assets/prompts/`에 있습니다.
+상세 기획서는 `outputs/planning/`의 30쪽 PPT, 1차 발표 PPT·대본·영상은 `outputs/presentations/first/`에 있습니다. 무속성 주인공은 pixelfx로 기존 시트를 교체해 4방향 대기·걷기 시트와 JSON을 준비했습니다. 각 방향·동작 8프레임, 칸 64×64px, 공통 발밑 기준점 (32, 58)입니다. [에셋 사용 안내](assets/sprites/hero/neutral/README.md)에 원본 코드와 다시 만드는 방법이 있고, 미리보기는 `outputs/previews/hero-neutral/`에 있습니다. 실행 가능한 게임은 아직 없으며 원소 변신 애니메이션도 미제작입니다. 기존 이미지 생성 기록은 `assets/prompts/`에 보관합니다.
 
 ## 다음 작업
 

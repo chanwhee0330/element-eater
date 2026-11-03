@@ -1,5 +1,7 @@
 # 기본 상태 캐릭터 스프라이트 생성 기록
 
+> 이 문서는 이전 image_gen 시트의 제작 기록입니다. 2026년 11월 3일 사용자의 요청으로 아래 결과 경로의 파일을 pixelfx 기반 대기·걷기 시트로 교체했습니다. 기존 PNG와 JSON은 Git 이력에 남아 있습니다. 현재 규격과 원본 코드는 [스프라이트 안내](../sprites/hero/neutral/README.md)를 기준으로 확인합니다. 아래 프롬프트의 4열·대기 겸용 규격은 현재 파일에 적용하지 않습니다.
+
 - 결과: [스프라이트 시트](../sprites/hero/neutral/hero-neutral-walk.png), [프레임 데이터](../sprites/hero/neutral/hero-neutral-walk.json).
 - 참조: [기본 주인공](../concepts/character-cover.png), [원소별 외형](../concepts/hero-element-forms.png).
 - 도구: 내장 이미지 생성 도구 (image_gen), 투명 배경 사용.

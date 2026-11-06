@@ -34,12 +34,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 20,
-        "y0": 11,
-        "x1": 113,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        25,
+        14,
+        108,
+        109
+      ],
       "pico2dClip": {
         "left": 0,
         "bottom": 384,
@@ -51,7 +51,11 @@
         "frame": 0,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_1": {
       "frame": {
@@ -64,12 +68,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 17,
-        "y0": 16,
-        "x1": 111,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        26,
+        22,
+        105,
+        104
+      ],
       "pico2dClip": {
         "left": 128,
         "bottom": 384,
@@ -81,7 +85,11 @@
         "frame": 1,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_2": {
       "frame": {
@@ -94,12 +102,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 18,
-        "y0": 8,
-        "x1": 110,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        25,
+        20,
+        106,
+        113
+      ],
       "pico2dClip": {
         "left": 256,
         "bottom": 384,
@@ -111,7 +119,11 @@
         "frame": 2,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_3": {
       "frame": {
@@ -124,12 +136,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 17,
-        "y0": 6,
-        "x1": 113,
-        "y1": 121
-      },
+      "opaqueBoundsInCell": [
+        24,
+        19,
+        106,
+        115
+      ],
       "pico2dClip": {
         "left": 384,
         "bottom": 384,
@@ -141,7 +153,11 @@
         "frame": 3,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_4": {
       "frame": {
@@ -154,12 +170,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 18,
-        "y0": 12,
-        "x1": 115,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        25,
+        18,
+        107,
+        112
+      ],
       "pico2dClip": {
         "left": 512,
         "bottom": 384,
@@ -171,7 +187,11 @@
         "frame": 4,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_5": {
       "frame": {
@@ -184,12 +204,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 16,
-        "y0": 17,
-        "x1": 111,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        24,
+        18,
+        107,
+        108
+      ],
       "pico2dClip": {
         "left": 640,
         "bottom": 384,
@@ -201,7 +221,11 @@
         "frame": 5,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_6": {
       "frame": {
@@ -214,12 +238,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 13,
-        "x1": 113,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        25,
+        18,
+        106,
+        114
+      ],
       "pico2dClip": {
         "left": 768,
         "bottom": 384,
@@ -231,7 +255,11 @@
         "frame": 6,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "down_7": {
       "frame": {
@@ -244,12 +272,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 17,
-        "x1": 112,
-        "y1": 114
-      },
+      "opaqueBoundsInCell": [
+        25,
+        23,
+        106,
+        106
+      ],
       "pico2dClip": {
         "left": 896,
         "bottom": 384,
@@ -261,7 +289,11 @@
         "frame": 7,
         "image": "source/raster/walk-source.png",
         "row": 0
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_0": {
       "frame": {
@@ -274,12 +306,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 16,
-        "y0": 10,
-        "x1": 108,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        25,
+        21,
+        100,
+        114
+      ],
       "pico2dClip": {
         "left": 0,
         "bottom": 256,
@@ -291,7 +323,11 @@
         "frame": 0,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_1": {
       "frame": {
@@ -304,12 +340,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 10,
-        "x1": 110,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        25,
+        20,
+        101,
+        112
+      ],
       "pico2dClip": {
         "left": 128,
         "bottom": 256,
@@ -321,7 +357,11 @@
         "frame": 1,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_2": {
       "frame": {
@@ -334,12 +374,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 17,
-        "y0": 8,
-        "x1": 106,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        26,
+        20,
+        99,
+        114
+      ],
       "pico2dClip": {
         "left": 256,
         "bottom": 256,
@@ -351,7 +391,11 @@
         "frame": 2,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_3": {
       "frame": {
@@ -364,12 +408,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 14,
-        "y0": 9,
-        "x1": 108,
-        "y1": 124
-      },
+      "opaqueBoundsInCell": [
+        27,
+        23,
+        101,
+        109
+      ],
       "pico2dClip": {
         "left": 384,
         "bottom": 256,
@@ -381,7 +425,11 @@
         "frame": 3,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_4": {
       "frame": {
@@ -394,12 +442,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 15,
-        "y0": 7,
-        "x1": 108,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        26,
+        21,
+        100,
+        113
+      ],
       "pico2dClip": {
         "left": 512,
         "bottom": 256,
@@ -411,7 +459,11 @@
         "frame": 4,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_5": {
       "frame": {
@@ -424,12 +476,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 18,
-        "y0": 9,
-        "x1": 109,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        26,
+        21,
+        99,
+        113
+      ],
       "pico2dClip": {
         "left": 640,
         "bottom": 256,
@@ -441,7 +493,11 @@
         "frame": 5,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_6": {
       "frame": {
@@ -454,12 +510,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 17,
-        "y0": 7,
-        "x1": 104,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        25,
+        19,
+        99,
+        112
+      ],
       "pico2dClip": {
         "left": 768,
         "bottom": 256,
@@ -471,7 +527,11 @@
         "frame": 6,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "left_7": {
       "frame": {
@@ -484,12 +544,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 9,
-        "y0": 9,
-        "x1": 106,
-        "y1": 114
-      },
+      "opaqueBoundsInCell": [
+        26,
+        20,
+        99,
+        114
+      ],
       "pico2dClip": {
         "left": 896,
         "bottom": 256,
@@ -501,7 +561,11 @@
         "frame": 7,
         "image": "source/raster/walk-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_0": {
       "frame": {
@@ -514,12 +578,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 21,
-        "y0": 7,
-        "x1": 113,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        30,
+        23,
+        102,
+        110
+      ],
       "pico2dClip": {
         "left": 0,
         "bottom": 128,
@@ -531,7 +595,11 @@
         "frame": 0,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_1": {
       "frame": {
@@ -544,12 +612,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 20,
-        "y0": 11,
-        "x1": 109,
-        "y1": 117
-      },
+      "opaqueBoundsInCell": [
+        29,
+        21,
+        103,
+        113
+      ],
       "pico2dClip": {
         "left": 128,
         "bottom": 128,
@@ -561,7 +629,11 @@
         "frame": 1,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_2": {
       "frame": {
@@ -574,12 +646,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 8,
-        "x1": 109,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        30,
+        20,
+        103,
+        115
+      ],
       "pico2dClip": {
         "left": 256,
         "bottom": 128,
@@ -591,7 +663,11 @@
         "frame": 2,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_3": {
       "frame": {
@@ -604,12 +680,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 20,
-        "y0": 7,
-        "x1": 111,
-        "y1": 117
-      },
+      "opaqueBoundsInCell": [
+        30,
+        21,
+        102,
+        109
+      ],
       "pico2dClip": {
         "left": 384,
         "bottom": 128,
@@ -621,7 +697,11 @@
         "frame": 3,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_4": {
       "frame": {
@@ -634,12 +714,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 21,
-        "y0": 8,
-        "x1": 120,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        30,
+        21,
+        103,
+        114
+      ],
       "pico2dClip": {
         "left": 512,
         "bottom": 128,
@@ -651,7 +731,11 @@
         "frame": 4,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_5": {
       "frame": {
@@ -664,12 +748,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 5,
-        "y0": 12,
-        "x1": 109,
-        "y1": 119
-      },
+      "opaqueBoundsInCell": [
+        29,
+        22,
+        102,
+        113
+      ],
       "pico2dClip": {
         "left": 640,
         "bottom": 128,
@@ -681,7 +765,11 @@
         "frame": 5,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_6": {
       "frame": {
@@ -694,12 +782,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 5,
-        "y0": 10,
-        "x1": 115,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        29,
+        21,
+        102,
+        111
+      ],
       "pico2dClip": {
         "left": 768,
         "bottom": 128,
@@ -711,7 +799,11 @@
         "frame": 6,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "right_7": {
       "frame": {
@@ -724,12 +816,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 18,
-        "y0": 13,
-        "x1": 111,
-        "y1": 118
-      },
+      "opaqueBoundsInCell": [
+        29,
+        22,
+        102,
+        113
+      ],
       "pico2dClip": {
         "left": 896,
         "bottom": 128,
@@ -741,7 +833,11 @@
         "frame": 7,
         "image": "source/raster/walk-source.png",
         "row": 2
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_0": {
       "frame": {
@@ -754,12 +850,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 15,
-        "x1": 112,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        23,
+        26,
+        107,
+        113
+      ],
       "pico2dClip": {
         "left": 0,
         "bottom": 0,
@@ -771,7 +867,11 @@
         "frame": 0,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_1": {
       "frame": {
@@ -784,12 +884,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 12,
-        "x1": 109,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        23,
+        24,
+        105,
+        111
+      ],
       "pico2dClip": {
         "left": 128,
         "bottom": 0,
@@ -801,7 +901,11 @@
         "frame": 1,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_2": {
       "frame": {
@@ -814,12 +918,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 13,
-        "x1": 108,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        24,
+        23,
+        104,
+        114
+      ],
       "pico2dClip": {
         "left": 256,
         "bottom": 0,
@@ -831,7 +935,11 @@
         "frame": 2,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_3": {
       "frame": {
@@ -844,12 +952,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 20,
-        "y0": 9,
-        "x1": 109,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        25,
+        24,
+        103,
+        116
+      ],
       "pico2dClip": {
         "left": 384,
         "bottom": 0,
@@ -861,7 +969,11 @@
         "frame": 3,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_4": {
       "frame": {
@@ -874,12 +986,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 18,
-        "y0": 13,
-        "x1": 112,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        23,
+        25,
+        106,
+        116
+      ],
       "pico2dClip": {
         "left": 512,
         "bottom": 0,
@@ -891,7 +1003,11 @@
         "frame": 4,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_5": {
       "frame": {
@@ -904,12 +1020,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 19,
-        "y0": 14,
-        "x1": 109,
-        "y1": 115
-      },
+      "opaqueBoundsInCell": [
+        24,
+        27,
+        105,
+        111
+      ],
       "pico2dClip": {
         "left": 640,
         "bottom": 0,
@@ -921,7 +1037,11 @@
         "frame": 5,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_6": {
       "frame": {
@@ -934,12 +1054,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 20,
-        "y0": 14,
-        "x1": 109,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        24,
+        22,
+        104,
+        112
+      ],
       "pico2dClip": {
         "left": 768,
         "bottom": 0,
@@ -951,7 +1071,11 @@
         "frame": 6,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     },
     "up_7": {
       "frame": {
@@ -964,12 +1088,12 @@
         "x": 64,
         "y": 114
       },
-      "opaqueBoundsInCell": {
-        "x0": 20,
-        "y0": 13,
-        "x1": 110,
-        "y1": 116
-      },
+      "opaqueBoundsInCell": [
+        25,
+        25,
+        105,
+        117
+      ],
       "pico2dClip": {
         "left": 896,
         "bottom": 0,
@@ -981,7 +1105,11 @@
         "frame": 7,
         "image": "source/raster/rear-source.png",
         "row": 1
-      }
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ]
     }
   },
   "animations": {
@@ -1042,7 +1170,7 @@
       "loop": true
     }
   },
-  "sha256": "5e5ba858fd8785ada1464040a6facbc1b39b441779406156915032c9c843376c",
+  "sha256": "bed3fb7d4c0f676c8fb48ad84c47dbf282ae97eab366524cc195ffd9ba5e38ce",
   "generator": {
     "tool": "image_gen + RGBA atlas packing",
     "source": "source/raster/walk-source.png",
@@ -1055,5 +1183,22 @@
     "recipe": "source/raster/manifest.json",
     "uniformSourceScale": 0.522762,
     "command": "python tools/build_hero_sprites.py"
+  },
+  "registration": {
+    "method": "shared-torso-ellipse",
+    "target": [
+      64.0,
+      76.38,
+      33.66,
+      31.68
+    ],
+    "pivot": [
+      64,
+      114
+    ],
+    "feetNeverDefinePerFrameCenter": true,
+    "sameTargetAcrossAllForms": true,
+    "preserveCompletePose": true,
+    "rectangularFootOverwrite": false
   }
 }

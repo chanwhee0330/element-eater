@@ -1,0 +1,1096 @@
+{
+  "schema": "element-eater.sprite-atlas.v1",
+  "image": "hero-lightning-ingest.png",
+  "imageSize": {
+    "width": 1024,
+    "height": 512
+  },
+  "state": "lightning",
+  "animationState": "ingest",
+  "layout": {
+    "rows": [
+      "down",
+      "left",
+      "right",
+      "up"
+    ],
+    "columns": 8
+  },
+  "frameSize": {
+    "width": 128,
+    "height": 128
+  },
+  "pivotPixelsTopLeft": {
+    "x": 64,
+    "y": 114
+  },
+  "recommendedDrawScale": 0.5,
+  "frames": {
+    "down_0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        27,
+        25,
+        103,
+        109
+      ]
+    },
+    "down_1": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        26,
+        25,
+        101,
+        112
+      ]
+    },
+    "down_2": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 256,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        27,
+        24,
+        100,
+        113
+      ]
+    },
+    "down_3": {
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 384,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        27,
+        24,
+        102,
+        112
+      ]
+    },
+    "down_4": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 512,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        28,
+        25,
+        101,
+        113
+      ]
+    },
+    "down_5": {
+      "frame": {
+        "x": 640,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        27,
+        29,
+        101,
+        113
+      ]
+    },
+    "down_6": {
+      "frame": {
+        "x": 768,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 768,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        27,
+        24,
+        102,
+        112
+      ]
+    },
+    "down_7": {
+      "frame": {
+        "x": 896,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 896,
+        "bottom": 384,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        27,
+        25,
+        103,
+        109
+      ]
+    },
+    "left_0": {
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        23,
+        99,
+        113
+      ]
+    },
+    "left_1": {
+      "frame": {
+        "x": 128,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        23,
+        99,
+        114
+      ]
+    },
+    "left_2": {
+      "frame": {
+        "x": 256,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 256,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        23,
+        99,
+        114
+      ]
+    },
+    "left_3": {
+      "frame": {
+        "x": 384,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 384,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        24,
+        99,
+        115
+      ]
+    },
+    "left_4": {
+      "frame": {
+        "x": 512,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 512,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        28,
+        23,
+        99,
+        114
+      ]
+    },
+    "left_5": {
+      "frame": {
+        "x": 640,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        28,
+        24,
+        98,
+        116
+      ]
+    },
+    "left_6": {
+      "frame": {
+        "x": 768,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 768,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        24,
+        99,
+        115
+      ]
+    },
+    "left_7": {
+      "frame": {
+        "x": 896,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 896,
+        "bottom": 256,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        23,
+        99,
+        113
+      ]
+    },
+    "right_0": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        31,
+        23,
+        99,
+        114
+      ]
+    },
+    "right_1": {
+      "frame": {
+        "x": 128,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        31,
+        26,
+        99,
+        115
+      ]
+    },
+    "right_2": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 256,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        31,
+        28,
+        99,
+        115
+      ]
+    },
+    "right_3": {
+      "frame": {
+        "x": 384,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 384,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        31,
+        27,
+        99,
+        114
+      ]
+    },
+    "right_4": {
+      "frame": {
+        "x": 512,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 512,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        23,
+        99,
+        110
+      ]
+    },
+    "right_5": {
+      "frame": {
+        "x": 640,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        30,
+        27,
+        100,
+        115
+      ]
+    },
+    "right_6": {
+      "frame": {
+        "x": 768,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 768,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        31,
+        27,
+        99,
+        114
+      ]
+    },
+    "right_7": {
+      "frame": {
+        "x": 896,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 896,
+        "bottom": 128,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        31,
+        23,
+        99,
+        114
+      ]
+    },
+    "up_0": {
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        24,
+        26,
+        105,
+        112
+      ]
+    },
+    "up_1": {
+      "frame": {
+        "x": 128,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 128,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        25,
+        24,
+        104,
+        114
+      ]
+    },
+    "up_2": {
+      "frame": {
+        "x": 256,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 256,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        25,
+        24,
+        104,
+        114
+      ]
+    },
+    "up_3": {
+      "frame": {
+        "x": 384,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 384,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        25,
+        24,
+        104,
+        114
+      ]
+    },
+    "up_4": {
+      "frame": {
+        "x": 512,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 512,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        25,
+        26,
+        104,
+        114
+      ]
+    },
+    "up_5": {
+      "frame": {
+        "x": 640,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        25,
+        27,
+        103,
+        114
+      ]
+    },
+    "up_6": {
+      "frame": {
+        "x": 768,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 768,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        25,
+        24,
+        104,
+        114
+      ]
+    },
+    "up_7": {
+      "frame": {
+        "x": 896,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 83.33333333333333,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "pico2dClip": {
+        "left": 896,
+        "bottom": 0,
+        "width": 128,
+        "height": 128
+      },
+      "registrationTarget": [
+        64.0,
+        76.38
+      ],
+      "opaqueBoundsInCell": [
+        24,
+        26,
+        105,
+        112
+      ]
+    }
+  },
+  "animations": {
+    "ingest_down": {
+      "frames": [
+        "down_0",
+        "down_1",
+        "down_2",
+        "down_3",
+        "down_4",
+        "down_5",
+        "down_6",
+        "down_7"
+      ],
+      "fps": 12,
+      "loop": false,
+      "next": "idle",
+      "events": [
+        {
+          "frame": 4,
+          "name": "consume_orb",
+          "once": true
+        }
+      ]
+    },
+    "ingest_left": {
+      "frames": [
+        "left_0",
+        "left_1",
+        "left_2",
+        "left_3",
+        "left_4",
+        "left_5",
+        "left_6",
+        "left_7"
+      ],
+      "fps": 12,
+      "loop": false,
+      "next": "idle",
+      "events": [
+        {
+          "frame": 4,
+          "name": "consume_orb",
+          "once": true
+        }
+      ]
+    },
+    "ingest_right": {
+      "frames": [
+        "right_0",
+        "right_1",
+        "right_2",
+        "right_3",
+        "right_4",
+        "right_5",
+        "right_6",
+        "right_7"
+      ],
+      "fps": 12,
+      "loop": false,
+      "next": "idle",
+      "events": [
+        {
+          "frame": 4,
+          "name": "consume_orb",
+          "once": true
+        }
+      ]
+    },
+    "ingest_up": {
+      "frames": [
+        "up_0",
+        "up_1",
+        "up_2",
+        "up_3",
+        "up_4",
+        "up_5",
+        "up_6",
+        "up_7"
+      ],
+      "fps": 12,
+      "loop": false,
+      "next": "idle",
+      "events": [
+        {
+          "frame": 4,
+          "name": "consume_orb",
+          "once": true
+        }
+      ]
+    }
+  },
+  "source": "../elemental-source-v1/lightning/ingest-generated.png",
+  "uniformSourceScale": 0.5454907,
+  "sha256": "0c9ea82a89152d05b78834fafffaf8332f733c032ecdea91c8982a978e805af2",
+  "note": "원소별 캐릭터 애니메이션 에셋. Space 기본 공격과 R 고유 능력은 별도이며 본게임 미연결.",
+  "timing": {
+    "consumeFrame": 4,
+    "consumeTime": 0.3333333333333333,
+    "status": "initial-animation-proposal"
+  },
+  "mouthPixelsTopLeft": {
+    "down": {
+      "x": 64,
+      "y": 73
+    },
+    "left": {
+      "x": 44,
+      "y": 74
+    },
+    "right": {
+      "x": 85,
+      "y": 74
+    },
+    "up": {
+      "x": 64,
+      "y": 51
+    }
+  },
+  "orbIsSeparate": true,
+  "drawOrbBehindHero": [
+    "up"
+  ],
+  "registration": {
+    "method": "shared-torso-ellipse",
+    "target": [
+      64.0,
+      76.38,
+      33.66,
+      31.68
+    ],
+    "pivot": [
+      64,
+      114
+    ],
+    "feetNeverDefinePerFrameCenter": true,
+    "sameTargetAcrossAllForms": true,
+    "preserveCompletePose": true,
+    "rectangularFootOverwrite": false
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "element": "lightning",
+  "name": "번개",
+  "states": {
+    "idle": {
+      "image": "hero-lightning-idle.png",
+      "fps": 4,
+      "loop": true,
+      "label": "대기"
+    },
+    "walk": {
+      "image": "hero-lightning-walk.png",
+      "fps": 10,
+      "loop": true,
+      "label": "걷기"
+    },
+    "attack": {
+      "image": "hero-lightning-attack.png",
+      "fps": 12,
+      "loop": false,
+      "label": "기본 공격"
+    },
+    "ingest": {
+      "image": "hero-lightning-ingest.png",
+      "fps": 12,
+      "loop": false,
+      "label": "구슬 먹기"
+    }
+  },
+  "uniformSourceScale": 0.5454907,
+  "sourceFolder": "../elemental-source-v1/lightning",
+  "frameSize": 128,
+  "pivot": [
+    64,
+    114
+  ],
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
+  "command": "python tools/build_element_heroes.py",
+  "finalRegistration": {
+    "command": "python tools/build_hero_registered.py",
+    "source": "../registration-source-v1",
+    "torsoTarget": [
+      64.0,
+      76.38,
+      33.66,
+      31.68
+    ],
+    "rectangularFootOverwrite": false
+  }
+}

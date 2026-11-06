@@ -1,0 +1,29 @@
+{
+  "schema": "element-eater.registration-source.v1",
+  "files": {
+    "earth/hero-earth-attack.png": "4670ca58e1460dd2c0496a56a34d1026be6717ab6459654bdd3d1c3922a6b991",
+    "earth/hero-earth-idle.png": "9781840357dfbb53d9ef4de9dd3579c67d771f0c6276942187bbe8bab328b786",
+    "earth/hero-earth-ingest.png": "d050172f5bcb11e9ab6b3b1073935bc774c1c1b625c749762ae01b892b23eb1f",
+    "earth/hero-earth-walk.png": "0bcc736e2572413edf67dae3d510d36b7e31f1dce01dd5c6fa3446584ea36c3b",
+    "fire/hero-fire-attack.png": "c860e5577596002bbc0b2e9f3516e22c6ec350939f2900393ff61248c624f9e9",
+    "fire/hero-fire-idle.png": "6e1a792bc4c5a63e477ca77f28f8c8b8ad46de3a7aef20c1eecdfeedd0df8ca7",
+    "fire/hero-fire-ingest.png": "d102d042a3c1e1c6d6b375d216f56eabd6386a5b72bacf6b0443a7f99bd29c8b",
+    "fire/hero-fire-walk.png": "60dc61c0158525b600d9894c9e3a7dfc32c7439b0360ea0783e51cdb2c1c5b4c",
+    "lightning/hero-lightning-attack.png": "1502309efba97c40c4270993f255f33897a505e58afacf36f6ab2e90e6267f3f",
+    "lightning/hero-lightning-idle.png": "fb9accf02583653c81d31963da53c53d6b0844636f164e651cb1857290cc0314",
+    "lightning/hero-lightning-ingest.png": "24a70d468525b56bda1f57a888d404352ed2397ba20b2360d3a62c59bc8f3e06",
+    "lightning/hero-lightning-walk.png": "c7e5775ea416225f3ea37752c5aa1d11d92ff7b32b937e0a791a5691976f417d",
+    "neutral/hero-neutral-attack.png": "4f4b72151603a3fb57bf02aecb190970297554539e3ab4a358b212a96e8eadf8",
+    "neutral/hero-neutral-idle.png": "f80084c08af963fe6b12bd8faf9cb6012b2b0f5a2580868fbe67e5453a60e0bf",
+    "neutral/hero-neutral-ingest.png": "f5b75dc552a303052f22349910f97fc67527e2d7427aa3c979f208a21136d52d",
+    "neutral/hero-neutral-walk.png": "5e5ba858fd8785ada1464040a6facbc1b39b441779406156915032c9c843376c",
+    "water/hero-water-attack.png": "6f87d7e6a7db07c3b60b81b9b0043b688da24c6b9c9c1185aa5c1ea298ff66c3",
+    "water/hero-water-idle.png": "70c00580df824db63829858858ee461d6625e69f026330788d78e6a7cc1a5999",
+    "water/hero-water-ingest.png": "f91e045653abf9cebcc9842234a19ab9fa8586561fcb22fda20a7cdcbd1974af",
+    "water/hero-water-walk.png": "ffc5ae00f130305dd23507ad9e3c8e9051ed123731bad36ecf8d1e50df4f8aa4",
+    "wind/hero-wind-attack.png": "b331720d4de6143332338c217199543b79950fa5a30bf21c213e9bc5eff808df",
+    "wind/hero-wind-idle.png": "872496b6daec7a59bc7aca606cef24eda086853fd3bca31823971447f783ea03",
+    "wind/hero-wind-ingest.png": "ce4242c418014be4850de9b657ab35342c77d57fc4346b1873c99e1b3b7f6776",
+    "wind/hero-wind-walk.png": "dcd22df541fb155c3fe7cc09d36352297698bceb798d550ddc77771f69449141"
+  }
+}

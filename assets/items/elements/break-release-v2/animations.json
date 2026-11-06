@@ -1,0 +1,565 @@
+{
+  "schema": "element-eater.break-release.v3",
+  "frameSize": {
+    "w": 256,
+    "h": 256
+  },
+  "orbDiameterPixels": 96,
+  "defaultHits": 3,
+  "weaknessHits": 1,
+  "weaknessByTarget": {
+    "water": "lightning",
+    "fire": "water",
+    "wind": "fire",
+    "earth": "wind",
+    "lightning": "earth"
+  },
+  "states": {
+    "intact": {
+      "frame": 0,
+      "holdUntilAttack": true
+    },
+    "damaged1": {
+      "animationKey": "damaged1",
+      "loop": true,
+      "holdUntilAttack": true,
+      "advanceDamageWithTime": false
+    },
+    "damaged2": {
+      "animationKey": "damaged2",
+      "loop": true,
+      "holdUntilAttack": true,
+      "advanceDamageWithTime": false
+    },
+    "breaking": {
+      "frames": [
+        4,
+        5,
+        6
+      ],
+      "durationMs": [
+        140,
+        170,
+        200
+      ],
+      "next": "orb",
+      "loop": false
+    },
+    "orb": {
+      "frame": 7,
+      "holdUntilIngested": true
+    }
+  },
+  "elements": {
+    "water": {
+      "name": "물",
+      "image": "sprites/water-break.png",
+      "orbImage": "sprites/water-orb.png",
+      "orbSize": {
+        "w": 96,
+        "h": 96
+      },
+      "idleImage": "sprites/water-idle.png",
+      "idleFrameSize": 128,
+      "idleFps": 8,
+      "idleFrames": 8,
+      "weakness": "lightning",
+      "damageLoops": {
+        "damaged1": {
+          "image": "sprites/water-damaged1.png",
+          "motionMask": "sprites/water-damaged1-motion-mask.png",
+          "frames": 8,
+          "fps": 8,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              92,
+              160,
+              164,
+              228
+            ],
+            "originalRootBounds": [
+              92,
+              160,
+              164,
+              227
+            ],
+            "anchor": [
+              128.0,
+              228
+            ],
+            "scale": 1.0,
+            "alignedRootBounds": [
+              92,
+              160,
+              164,
+              228
+            ],
+            "outputToSourceMatrix": [
+              1.0,
+              0,
+              0.0,
+              0,
+              1.0,
+              -1.0
+            ],
+            "holdTransformForAllFrames": true
+          }
+        },
+        "damaged2": {
+          "image": "sprites/water-damaged2.png",
+          "motionMask": "sprites/water-damaged2-motion-mask.png",
+          "frames": 8,
+          "fps": 8,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              92,
+              160,
+              164,
+              228
+            ],
+            "originalRootBounds": [
+              92,
+              160,
+              164,
+              222
+            ],
+            "anchor": [
+              128.0,
+              228
+            ],
+            "scale": 1.0,
+            "alignedRootBounds": [
+              92,
+              160,
+              164,
+              228
+            ],
+            "outputToSourceMatrix": [
+              1.0,
+              0,
+              0.0,
+              0,
+              1.0,
+              -6.0
+            ],
+            "holdTransformForAllFrames": true
+          }
+        }
+      }
+    },
+    "fire": {
+      "name": "불",
+      "image": "sprites/fire-break.png",
+      "orbImage": "sprites/fire-orb.png",
+      "orbSize": {
+        "w": 96,
+        "h": 96
+      },
+      "idleImage": "sprites/fire-idle.png",
+      "idleFrameSize": 128,
+      "idleFps": 10,
+      "idleFrames": 8,
+      "weakness": "water",
+      "damageLoops": {
+        "damaged1": {
+          "image": "sprites/fire-damaged1.png",
+          "motionMask": "sprites/fire-damaged1-motion-mask.png",
+          "frames": 8,
+          "fps": 10,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              54,
+              142,
+              202,
+              230
+            ],
+            "originalRootBounds": [
+              42,
+              142,
+              215,
+              229
+            ],
+            "anchor": [
+              128.0,
+              230
+            ],
+            "scale": 0.8554913294797688,
+            "alignedRootBounds": [
+              54,
+              142,
+              202,
+              230
+            ],
+            "outputToSourceMatrix": [
+              1.1689189189189189,
+              0,
+              -21.121621621621614,
+              0,
+              1.1689189189189189,
+              -39.851351351351354
+            ],
+            "holdTransformForAllFrames": true
+          }
+        },
+        "damaged2": {
+          "image": "sprites/fire-damaged2.png",
+          "motionMask": "sprites/fire-damaged2-motion-mask.png",
+          "frames": 8,
+          "fps": 10,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              54,
+              142,
+              202,
+              230
+            ],
+            "originalRootBounds": [
+              41,
+              142,
+              215,
+              221
+            ],
+            "anchor": [
+              128.0,
+              230
+            ],
+            "scale": 0.8505747126436781,
+            "alignedRootBounds": [
+              54,
+              142,
+              202,
+              230
+            ],
+            "outputToSourceMatrix": [
+              1.1756756756756757,
+              0,
+              -22.486486486486484,
+              0,
+              1.1756756756756757,
+              -49.40540540540542
+            ],
+            "holdTransformForAllFrames": true
+          }
+        }
+      }
+    },
+    "wind": {
+      "name": "바람",
+      "image": "sprites/wind-break.png",
+      "orbImage": "sprites/wind-orb.png",
+      "orbSize": {
+        "w": 96,
+        "h": 96
+      },
+      "idleImage": "sprites/wind-idle.png",
+      "idleFrameSize": 128,
+      "idleFps": 12,
+      "idleFrames": 24,
+      "weakness": "fire",
+      "damageLoops": {
+        "damaged1": {
+          "image": "sprites/wind-damaged1.png",
+          "motionMask": "sprites/wind-damaged1-motion-mask.png",
+          "frames": 8,
+          "fps": 4,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              98,
+              184,
+              158,
+              230
+            ],
+            "originalRootBounds": [
+              96,
+              184,
+              166,
+              237
+            ],
+            "anchor": [
+              128.0,
+              230
+            ],
+            "scale": 0.8571428571428571,
+            "alignedRootBounds": [
+              98,
+              184,
+              158,
+              230
+            ],
+            "outputToSourceMatrix": [
+              1.1666666666666667,
+              0,
+              -18.333333333333343,
+              0,
+              1.1666666666666667,
+              -31.33333333333337
+            ],
+            "holdTransformForAllFrames": true
+          }
+        },
+        "damaged2": {
+          "image": "sprites/wind-damaged2.png",
+          "motionMask": "sprites/wind-damaged2-motion-mask.png",
+          "frames": 8,
+          "fps": 4,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              98,
+              184,
+              158,
+              230
+            ],
+            "originalRootBounds": [
+              96,
+              184,
+              166,
+              238
+            ],
+            "anchor": [
+              128.0,
+              230
+            ],
+            "scale": 0.8571428571428571,
+            "alignedRootBounds": [
+              98,
+              184,
+              158,
+              230
+            ],
+            "outputToSourceMatrix": [
+              1.1666666666666667,
+              0,
+              -18.333333333333343,
+              0,
+              1.1666666666666667,
+              -30.33333333333337
+            ],
+            "holdTransformForAllFrames": true
+          }
+        }
+      }
+    },
+    "earth": {
+      "name": "흙",
+      "image": "sprites/earth-break.png",
+      "orbImage": "sprites/earth-orb.png",
+      "orbSize": {
+        "w": 96,
+        "h": 96
+      },
+      "idleImage": "sprites/earth-idle.png",
+      "idleFrameSize": 128,
+      "idleFps": 8,
+      "idleFrames": 8,
+      "weakness": "wind",
+      "damageLoops": {
+        "damaged1": {
+          "image": "sprites/earth-damaged1.png",
+          "motionMask": "sprites/earth-damaged1-motion-mask.png",
+          "frames": 8,
+          "fps": 8,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              127,
+              139,
+              238,
+              230
+            ],
+            "originalRootBounds": [
+              127,
+              139,
+              234,
+              223
+            ],
+            "anchor": [
+              182.5,
+              230
+            ],
+            "scale": 1.0373831775700935,
+            "alignedRootBounds": [
+              127,
+              139,
+              238,
+              230
+            ],
+            "outputToSourceMatrix": [
+              0.963963963963964,
+              0,
+              4.576576576576571,
+              0,
+              0.963963963963964,
+              2.2522522522522634
+            ],
+            "holdTransformForAllFrames": true
+          }
+        },
+        "damaged2": {
+          "image": "sprites/earth-damaged2.png",
+          "motionMask": "sprites/earth-damaged2-motion-mask.png",
+          "frames": 8,
+          "fps": 8,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              127,
+              139,
+              238,
+              230
+            ],
+            "originalRootBounds": [
+              127,
+              139,
+              235,
+              224
+            ],
+            "anchor": [
+              182.5,
+              230
+            ],
+            "scale": 1.0277777777777777,
+            "alignedRootBounds": [
+              127,
+              139,
+              238,
+              230
+            ],
+            "outputToSourceMatrix": [
+              0.972972972972973,
+              0,
+              3.432432432432421,
+              0,
+              0.972972972972973,
+              0.21621621621619624
+            ],
+            "holdTransformForAllFrames": true
+          }
+        }
+      }
+    },
+    "lightning": {
+      "name": "번개",
+      "image": "sprites/lightning-break.png",
+      "orbImage": "sprites/lightning-orb.png",
+      "orbSize": {
+        "w": 96,
+        "h": 96
+      },
+      "idleImage": "sprites/lightning-idle.png",
+      "idleFrameSize": 128,
+      "idleFps": 10,
+      "idleFrames": 8,
+      "weakness": "earth",
+      "damageLoops": {
+        "damaged1": {
+          "image": "sprites/lightning-damaged1.png",
+          "motionMask": "sprites/lightning-damaged1-motion-mask.png",
+          "frames": 8,
+          "fps": 10,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              50,
+              154,
+              207,
+              228
+            ],
+            "originalRootBounds": [
+              59,
+              154,
+              197,
+              219
+            ],
+            "anchor": [
+              128.5,
+              228
+            ],
+            "scale": 1.1376811594202898,
+            "alignedRootBounds": [
+              51,
+              154,
+              207,
+              228
+            ],
+            "outputToSourceMatrix": [
+              0.8789808917197452,
+              0,
+              15.050955414012734,
+              0,
+              0.8789808917197452,
+              18.592356687898075
+            ],
+            "holdTransformForAllFrames": true
+          }
+        },
+        "damaged2": {
+          "image": "sprites/lightning-damaged2.png",
+          "motionMask": "sprites/lightning-damaged2-motion-mask.png",
+          "frames": 8,
+          "fps": 10,
+          "frameSize": 256,
+          "loop": true,
+          "fixedBodyVerified": true,
+          "registration": {
+            "referenceRootBounds": [
+              50,
+              154,
+              207,
+              228
+            ],
+            "originalRootBounds": [
+              51,
+              154,
+              196,
+              220
+            ],
+            "anchor": [
+              128.5,
+              228
+            ],
+            "scale": 1.0827586206896551,
+            "alignedRootBounds": [
+              49,
+              154,
+              207,
+              228
+            ],
+            "outputToSourceMatrix": [
+              0.9235668789808917,
+              0,
+              4.821656050955411,
+              0,
+              0.9235668789808917,
+              9.42675159235668
+            ],
+            "holdTransformForAllFrames": true
+          }
+        }
+      }
+    }
+  }
+}

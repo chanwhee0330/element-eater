@@ -1,4 +1,8 @@
-# 기본 무속성 주인공: 대기·걷기·공격
+## 2026-11-06 중심 정렬 수정
+
+발끝 대신 몸통 윤곽을 기준으로 모든 동작/방향을 같은 중심에 맞췄습니다. 귀·발의 비율과 걷기 동작을 유지합니다. 몸통 아래를 자르던 직사각형 발 덮어쓰기는 제거했습니다. 공격·섭취 시작/끝은 idle 0번과 같습니다. 최종 재생성은 `python tools/build_hero_registered.py`입니다.
+
+# 기본 무속성 주인공: 대기·걷기·공격·섭취
 
 둥근 아이보리 몸, 두 초록 잎 귀와 작은 팔다리를 가진 기본형입니다. 현재 시트는 내장 `image_gen`으로 만든 원화를 RGBA 그대로 잘라 정렬한 것입니다. 이전 pixelfx 시안 코드는 `source/legacy/`에 보관합니다.
 
@@ -9,8 +13,9 @@
 | [idle PNG](hero-neutral-idle.png) · [JSON](hero-neutral-idle.json) | 4방향 × 대기 8프레임 | 4fps, 반복 |
 | [walk PNG](hero-neutral-walk.png) · [JSON](hero-neutral-walk.json) | 4방향 × 걷기 8프레임 | 10fps, 반복 |
 | [attack PNG](hero-neutral-attack.png) · [JSON](hero-neutral-attack.json) | 4방향 × 공격 8프레임 | 12fps, 한 번 |
+| [ingest PNG](hero-neutral-ingest.png) · [JSON](hero-neutral-ingest.json) | 4방향 × 구슬 섭취 8프레임 | 12fps, 한 번 |
 
-- 시트는 **1024×512px**, 칸은 **128×128px**, 8열×4행입니다. 총 96프레임입니다.
+- 시트는 **1024×512px**, 칸은 **128×128px**, 8열×4행입니다. 총 128프레임입니다.
 - 행 순서는 아래(정면) / 왼쪽 / 오른쪽 / 위(뒷면)이며 각 행을 왼쪽부터 재생합니다.
 - 투명 배경이며 발밑 기준점은 칸 왼쪽 위 기준 **(64, 114)**입니다.
 - 권장 표시 배율은 **0.5배**입니다. 화면에서는 64×64px 칸에 해당합니다. 원화의 부드러운 경계는 보간 확대를 사용합니다.
@@ -56,4 +61,13 @@ sheet.clip_draw(c['left'], c['bottom'], c['width'], c['height'],
                 gx, gy + 50 * scale, 128 * scale, 128 * scale)
 ```
 
-이 코드는 에셋 연동 예시입니다. 실행 가능한 게임과 원소 변신·섭취·피격 동작은 아직 구현하지 않았습니다.
+이 코드는 에셋 연동 예시입니다. 실행 가능한 게임과 원소 변신·피격 동작은 아직 구현하지 않았습니다. 준비된 섭취 애니메이션도 본게임의 판정·보유 개수 갱신에는 미연결입니다.
+
+
+## 원소 구슬 섭취 애니메이션
+
+`ingest_down/left/right/up`은 입을 벌려 구슬을 삼킨 뒤 대기 자세로 돌아오는 단발 동작입니다. 구슬은 별도 오브젝트이며 등 뒤를 볼 때는 캐릭터 뒤에 그립니다. 각 방향 0·7번은 기존 idle 0번과 완전히 같고, 발의 하단 픽셀을 고정했습니다. 4번 프레임 섭취 이벤트와 12fps는 초기 애니메이션 시안입니다.
+
+[4방향 GIF](../../../../outputs/previews/hero-neutral-ingest/hero-neutral-ingest.gif) · [5원소 비교 GIF](../../../../outputs/previews/hero-neutral-ingest/five-elements-ingest.gif) · [프롬프트](../../../prompts/hero-neutral-ingest.md).
+
+섭취 원화는 별도 도구 `python tools/build_hero_ingest.py`로 다시 만듭니다. 기존 `build_hero_sprites.py`의 대기·걷기·공격 시트와 원본 manifest는 그대로 유지합니다.

@@ -1,8 +1,8 @@
 # 엘리먼트 이터 (Element Eater)
 
-주변 사물을 먹으면 주인공의 색과 외형이 바뀌고, 적의 약점에 맞는 원소로 피해를 주는 2D 탑뷰 액션 게임 프로젝트입니다. 무속성 기본 공격은 피해 없이 적을 살짝 밀어냅니다.
+주변 사물을 먹으면 주인공의 색과 외형이 바뀌고, 적의 약점에 맞는 원소로 피해를 주는 2D 탑뷰 액션 게임 프로젝트입니다. 무속성 기본 공격은 낮은 피해를 주면서 적을 살짝 밀어냅니다.
 
-현재는 **기획 단계**입니다. 상세 기획서와 발표 자료, AI 컨셉 이미지가 준비되어 있고, 실행 가능한 게임 코드는 아직 구현하지 않았습니다. 개발 도구는 Python과 pico2d를 계획하고 있습니다.
+현재는 **기획·에셋 준비 단계**입니다. 상세 기획서와 발표 자료, AI 컨셉 이미지, 기본 맵 크기 비교·이동 미리보기가 준비되어 있습니다. Python/pico2d 본게임과 실제 전투는 아직 구현하지 않았습니다.
 
 ![물 원소 주인공이 불 속성 적을 공격하는 컨셉](assets/concepts/gameplay-element-matchup.png)
 
@@ -10,11 +10,20 @@
 
 ## 최신 자료
 
+- [맵에 놓인 원소 5종 애니메이션](outputs/previews/element-pickups/element-pickups-map.gif) · [확대 동작](outputs/previews/element-pickups/element-pickups-animation.gif) · [재생·정지·속도 조절](outputs/previews/element-pickups/element-pickups-preview.html) · [스프라이트 시트와 규격](assets/items/elements/README.md)
+
+- [맵 일부를 보여주는 인게임 화면 시안](outputs/previews/obstacle-room/obstacle-room-ingame-preview.png): 1280×720, 16×9칸 구도와 기존 플레이어·HUD 배치 예시
+
+- [구멍·벽·가시를 배치한 30×30 맵](outputs/previews/obstacle-room/obstacle-room-preview.html) · [예시 화면](outputs/previews/obstacle-room/obstacle-room-scale-preview.png) · [원본·규격](assets/maps/obstacle-room/README.md)
+
+- [기본 맵 30×30과 플레이어 크기 비교](outputs/previews/base-room/base-room-preview.html) · [비교 PNG](outputs/previews/base-room/base-room-scale-preview.png) · [맵 원본·규격](assets/maps/base-room/README.md)
+
 - [상세 기획서 30쪽](outputs/planning/엘리먼트_이터_기획서_허찬휘.pptx)
 - [1차 발표 PPT 7쪽](outputs/presentations/first/엘리먼트_이터_1차발표_허찬휘.pptx)
 - [90초 발표 대본 PDF](outputs/presentations/first/엘리먼트_이터_90초_발표대본_허찬휘.pdf)
 - [방 10개와 원소 변환 보스](docs/design/STAGES_AND_BOSS.md)
 - [게임 규칙과 초기 수치](docs/design/GAME_DESIGN.md)
+- [구멍·벽·가시 장애물 기획](docs/design/OBSTACLES_AND_HAZARDS.md)
 - [개발 순서와 작업 목록](docs/development/ROADMAP.md)
 - [노트북에서 작업 이어가기](docs/guides/LAPTOP_SETUP.md)
 - [현재 작업 맥락](PROJECT_CONTEXT.md)
@@ -37,7 +46,7 @@
 
 ![다섯 원소의 주인공 외형](assets/concepts/hero-element-forms.png)
 
-적도 원소를 가지며 **물은 불, 불은 바람, 바람은 흙, 흙은 번개, 번개는 물**인 적에게 피해를 줍니다. 원소 공격은 같은 원소를 포함한 다른 조합의 피해와 공격 효과가 모두 차단됩니다. 무속성 충격탄만 별도 예외로, 모든 적 원소에 피해 0과 약한 넉백을 적용합니다.
+적도 원소를 가지며 **물은 불, 불은 바람, 바람은 흙, 흙은 번개, 번개는 물**인 적에게 피해를 줍니다. 원소 공격은 같은 원소를 포함한 다른 조합의 피해와 공격 효과가 모두 차단됩니다. 무속성 충격탄만 별도 예외로, 모든 적 원소에 낮은 피해와 약한 넉백을 적용합니다. 무속성 피해 5는 미확정 시험값입니다.
 
 ## 조작과 원소 소모
 
@@ -52,7 +61,7 @@
 
 공격은 마지막 이동 방향을 사용하며 마우스로 조준하지 않습니다. 예를 들어 불을 2개 먹고 R 스킬을 한 번 사용하면 불 1개가 남습니다. 같은 종류가 0개가 되면 선택에서 빠지고, 전부 소진되면 무속성 충격탄을 사용합니다. 물 Space 공격은 불 적에게 피해를 주고 물 R 스킬은 자가 치유입니다.
 
-무속성 Space 공격은 피해 없이 적을 짧게 밀어내며 R 스킬은 없습니다. [공격·넉백 연출 미리보기](outputs/previews/neutral-attack/neutral-attack-preview.gif)를 준비했으며 실제 게임 연동은 구현 전입니다.
+무속성 Space 공격은 낮은 피해와 짧은 넉백을 함께 주며 R 스킬은 없습니다. [공격·넉백 연출 미리보기](outputs/previews/neutral-attack/neutral-attack-preview.gif)를 준비했으며 실제 게임 연동은 구현 전입니다.
 
 전투와 퍼즐을 해결하며 일반 방 9개와 원소 변환 보스 방 1개, 총 10개의 방을 돌파하는 구상입니다. 일반 방은 적 처치와 필수 환경 퍼즐 해결을 함께 확인해 출구를 엽니다. 피해 배율 1.5, 먹이 재생성 8초 등은 [초기 기획안](docs/design/GAME_DESIGN.md)이며 테스트 후 조정합니다. 흙의 충격파와 번개의 기절은 기획에 포함하지 않습니다.
 
@@ -76,6 +85,7 @@ assets/
   concepts/          현재 컨셉 이미지
     archive/         이전 버전 이미지
   sprites/           게임용 스프라이트와 프레임 데이터
+  items/             원소 먹이 5종과 반복 대기 스프라이트
   prompts/           이미지 생성 프롬프트와 제작 기록
 docs/
   design/            게임 기획, 방과 보스 설계

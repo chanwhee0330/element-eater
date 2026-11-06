@@ -1,0 +1,16 @@
+{
+  "schema": "element-eater.pickup-recipe.v1",
+  "sourceGrid": {"columns": 4, "rows": 2},
+  "frameSize": 128,
+  "pivotPixelsTopLeft": {"x": 64, "y": 114},
+  "solidAlpha": 96,
+  "trimMargin": 3,
+  "maxArtSize": {"width": 106, "height": 104},
+  "elements": [
+    {"id": "water", "name": "물", "object": "항아리", "fps": 8, "heightUnits": 0.85, "motion": "수면 잔물결과 반사광의 순환"},
+    {"id": "fire", "name": "불", "object": "장작", "fps": 10, "heightUnits": 0.95, "motion": "고정된 장작 윗면 앞에 불꽃을 합성해 타오름"},
+    {"id": "wind", "name": "바람", "object": "바람개비", "fps": 12, "heightUnits": 1.15, "motion": "받침대 위 초록 날개의 시계 방향 회전"},
+    {"id": "earth", "name": "흙", "object": "돌무더기", "fps": 8, "heightUnits": 0.75, "motion": "뒤·오른쪽 돌은 고정, 왼쪽 아래 작은 돌만 들썩임"},
+    {"id": "lightning", "name": "번개", "object": "전지", "fps": 10, "heightUnits": 0.85, "motion": "고정 전지의 중앙 번개 표시 점멸과 양옆 스파크"}
+  ]
+}

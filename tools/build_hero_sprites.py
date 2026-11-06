@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--output-dir', type=Path, default=ASSETS)
 parser.add_argument('--preview-dir', type=Path, default=ROOT / 'outputs/previews/hero-neutral')
 parser.add_argument('--before-dir', type=Path)
+parser.add_argument('--rear-before-dir', type=Path, help='뒷모습 걷기 수정 전 PNG 폴더')
 args = parser.parse_args()
 OUT, PREVIEW = args.output_dir.resolve(), args.preview_dir.resolve()
 OUT.mkdir(parents=True, exist_ok=True)
@@ -23,15 +24,15 @@ fonts = Path('C:/Windows/Fonts/malgun.ttf')
 def font(size):
     return ImageFont.truetype(str(fonts), size) if fonts.exists() else ImageFont.load_default(size=size)
 
-def source_cells(file):
+def source_cells(file, columns=8, rows=4, trim_margin=None):
     im = Image.open(file).convert('RGBA')
     items = []
-    for row in range(4):
+    for row in range(rows):
         frames = []
-        for col in range(8):
+        for col in range(columns):
             # Generated canvases need not divide evenly by 8/4: keep exact integer boundaries.
-            box = (round(col*im.width/8), round(row*im.height/4),
-                   round((col+1)*im.width/8), round((row+1)*im.height/4))
+            box = (round(col*im.width/columns), round(row*im.height/rows),
+                   round((col+1)*im.width/columns), round((row+1)*im.height/rows))
             cell = im.crop(box)
             a = cell.getchannel('A')
             visible = a.getbbox()
@@ -39,6 +40,10 @@ def source_cells(file):
             solid = a.point(lambda x: 255 if x >= 96 else 0)
             body = solid.getbbox()
             assert visible and body, (file, row, col)
+            if trim_margin is not None:
+                # Crop distant low-alpha generation dust; keep raw RGBA inside the padded pose.
+                visible = (max(0, body[0]-trim_margin), max(0, body[1]-trim_margin),
+                           min(cell.width, body[2]+trim_margin), min(cell.height, body[3]+trim_margin))
             h = body[3]-body[1]
             centers = []
             for y in range(round(body[1]+h*.42), round(body[1]+h*.82)):
@@ -46,7 +51,8 @@ def source_cells(file):
                 if xs: centers.append(sum(xs)/len(xs))
             anchor = (median(centers), body[3])
             frames.append(dict(cell=cell, visible=visible, anchor=anchor, sourceRect=box,
-                               sourceState=file.stem.removesuffix('-source'), sourceFrame=col))
+                               sourceState=file.stem.removesuffix('-source'), sourceFrame=col,
+                               sourceImage=file.name, sourceRow=row))
         items.append(frames)
     return items
 
@@ -59,16 +65,35 @@ for rows in raw.values():
             for available, extent in [(PX-3,ax-x0),(S-PX-3,x1-ax),(PY-3,ay-y0),(S-PY-3,y1-ay)]:
                 if extent>0: scale = min(scale,available/extent)
 scale = round(scale*.998,6)
+
+# Separate rear art replaces only the requested facing. Existing front/side pixels and scale stay intact.
+overrides = {}
+for direction, override in CFG.get('directionOverrides', {}).items():
+    source = source_cells(SOURCE / override['source'], columns=8, rows=len(override['rows']),
+                          trim_margin=override.get('trimMargin'))
+    override_scale = override['sourceScale']
+    for row in source:
+        for item in row:
+            x0,y0,x1,y1 = item['visible']; ax,ay = item['anchor']
+            for available, extent in [(PX-3,ax-x0),(S-PX-3,x1-ax),(PY-3,ay-y0),(S-PY-3,y1-ay)]:
+                if extent>0: override_scale = min(override_scale,available/extent)
+    override_scale = round(override_scale*.998,6)
+    for state, row in zip(override['rows'], source):
+        for item in row: item['sourceState'] = state
+        raw[state][DIRECTIONS.index(direction)] = row
+        overrides[state,direction] = override_scale
+
 packed, atlases = {}, {}
 for state,cfg in CFG['states'].items():
     rows = []
-    for row in raw[state]:
+    for direction, row in zip(DIRECTIONS, raw[state]):
+        pose_scale = overrides.get((state,direction), scale)
         frames = []
         for item in row:
             box=item['visible']; ax,ay=item['anchor']
             trimmed=item['cell'].crop(box)
-            resized=trimmed.resize((max(1,round(trimmed.width*scale)),max(1,round(trimmed.height*scale))),Image.Resampling.LANCZOS)
-            at=(round(PX-(ax-box[0])*scale),round(PY-(ay-box[1])*scale))
+            resized=trimmed.resize((max(1,round(trimmed.width*pose_scale)),max(1,round(trimmed.height*pose_scale))),Image.Resampling.LANCZOS)
+            at=(round(PX-(ax-box[0])*pose_scale),round(PY-(ay-box[1])*pose_scale))
             assert at[0]>=0 and at[1]>=0 and at[0]+resized.width<=S and at[1]+resized.height<=S, (state,item['sourceFrame'],at)
             image=Image.new('RGBA',(S,S))
             # Raw RGBA copy, not alpha-masked paste: retain the generated soft edges exactly once.
@@ -95,7 +120,8 @@ for state,cfg in CFG['states'].items():
                 'pivotPixelsTopLeft':{'x':PX,'y':PY},
                 'opaqueBoundsInCell':dict(zip(['x0','y0','x1','y1'],[bounds[0],bounds[1],bounds[2]-1,bounds[3]-1])),
                 'pico2dClip':{'left':i*S,'bottom':(3-row)*S,'width':S,'height':S},
-                'sourcePose':{'state':source['sourceState'],'frame':source['sourceFrame']},
+                'sourcePose':{'state':source['sourceState'],'frame':source['sourceFrame'],
+                              'image':f'source/raster/{source["sourceImage"]}', 'row':source['sourceRow']},
             }
         animations[f'{state}_{direction}']={'frames':[f'{direction}_{i}' for i in range(8)],'fps':cfg['fps'],'loop':cfg['loop']}
     name=f'hero-neutral-{state}'
@@ -106,11 +132,14 @@ for state,cfg in CFG['states'].items():
            'recommendedDrawScale':CFG['recommendedDrawScale'],'frames':frames,'animations':animations,
            'sha256':hashlib.sha256(file.read_bytes()).hexdigest(),
            'generator':{'tool':'image_gen + RGBA atlas packing','source':f'source/raster/{cfg["source"]}',
+                        'directionOverrides':{direction:{'source':f'source/raster/{override["source"]}',
+                                                        'uniformSourceScale':overrides[state,direction]}
+                                              for direction,override in CFG.get('directionOverrides',{}).items()},
                         'recipe':'source/raster/manifest.json','uniformSourceScale':scale,'command':'python tools/build_hero_sprites.py'}}
     if state=='attack':
         atlas.update(timing=CFG['attackTiming'],muzzlePixelsTopLeft=CFG['muzzlePixelsTopLeft'],drawProjectileBehindHero=['up'],
-                     damage=0,knockback={'regularEnemyPixels':12,'bossPixels':4,'seconds':.1,'status':'initial-proposal'},
-                     note='Space 무속성 기본 공격은 피해 0·약한 넉백. 공격은 한 번 재생 후 idle, 실제 게임 판정 미구현.')
+                     **CFG['neutralCombat'],
+                     note='Space 무속성 기본 공격은 적 원소와 관계없이 낮은 피해·약한 넉백. 피해 수치와 넉백 거리는 시험값. 공격은 한 번 재생 후 idle, 실제 게임 판정 미구현.')
     (OUT/f'{name}.json').write_text(json.dumps(atlas,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     atlases[state]=atlas
     print(f'{name}: {sheet.width}x{sheet.height}, 32 frames, RGBA, pivot {PX},{PY}, scale {scale}')
@@ -199,3 +228,35 @@ if args.before_dir:
     d.text((26,735),'대기·걷기·공격 모두 같은 체형과 표정으로 교체',font=font(12),fill='#9fbaaa')
     comparison.save(PREVIEW/'hero-neutral-round-before-after.png')
 print('Atlas PNG/JSON, GIF, offline HTML and contact previews saved')
+
+if args.rear_before_dir:
+    before=Image.open(args.rear_before_dir/'hero-neutral-walk.png').convert('RGBA')
+    row=DIRECTIONS.index('up')
+    old_size=before.height//4
+    old=[before.crop((i*old_size,row*old_size,(i+1)*old_size,(row+1)*old_size)) for i in range(8)]
+    new=packed['walk'][row]
+    board=Image.new('RGB',(1220,410),'#152125');d=ImageDraw.Draw(board)
+    d.text((24,15),'무속성 주인공 · 뒷모습 걷기 수정',font=font(23),fill='#f2efd7')
+    d.text((24,52),'팔은 몸 앞에 가려지고, 뒤꿈치는 좌우로 교차 · 잎 뒷면과 등 명암',font=font(14),fill='#b0c4ae')
+    for r,(label,frames) in enumerate([('수정 전',old),('수정 후',new)]):
+        y=95+r*150;d.text((10,y+48),label,font=font(14),fill='#dae5c5')
+        for i,sprite in enumerate(frames):
+            x=94+i*140;d.rounded_rectangle((x,y,x+127,y+127),radius=8,fill='#233231')
+            paste_scaled(board,sprite,x,y,128)
+            d.text((x+5,y+130),str(i),font=font(11),fill='#9fbaaa')
+    board.save(PREVIEW/'hero-neutral-rear-before-after.png')
+    base=Image.new('RGB',(700,368),'#152125');d=ImageDraw.Draw(base)
+    d.text((24,14),'무속성 · 화면 위쪽으로 걸어가는 뒷모습',font=font(21),fill='#f2efd7')
+    for col,label in enumerate(['수정 전','수정 후']):
+        x=20+col*350;d.rounded_rectangle((x,62,x+309,329),radius=12,fill='#233231')
+        d.text((x+155,337),label,anchor='mt',font=font(14),fill='#b0c4ae')
+    motion=[]
+    for i in range(8):
+        frame=base.copy()
+        for col,sprite in enumerate([old[i],new[i]]):paste_scaled(frame,sprite,47+col*350,66,256)
+        motion.append(frame)
+    palette=motion[0].quantize(colors=256,method=Image.Quantize.MEDIANCUT)
+    motion=[im.quantize(palette=palette,dither=Image.Dither.NONE) for im in motion]
+    motion[0].save(PREVIEW/'hero-neutral-rear-before-after.gif',save_all=True,
+                   append_images=motion[1:],duration=100,loop=0,disposal=2,optimize=False)
+    print('Rear-view before/after contact and 10fps motion preview saved')

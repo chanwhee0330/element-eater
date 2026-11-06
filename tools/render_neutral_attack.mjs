@@ -1,5 +1,5 @@
 // node tools/render_neutral_attack.mjs [--pixelfx ../pixelfx] [--draft DIR] [--check]
-import { mkdirSync,writeFileSync,existsSync,rmSync } from 'node:fs';
+import { mkdirSync,writeFileSync,readFileSync,existsSync,rmSync } from 'node:fs';
 import { resolve,dirname,join } from 'node:path';
 import { pathToFileURL,fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -8,6 +8,7 @@ import { makeHeroAttack,ATTACK_TIMING,MUZZLES } from '../assets/sprites/hero/neu
 import { makeNeutralFx } from '../assets/effects/neutral/source/neutral-fx.mjs';
 import { DIRECTIONS } from '../assets/sprites/hero/neutral/source/legacy/hero-neutral.mjs';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..'), args=process.argv.slice(2);
+const {neutralCombat}=JSON.parse(readFileSync(join(ROOT,'assets/sprites/hero/neutral/source/raster/manifest.json'),'utf8'));
 const value=(key,fallback)=>args.includes(key)?args[args.indexOf(key)+1]:fallback;
 const FX=resolve(ROOT,value('--pixelfx','../pixelfx'));
 const DRAFT=args.includes('--draft')?resolve(ROOT,value('--draft')):null;
@@ -54,8 +55,8 @@ function atlas(folder,name,kind,factory){
     generator:{tool:'pixelfx',version:'0.3.0',command:'node tools/render_neutral_attack.mjs'}};
   if(kind==='attack'){
     json.timing=ATTACK_TIMING;json.muzzlePixelsTopLeft=Object.fromEntries(DIRECTIONS.map(d=>[d,{x:MUZZLES[d][0],y:MUZZLES[d][1]}]));
-    json.drawProjectileBehindHero=['up'];json.damage=0;json.knockback={regularEnemyPixels:12,bossPixels:4,seconds:.1,status:'initial-proposal'};
-    json.note='무속성은 피해 없이 약한 넉백만 준다. 모션 종료 뒤 idle로 전환한다. 실제 게임 판정은 미구현.';
+    json.drawProjectileBehindHero=['up'];Object.assign(json,neutralCombat);
+    json.note='무속성은 적 원소와 관계없이 낮은 피해와 약한 넉백을 준다. 피해 수치와 넉백 거리는 시험값. 모션 종료 뒤 idle로 전환한다. 실제 게임 판정은 미구현.';
   }
   if(kind==='projectile')json.staticImage='neutral-projectile.png';
   mkdirSync(folder,{recursive:true});writeFileSync(join(folder,`${name}.png`),png);writeFileSync(join(folder,`${name}.json`),JSON.stringify(json,null,2)+'\n');

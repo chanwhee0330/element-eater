@@ -1,0 +1,22 @@
+{
+  "schema": "element-eater.map-recipe.v1",
+  "id": "base-room",
+  "name": "기본 크기 비교 맵",
+  "columns": 30,
+  "rows": 30,
+  "unitPixels": 64,
+  "wallThicknessUnits": 1,
+  "seed": 1103,
+  "tileSource": "tiles-source.png",
+  "sourceGrid": { "columns": 2, "rows": 2 },
+  "player": {
+    "heightUnits": 1,
+    "referenceState": "idle",
+    "referenceDirection": "down",
+    "referenceFrame": 0,
+    "referenceAlphaThreshold": 96,
+    "spawnCenter": { "x": 15, "y": 15 },
+    "previewSpeedUnitsPerSecond": 5,
+    "speedStatus": "initial-proposal"
+  }
+}

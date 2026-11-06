@@ -1,30 +1,105 @@
 {
-  "version": 2,
+  "version": 5,
   "artTool": "image_gen (built-in)",
   "reference": "../../../../../concepts/neutral-style-reference.png",
-  "sourceGrid": { "columns": 8, "rows": 4 },
-  "directions": ["down", "left", "right", "up"],
+  "sourceGrid": {
+    "columns": 8,
+    "rows": 4
+  },
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
   "frameSize": 128,
-  "pivot": [64, 114],
+  "pivot": [
+    64,
+    114
+  ],
   "sourceScale": 0.53,
   "recommendedDrawScale": 0.5,
   "states": {
-    "idle": { "source": "idle-source.png", "fps": 4, "loop": true },
-    "walk": { "source": "walk-source.png", "fps": 10, "loop": true },
-    "attack": { "source": "attack-source.png", "fps": 12, "loop": false }
+    "idle": {
+      "source": "idle-source.png",
+      "fps": 4,
+      "loop": true
+    },
+    "walk": {
+      "source": "walk-source.png",
+      "fps": 10,
+      "loop": true
+    },
+    "attack": {
+      "source": "attack-source.png",
+      "fps": 12,
+      "loop": false
+    }
   },
   "attackTiming": {
     "windup": 0.25,
     "releaseFrame": 3,
     "releaseTime": 0.25,
     "recoveryEnd": 0.6666666666666666,
-    "phases": { "prepare": [0,2], "release": [3,3], "recoil": [4,4], "recover": [5,7] }
+    "phases": {
+      "prepare": [
+        0,
+        2
+      ],
+      "release": [
+        3,
+        3
+      ],
+      "recoil": [
+        4,
+        4
+      ],
+      "recover": [
+        5,
+        7
+      ]
+    }
   },
   "muzzlePixelsTopLeft": {
-    "down": { "x": 64, "y": 92 },
-    "left": { "x": 20, "y": 80 },
-    "right": { "x": 108, "y": 80 },
-    "up": { "x": 64, "y": 38 }
+    "down": {
+      "x": 64,
+      "y": 92
+    },
+    "left": {
+      "x": 20,
+      "y": 80
+    },
+    "right": {
+      "x": 108,
+      "y": 80
+    },
+    "up": {
+      "x": 64,
+      "y": 38
+    }
   },
-  "notes": "원화의 RGBA를 유지하고 칸 분리·균일 배율·발밑 정렬·아틀라스 조립만 한다. 공격 0·7번은 같은 방향의 대기 0번을 사용해 시작과 복귀를 연결한다."
+  "notes": "원화 RGBA를 유지하고 칸 분리·균일 배율·발밑 정렬·아틀라스 조립만 한다. up은 rear-source.png의 대기·걷기·공격 3행으로 교체하며 나머지 방향의 원화와 배율은 유지한다. 새 원화의 몸 바깥 저알파 노이즈는 실체 경계+6px의 사각 크롭으로 제외하며 크롭 내부 알파는 변경하지 않는다. 공격 0·7번은 같은 방향의 대기 0번으로 연결한다. 사용자 최종 요청: 뒷면도 정면과 같은 밝은 아이보리 몸과 초록 잎 색을 사용하며, 뒷면만 어둡게 표현하지 않는다.",
+  "directionOverrides": {
+    "up": {
+      "source": "rear-source.png",
+      "rows": [
+        "idle",
+        "walk",
+        "attack"
+      ],
+      "sourceScale": 0.51,
+      "trimMargin": 6
+    }
+  },
+  "neutralCombat": {
+    "damage": 5,
+    "damageStatus": "initial-proposal",
+    "ignoresElementMatch": true,
+    "knockback": {
+      "regularEnemyPixels": 12,
+      "bossPixels": 4,
+      "seconds": 0.1,
+      "status": "initial-proposal"
+    }
+  }
 }

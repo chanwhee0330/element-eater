@@ -1,0 +1,11 @@
+{
+  "schema": "element-eater.camera-preview.v1",
+  "resolution": { "width": 1280, "height": 720 },
+  "viewUnits": { "width": 16, "height": 9 },
+  "cameraCenter": { "x": 15, "y": 11 },
+  "playerCenter": { "x": 15, "y": 12 },
+  "playerDirection": "down",
+  "playerFrame": 0,
+  "hudSample": { "health": 100, "maxHealth": 100, "room": "01 · 첫 섭취", "element": "무속성", "heldElements": [] },
+  "note": "기존 30×30 맵 일부를 보여주는 인게임 구도 시안. 카메라 범위·위치와 HUD 수치는 예시이며 실제 전투 구현이나 최종 카메라 규칙이 아니다."
+}

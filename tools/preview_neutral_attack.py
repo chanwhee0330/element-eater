@@ -20,6 +20,9 @@ HERO_SIZE = hero_data['frameSize']['width']
 first_frame = next(iter(hero_data['frames'].values()))
 HERO_PIVOT = (first_frame['pivotPixelsTopLeft']['x'], first_frame['pivotPixelsTopLeft']['y'])
 HERO_GAME_SCALE = hero_data['recommendedDrawScale']
+DAMAGE = hero_data['damage']
+KNOCKBACK = hero_data['knockback']
+DUMMY_HP = 100
 
 def frame(sheet, size, direction, index):
     row = ['down', 'left', 'right', 'up'].index(direction)
@@ -38,7 +41,7 @@ def font(size):
 base = Image.new('RGB', (760, 598), '#131b1f')
 d = ImageDraw.Draw(base)
 d.text((24,18), '엘리먼트 이터 · 무속성 공격', font=font(24), fill='#f2efd7')
-d.text((24,56), '피해 0 · 적 원소와 관계없이 약한 넉백', font=font(14), fill='#c2d5b2')
+d.text((24,56), f'낮은 피해(시험값 {DAMAGE}) · 적 원소와 관계없이 약한 넉백', font=font(14), fill='#c2d5b2')
 d.rounded_rectangle((24,94,736,358), radius=12, fill='#1d282b')
 d.text((44,111), 'Space 기본 공격 + 충격탄 + 명중 효과', font=font(13), fill='#a7bdab')
 d.line((52,327,708,327), fill='#3b4c46', width=1)
@@ -49,7 +52,7 @@ for col, label in enumerate(labels):
     x = 24+182*col
     d.rounded_rectangle((x,406,x+165,575), radius=10, fill='#1d282b')
     d.text((x+83,552), label, anchor='mt', font=font(12), fill='#a7bdab')
-d.text((24,584), '에셋 연출 미리보기 · 넉백 거리는 테스트용 초기값', font=font(10), fill='#8ca593')
+d.text((24,584), '에셋 연출 미리보기 · 피해와 넉백 거리는 테스트용 초기값 · 게임 판정 구현 전', font=font(10), fill='#8ca593')
 
 # A simple neutral dummy exists only in this preview, not in the game's enemy asset set.
 dummy = Image.new('RGBA', (30,34))
@@ -79,11 +82,14 @@ for tick in range(total):
     attack_index = min(7, int(t*12))
     current = frame(hero,HERO_SIZE,'right',attack_index) if t<8/12 else frame(idle,HERO_SIZE,'right',0)
     paste_center(image,current,hero_foot,3*HERO_GAME_SCALE,HERO_PIVOT)
-    progress = min(1,max(0,(t-hit_time)/.1))
-    push = 12*3*(1-(1-progress)**3) if t>=hit_time else 0
+    progress = min(1,max(0,(t-hit_time)/KNOCKBACK['seconds']))
+    push = KNOCKBACK['regularEnemyPixels']*3*(1-(1-progress)**3) if t>=hit_time else 0
     paste_center(image,dummy,(target[0]+push,276),3,(15,17))
-    draw.text((target[0]+push,209), 'HP 100 / 100', anchor='mt', font=font(12), fill='#c2d5b2')
-    draw.rectangle((target[0]-35+push,230,target[0]+35+push,235), fill='#91b16d')
+    hp = max(0,DUMMY_HP-DAMAGE) if t>=hit_time else DUMMY_HP
+    draw.text((target[0]+push,209), f'HP {hp} / {DUMMY_HP}', anchor='mt', font=font(12), fill='#c2d5b2')
+    bar_left=target[0]-35+push
+    draw.rectangle((bar_left,230,bar_left+70,235), fill='#493d36')
+    if hp>0: draw.rectangle((bar_left,230,bar_left+70*hp/DUMMY_HP,235), fill='#91b16d')
     if release<=t<hit_time:
         x = muzzle[0]+(t-release)*280*3
         shot, _ = effects['projectile']
@@ -95,7 +101,7 @@ for tick in range(total):
         impact, _ = effects['impact']
         paste_center(image,frame(impact,48,'right',min(7,int((t-hit_time)*16))),(hit_x+push,muzzle[1]))
     if t>=hit_time:
-        draw.text((565,337),'피해 0 · 살짝 밀림',anchor='mt',font=font(12),fill='#e6dcc1')
+        draw.text((565,337),f'피해 {DAMAGE} · 살짝 밀림',anchor='mt',font=font(12),fill='#e6dcc1')
     for col,direction in enumerate(['down','left','right','up']):
         spr=frame(hero,HERO_SIZE,direction,attack_index) if t<8/12 else frame(idle,HERO_SIZE,direction,0)
         paste_center(image,spr,(24+182*col+83,536),2*HERO_GAME_SCALE,HERO_PIVOT)
@@ -114,4 +120,4 @@ for row,kind in enumerate(['projectile','muzzle','impact']):
         sprite=frame(sheet,size,'right',i)
         paste_center(contact,sprite,(94+i*140+64,y+48),96/size)
 contact.save(OUT/'neutral-attack-contact.png')
-print('neutral-attack-preview.gif: 1.6s loop, HP unchanged, 12px example knockback')
+print(f'neutral-attack-preview.gif: 1.6s loop, HP {DUMMY_HP} -> {max(0,DUMMY_HP-DAMAGE)}, {KNOCKBACK["regularEnemyPixels"]}px example knockback (proposed values; not gameplay)')

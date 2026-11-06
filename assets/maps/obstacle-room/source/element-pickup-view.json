@@ -1,0 +1,13 @@
+{
+  "schema": "element-eater.pickup-view.v1",
+  "camera": "ingame-view.json",
+  "catalog": "../../../items/elements/element-pickups.json",
+  "placements": [
+    {"element": "water", "ground": {"x": 14.0, "y": 12.8}, "phaseSeconds": 0.0},
+    {"element": "fire", "ground": {"x": 10.5, "y": 11.5}, "phaseSeconds": 0.17},
+    {"element": "wind", "ground": {"x": 16.5, "y": 9.8}, "phaseSeconds": 0.31},
+    {"element": "earth", "ground": {"x": 18.2, "y": 13.8}, "phaseSeconds": 0.4},
+    {"element": "lightning", "ground": {"x": 11.8, "y": 13.8}, "phaseSeconds": 0.63}
+  ],
+  "note": "다섯 먹이의 크기와 반복 동작을 한 화면에서 비교하는 배치 시안. ground는 발밑 좌표이며 안전 바닥에만 놓는다. 1번 방의 실제 먹이 구성을 다섯 종류로 바꾸는 설정이 아니며 F 섭취·보관·전투는 구현하지 않는다."
+}

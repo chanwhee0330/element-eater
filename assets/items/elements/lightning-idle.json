@@ -1,0 +1,350 @@
+{
+  "frames": {
+    "lightning_idle_00": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "solidBounds": [
+        24,
+        10,
+        104,
+        114
+      ]
+    },
+    "lightning_idle_01": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        128,
+        0,
+        256,
+        128
+      ],
+      "solidBounds": [
+        15,
+        10,
+        104,
+        114
+      ]
+    },
+    "lightning_idle_02": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        256,
+        0,
+        384,
+        128
+      ],
+      "solidBounds": [
+        13,
+        10,
+        104,
+        114
+      ]
+    },
+    "lightning_idle_03": {
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        384,
+        0,
+        512,
+        128
+      ],
+      "solidBounds": [
+        24,
+        10,
+        115,
+        114
+      ]
+    },
+    "lightning_idle_04": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        512,
+        0,
+        640,
+        128
+      ],
+      "solidBounds": [
+        24,
+        10,
+        115,
+        114
+      ]
+    },
+    "lightning_idle_05": {
+      "frame": {
+        "x": 640,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        640,
+        0,
+        768,
+        128
+      ],
+      "solidBounds": [
+        24,
+        10,
+        114,
+        114
+      ]
+    },
+    "lightning_idle_06": {
+      "frame": {
+        "x": 768,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        768,
+        0,
+        896,
+        128
+      ],
+      "solidBounds": [
+        24,
+        10,
+        104,
+        114
+      ]
+    },
+    "lightning_idle_07": {
+      "frame": {
+        "x": 896,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 100.0,
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 128
+      },
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      },
+      "sourceCell": [
+        896,
+        0,
+        1024,
+        128
+      ],
+      "solidBounds": [
+        24,
+        10,
+        104,
+        114
+      ]
+    }
+  },
+  "meta": {
+    "image": "lightning-idle.png",
+    "size": {
+      "w": 1024,
+      "h": 128
+    },
+    "scale": "1",
+    "frameTags": [
+      {
+        "name": "idle",
+        "from": 0,
+        "to": 7,
+        "direction": "forward"
+      }
+    ],
+    "animation": {
+      "fps": 10,
+      "frameCount": 8,
+      "loop": true,
+      "seconds": 0.8,
+      "pivotPixelsTopLeft": {
+        "x": 64,
+        "y": 114
+      }
+    },
+    "source": "source/layers/lightning-baked.png",
+    "sourceGrid": {
+      "columns": 8,
+      "rows": 1
+    },
+    "sourceSha256": "1389f03e6e7d63d3ea80d3dc7befffaabe679b826ffcdbafa9775b9f0630762b",
+    "packingScale": 1.0,
+    "layeredAnimation": {
+      "method": "static-battery-bolt-pulse-and-exterior-sparks",
+      "boltMask": "source/layers/lightning-bolt-mask.png",
+      "boltPulse": [
+        0.0,
+        0.12,
+        0.55,
+        1.0,
+        0.85,
+        0.45,
+        0.12,
+        0.0
+      ],
+      "fixedMask": "source/layers/lightning-fixed-mask.png",
+      "fixedBody": "source/layers/lightning-fixed-body.png",
+      "fixedPixelsVerified": true
+    }
+  }
+}

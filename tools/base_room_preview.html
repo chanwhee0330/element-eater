@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>엘리먼트 이터 · MAP_TITLE 30×30</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #15241e; color: #f5efda; font: 15px/1.5 system-ui, sans-serif; }
+    main { max-width: 1040px; margin: 28px auto; padding: 0 22px; }
+    header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 26px; font-weight: 600; margin: 0; }
+    header span { color: #b7c9b2; }
+    p { color: #bac8b3; margin: 10px 0; }
+    .controls { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 20px 0 8px; }
+    label { display: flex; align-items: center; gap: 7px; }
+    input { accent-color: #cedd9d; width: 17px; height: 17px; }
+    button { border: 1px solid #65785c; border-radius: 7px; background: #2d4331; color: #f5efda; padding: 8px 13px; font: inherit; cursor: pointer; }
+    button:hover { background: #3b5340; }
+    canvas { width: 100%; aspect-ratio: 1 / 1.04; display: block; outline-offset: 3px; touch-action: manipulation; }
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; color: #acbda5; margin: 8px 0 20px; }
+    kbd { font: inherit; color: #f5efda; }
+    #error { color: #ffb8a0; }
+    @media (max-width: 540px) { main { margin: 18px auto; padding: 0 12px; } h1 { font-size: 22px; } .controls { gap: 12px; font-size: 14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><h1>MAP_TITLE · 30×30</h1><span>플레이어 크기 1</span></header>
+    <p>캐릭터의 잎부터 발끝까지 높이 = 바닥 1칸 · 전체 900칸, 외곽 벽 포함</p>
+    <div class="controls">
+      <label><input id="grid" type="checkbox" GRID_CHECKED>1칸 눈금</label>
+      <label><input id="marker" type="checkbox" checked>이름·크기 표시</label>
+      <button id="center" type="button">중앙으로</button>
+    </div>
+    <p id="error" role="alert" hidden></p>
+    <canvas id="map" tabindex="0" role="application" aria-label="30칸 가로, 30칸 세로의 기본 맵. 중앙에 높이 1칸 플레이어. 맵을 누른 뒤 WASD 또는 방향키로 움직일 수 있습니다.">30×30 기본 맵과 중앙의 1칸 높이 플레이어</canvas>
+    <footer><span>맵 클릭 후 <kbd>W A S D</kbd> 또는 방향키로 이동</span><span id="position">중심 위치 (15.0, 15.0)</span></footer>
+    <p id="terrain" aria-live="polite">HAZARD_HELP</p>
+  </main>
+  <script>PREVIEW_SCRIPT</script>
+</body>
+</html>

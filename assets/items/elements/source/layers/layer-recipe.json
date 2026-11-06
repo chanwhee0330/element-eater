@@ -1,0 +1,8 @@
+{
+  "schema": "element-eater.fixed-pickup-layers.v1",
+  "water": {"waterClip": [42, 33, 88, 48], "effectBox": [34, 10, 96, 72]},
+  "fire": {"width": 82, "height": 51, "flameMaxWidth": 64, "flameMaxHeight": 74, "flameBaseY": 84},
+  "wind": {"axis": [64, 48], "sourceAxis": [616, 642], "rotorScale": 0.065, "hubRadius": 8, "standWidth": 36, "standHeight": 72, "protectedStandY": 90, "frameCount": 24},
+  "lightning": {"offWidth": 80, "offHeight": 104, "boltRegion": [43, 46, 88, 103], "boltPulse": [0.0, 0.12, 0.55, 1.0, 0.85, 0.45, 0.12, 0.0]},
+  "earth": {"fixedWidth": 96, "fixedHeight": 92, "fixedPivot": [70, 114], "smallWidth": 49, "smallHeight": 45, "smallGround": [34, 114], "smallRotationCenter": [34, 110], "motion": [[0, 0], [-1, -2], [-3, -3], [-4, -1], [-3, 1], [-2, 3], [-1, 2], [0, 1]]}
+}

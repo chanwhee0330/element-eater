@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>엘리먼트 이터 · 원소 먹이 애니메이션</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10221c;color:#efe9d3;font:15px 'Malgun Gothic',sans-serif}main{max-width:1320px;margin:auto;padding:22px 20px 30px}h1{font-size:23px;margin:0 0 8px}p{color:#b8c7ab;margin:8px 0 15px;line-height:1.65}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}button,select{background:#2d4938;color:#f4efd9;border:1px solid #6c8159;border-radius:7px;padding:9px 13px;font:inherit;cursor:pointer}button:hover{background:#3a5944}button:focus-visible,select:focus-visible{outline:2px solid #d6e2a8;outline-offset:3px}canvas{display:block;width:100%;height:auto;border-radius:12px;border:1px solid #526745}#gallery{margin-top:16px}#status{font-variant-numeric:tabular-nums;color:#bdcca9}label{display:flex;gap:9px;align-items:center}.note{font-size:13px;margin-top:16px}a{color:#d4e2b3}
+</style>
+<main>
+<h1>원소 먹이 · 맵 대기 애니메이션</h1>
+<p>불꽃은 장작 위에서, 흙은 왼쪽 아래 돌만 움직입니다. 전지는 중앙 번개 표시의 점멸과 양옆 스파크를 함께 재생합니다.</p>
+<div class="controls"><button id="play" type="button">일시정지</button><button id="step" type="button">한 프레임</button><button id="reset" type="button">처음부터</button><label>재생 속도<select id="speed"><option value="0.5">0.5배</option><option value="1" selected>1배</option><option value="2">2배</option></select></label><output id="status" aria-live="off">이미지 불러오는 중</output></div>
+<canvas id="map" width="1280" height="720" aria-label="기존 맵에 원소 다섯 종류가 움직이는 예시"></canvas>
+<canvas id="gallery" width="1280" height="350" aria-label="원소별 확대 애니메이션 비교"></canvas>
+<p class="note">128×128px 칸을 반복 재생합니다. 바람은 24프레임, 나머지는 8프레임입니다. 위 화면은 기존 30×30 맵 중 16×9칸을 사용한 배치 시안입니다. 실제 먹기·보관·전투는 이후 게임 구현에 연결합니다.</p>
+<p class="note" id="error" role="alert"></p>
+</main>
+<script id="assets" type="application/json">__PAYLOAD__</script>
+<script>__SCRIPT__</script>
+</html>

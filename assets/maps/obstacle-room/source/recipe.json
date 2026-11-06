@@ -1,0 +1,39 @@
+{
+  "schema": "element-eater.map-recipe.v1",
+  "id": "obstacle-room",
+  "name": "장애물 배치 예시",
+  "columns": 30,
+  "rows": 30,
+  "unitPixels": 64,
+  "wallThicknessUnits": 1,
+  "seed": 1103,
+  "tileSource": "../../base-room/source/tiles-source.png",
+  "sourceGrid": { "columns": 2, "rows": 2 },
+  "hazardSources": { "pit": "pit-source.png", "spikes": "spikes-source.png" },
+  "regions": [
+    { "kind": "wall", "x": 18, "y": 5, "width": 1, "height": 6 },
+    { "kind": "wall", "x": 18, "y": 5, "width": 5, "height": 1 },
+    { "kind": "wall", "x": 6, "y": 18, "width": 6, "height": 1 },
+    { "kind": "wall", "x": 6, "y": 18, "width": 1, "height": 5 },
+    { "kind": "pit", "x": 6, "y": 6, "width": 5, "height": 3 },
+    { "kind": "pit", "x": 20, "y": 18, "width": 4, "height": 4 },
+    { "kind": "spikes", "x": 20, "y": 11, "width": 4, "height": 2 },
+    { "kind": "spikes", "x": 10, "y": 23, "width": 4, "height": 2 }
+  ],
+  "previewLabels": [
+    { "text": "구멍", "anchor": { "x": 8.5, "y": 7.5 }, "label": { "x": 8.5, "y": 4.6 } },
+    { "text": "벽", "anchor": { "x": 18.5, "y": 8 }, "label": { "x": 22, "y": 8 } },
+    { "text": "가시", "anchor": { "x": 22, "y": 12 }, "label": { "x": 25.5, "y": 14.7 } }
+  ],
+  "previewHazards": { "fallSeconds": 0.6, "spikeFlashSeconds": 0.35, "spikeRepeatSeconds": 1, "damageImplemented": false, "status": "visual-preview-only" },
+  "player": {
+    "heightUnits": 1,
+    "referenceState": "idle",
+    "referenceDirection": "down",
+    "referenceFrame": 0,
+    "referenceAlphaThreshold": 96,
+    "spawnCenter": { "x": 15, "y": 15 },
+    "previewSpeedUnitsPerSecond": 5,
+    "speedStatus": "initial-proposal"
+  }
+}

@@ -48,7 +48,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/idle-source.png",
+        "row": 0
       }
     },
     "down_1": {
@@ -76,7 +78,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 1
+        "frame": 1,
+        "image": "source/raster/attack-source.png",
+        "row": 0
       }
     },
     "down_2": {
@@ -104,7 +108,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 2
+        "frame": 2,
+        "image": "source/raster/attack-source.png",
+        "row": 0
       }
     },
     "down_3": {
@@ -132,7 +138,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 3
+        "frame": 3,
+        "image": "source/raster/attack-source.png",
+        "row": 0
       }
     },
     "down_4": {
@@ -160,7 +168,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 4
+        "frame": 4,
+        "image": "source/raster/attack-source.png",
+        "row": 0
       }
     },
     "down_5": {
@@ -188,7 +198,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 5
+        "frame": 5,
+        "image": "source/raster/attack-source.png",
+        "row": 0
       }
     },
     "down_6": {
@@ -216,7 +228,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 6
+        "frame": 6,
+        "image": "source/raster/attack-source.png",
+        "row": 0
       }
     },
     "down_7": {
@@ -244,7 +258,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/idle-source.png",
+        "row": 0
       }
     },
     "left_0": {
@@ -272,7 +288,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/idle-source.png",
+        "row": 1
       }
     },
     "left_1": {
@@ -300,7 +318,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 1
+        "frame": 1,
+        "image": "source/raster/attack-source.png",
+        "row": 1
       }
     },
     "left_2": {
@@ -328,7 +348,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 2
+        "frame": 2,
+        "image": "source/raster/attack-source.png",
+        "row": 1
       }
     },
     "left_3": {
@@ -356,7 +378,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 3
+        "frame": 3,
+        "image": "source/raster/attack-source.png",
+        "row": 1
       }
     },
     "left_4": {
@@ -384,7 +408,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 4
+        "frame": 4,
+        "image": "source/raster/attack-source.png",
+        "row": 1
       }
     },
     "left_5": {
@@ -412,7 +438,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 5
+        "frame": 5,
+        "image": "source/raster/attack-source.png",
+        "row": 1
       }
     },
     "left_6": {
@@ -440,7 +468,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 6
+        "frame": 6,
+        "image": "source/raster/attack-source.png",
+        "row": 1
       }
     },
     "left_7": {
@@ -468,7 +498,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/idle-source.png",
+        "row": 1
       }
     },
     "right_0": {
@@ -496,7 +528,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/idle-source.png",
+        "row": 2
       }
     },
     "right_1": {
@@ -524,7 +558,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 1
+        "frame": 1,
+        "image": "source/raster/attack-source.png",
+        "row": 2
       }
     },
     "right_2": {
@@ -552,7 +588,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 2
+        "frame": 2,
+        "image": "source/raster/attack-source.png",
+        "row": 2
       }
     },
     "right_3": {
@@ -580,7 +618,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 3
+        "frame": 3,
+        "image": "source/raster/attack-source.png",
+        "row": 2
       }
     },
     "right_4": {
@@ -608,7 +648,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 4
+        "frame": 4,
+        "image": "source/raster/attack-source.png",
+        "row": 2
       }
     },
     "right_5": {
@@ -636,7 +678,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 5
+        "frame": 5,
+        "image": "source/raster/attack-source.png",
+        "row": 2
       }
     },
     "right_6": {
@@ -664,7 +708,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 6
+        "frame": 6,
+        "image": "source/raster/attack-source.png",
+        "row": 2
       }
     },
     "right_7": {
@@ -692,7 +738,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/idle-source.png",
+        "row": 2
       }
     },
     "up_0": {
@@ -708,9 +756,9 @@
       },
       "opaqueBoundsInCell": {
         "x0": 19,
-        "y0": 16,
-        "x1": 109,
-        "y1": 121
+        "y0": 13,
+        "x1": 114,
+        "y1": 116
       },
       "pico2dClip": {
         "left": 0,
@@ -720,7 +768,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/rear-source.png",
+        "row": 0
       }
     },
     "up_1": {
@@ -735,10 +785,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": {
-        "x0": 17,
-        "y0": 18,
-        "x1": 120,
-        "y1": 116
+        "x0": 18,
+        "y0": 24,
+        "x1": 113,
+        "y1": 115
       },
       "pico2dClip": {
         "left": 128,
@@ -748,7 +798,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 1
+        "frame": 1,
+        "image": "source/raster/rear-source.png",
+        "row": 2
       }
     },
     "up_2": {
@@ -763,10 +815,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": {
-        "x0": 13,
-        "y0": 16,
-        "x1": 112,
-        "y1": 115
+        "x0": 19,
+        "y0": 27,
+        "x1": 114,
+        "y1": 116
       },
       "pico2dClip": {
         "left": 256,
@@ -776,7 +828,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 2
+        "frame": 2,
+        "image": "source/raster/rear-source.png",
+        "row": 2
       }
     },
     "up_3": {
@@ -791,8 +845,8 @@
         "y": 114
       },
       "opaqueBoundsInCell": {
-        "x0": 11,
-        "y0": 12,
+        "x0": 19,
+        "y0": 9,
         "x1": 113,
         "y1": 116
       },
@@ -804,7 +858,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 3
+        "frame": 3,
+        "image": "source/raster/rear-source.png",
+        "row": 2
       }
     },
     "up_4": {
@@ -819,10 +875,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": {
-        "x0": 14,
-        "y0": 16,
-        "x1": 114,
-        "y1": 114
+        "x0": 20,
+        "y0": 15,
+        "x1": 113,
+        "y1": 116
       },
       "pico2dClip": {
         "left": 512,
@@ -832,7 +888,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 4
+        "frame": 4,
+        "image": "source/raster/rear-source.png",
+        "row": 2
       }
     },
     "up_5": {
@@ -847,10 +905,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": {
-        "x0": 15,
-        "y0": 20,
-        "x1": 116,
-        "y1": 115
+        "x0": 20,
+        "y0": 17,
+        "x1": 113,
+        "y1": 116
       },
       "pico2dClip": {
         "left": 640,
@@ -860,7 +918,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 5
+        "frame": 5,
+        "image": "source/raster/rear-source.png",
+        "row": 2
       }
     },
     "up_6": {
@@ -875,10 +935,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": {
-        "x0": 17,
-        "y0": 20,
-        "x1": 111,
-        "y1": 114
+        "x0": 20,
+        "y0": 16,
+        "x1": 112,
+        "y1": 116
       },
       "pico2dClip": {
         "left": 768,
@@ -888,7 +948,9 @@
       },
       "sourcePose": {
         "state": "attack",
-        "frame": 6
+        "frame": 6,
+        "image": "source/raster/rear-source.png",
+        "row": 2
       }
     },
     "up_7": {
@@ -904,9 +966,9 @@
       },
       "opaqueBoundsInCell": {
         "x0": 19,
-        "y0": 16,
-        "x1": 109,
-        "y1": 121
+        "y0": 13,
+        "x1": 114,
+        "y1": 116
       },
       "pico2dClip": {
         "left": 896,
@@ -916,7 +978,9 @@
       },
       "sourcePose": {
         "state": "idle",
-        "frame": 0
+        "frame": 0,
+        "image": "source/raster/rear-source.png",
+        "row": 0
       }
     }
   },
@@ -978,10 +1042,16 @@
       "loop": false
     }
   },
-  "sha256": "cccfcba9acc52f28eb36f14734c0bac3711fe3c6e81285b547d09c6c5471fbef",
+  "sha256": "4f4b72151603a3fb57bf02aecb190970297554539e3ab4a358b212a96e8eadf8",
   "generator": {
     "tool": "image_gen + RGBA atlas packing",
     "source": "source/raster/attack-source.png",
+    "directionOverrides": {
+      "up": {
+        "source": "source/raster/rear-source.png",
+        "uniformSourceScale": 0.50898
+      }
+    },
     "recipe": "source/raster/manifest.json",
     "uniformSourceScale": 0.522762,
     "command": "python tools/build_hero_sprites.py"
@@ -1031,12 +1101,14 @@
   "drawProjectileBehindHero": [
     "up"
   ],
-  "damage": 0,
+  "damage": 5,
+  "damageStatus": "initial-proposal",
+  "ignoresElementMatch": true,
   "knockback": {
     "regularEnemyPixels": 12,
     "bossPixels": 4,
     "seconds": 0.1,
     "status": "initial-proposal"
   },
-  "note": "Space 무속성 기본 공격은 피해 0·약한 넉백. 공격은 한 번 재생 후 idle, 실제 게임 판정 미구현."
+  "note": "Space 무속성 기본 공격은 적 원소와 관계없이 낮은 피해·약한 넉백. 피해 수치와 넉백 거리는 시험값. 공격은 한 번 재생 후 idle, 실제 게임 판정 미구현."
 }

@@ -46,12 +46,12 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        23,
-        14,
-        109,
+        22,
+        16,
+        110,
         111
       ]
     },
@@ -75,13 +75,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         22,
-        11,
-        110,
-        110
+        15,
+        111,
+        111
       ]
     },
     "down_2": {
@@ -104,13 +104,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        23,
-        15,
-        107,
-        115
+        22,
+        18,
+        108,
+        113
       ]
     },
     "down_3": {
@@ -133,13 +133,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        23,
-        16,
+        22,
+        18,
         109,
-        115
+        114
       ]
     },
     "down_4": {
@@ -162,13 +162,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        22,
-        11,
-        109,
-        110
+        21,
+        15,
+        110,
+        111
       ]
     },
     "down_5": {
@@ -191,12 +191,12 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        21,
-        12,
-        109,
+        22,
+        15,
+        110,
         109
       ]
     },
@@ -220,13 +220,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         22,
-        14,
+        16,
         109,
-        113
+        110
       ]
     },
     "down_7": {
@@ -249,11 +249,11 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        23,
-        14,
+        22,
+        15,
         110,
         110
       ]
@@ -278,13 +278,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         30,
-        19,
-        102,
-        114
+        22,
+        103,
+        108
       ]
     },
     "left_1": {
@@ -307,13 +307,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        19,
+        31,
+        22,
         106,
-        113
+        106
       ]
     },
     "left_2": {
@@ -336,13 +336,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        20,
+        31,
+        22,
         107,
-        114
+        108
       ]
     },
     "left_3": {
@@ -365,13 +365,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         31,
-        20,
-        107,
-        111
+        24,
+        108,
+        108
       ]
     },
     "left_4": {
@@ -394,13 +394,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         30,
-        20,
+        22,
         107,
-        114
+        109
       ]
     },
     "left_5": {
@@ -423,13 +423,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        20,
+        31,
+        22,
         105,
-        112
+        106
       ]
     },
     "left_6": {
@@ -452,13 +452,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        20,
+        31,
+        22,
         105,
-        113
+        106
       ]
     },
     "left_7": {
@@ -481,13 +481,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        19,
+        31,
+        22,
         105,
-        114
+        107
       ]
     },
     "right_0": {
@@ -510,13 +510,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        26,
-        21,
-        99,
-        111
+        25,
+        22,
+        98,
+        107
       ]
     },
     "right_1": {
@@ -539,13 +539,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         25,
-        22,
-        99,
-        112
+        23,
+        98,
+        107
       ]
     },
     "right_2": {
@@ -568,13 +568,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
+        22,
         24,
-        23,
         98,
-        112
+        108
       ]
     },
     "right_3": {
@@ -597,13 +597,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        23,
-        24,
+        22,
+        26,
         98,
-        111
+        106
       ]
     },
     "right_4": {
@@ -626,13 +626,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         22,
-        20,
-        99,
-        114
+        22,
+        98,
+        109
       ]
     },
     "right_5": {
@@ -655,13 +655,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         26,
-        21,
-        99,
-        113
+        23,
+        98,
+        107
       ]
     },
     "right_6": {
@@ -684,13 +684,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         23,
-        21,
+        23,
         98,
-        113
+        107
       ]
     },
     "right_7": {
@@ -713,13 +713,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         24,
-        21,
+        24,
         99,
-        114
+        109
       ]
     },
     "up_0": {
@@ -742,13 +742,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         22,
-        17,
-        106,
-        109
+        16,
+        105,
+        111
       ]
     },
     "up_1": {
@@ -771,13 +771,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         23,
-        15,
+        16,
         105,
-        112
+        110
       ]
     },
     "up_2": {
@@ -800,13 +800,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         24,
-        14,
-        105,
-        115
+        16,
+        104,
+        112
       ]
     },
     "up_3": {
@@ -829,12 +829,12 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        24,
-        16,
-        105,
+        23,
+        17,
+        106,
         113
       ]
     },
@@ -858,13 +858,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        22,
+        23,
         15,
-        105,
-        112
+        104,
+        110
       ]
     },
     "up_5": {
@@ -887,7 +887,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         22,
@@ -916,13 +916,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        23,
-        14,
+        22,
+        16,
         105,
-        112
+        110
       ]
     },
     "up_7": {
@@ -945,13 +945,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         23,
-        15,
+        17,
         105,
-        113
+        110
       ]
     }
   },
@@ -1015,15 +1015,15 @@
   },
   "source": "../elemental-source-v1/fire/walk-generated.png",
   "uniformSourceScale": 0.5461692,
-  "sha256": "8b9023a32c86d8013767e22dc716636eebf8d9500bf7aca35075fadd7126ac5d",
+  "sha256": "76d09a5016c1d2e5762dcd21147ced344caa0df94de4df26309b6d999b349203",
   "note": "원소별 캐릭터 애니메이션 에셋. Space 기본 공격과 R 고유 능력은 별도이며 본게임 미연결.",
   "registration": {
-    "method": "shared-torso-ellipse",
+    "method": "shared-body-color-and-spans",
     "target": [
       64.0,
-      76.38,
-      33.66,
-      31.68
+      76,
+      34,
+      28
     ],
     "pivot": [
       64,
@@ -1031,6 +1031,7 @@
     ],
     "feetNeverDefinePerFrameCenter": true,
     "sameTargetAcrossAllForms": true,
+    "normalizeWidthAndHeight": true,
     "preserveCompletePose": true,
     "rectangularFootOverwrite": false
   }

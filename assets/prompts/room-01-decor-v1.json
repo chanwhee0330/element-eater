@@ -1,0 +1,9 @@
+{
+  "tool": "built-in image_gen",
+  "use_case": "stylized-concept",
+  "reference": "assets/maps/room-01/room-01.png",
+  "reference_role": "style-and-color-only",
+  "output": "assets/maps/room-01/source/decor-atlas-v1.png",
+  "transparent_background": true,
+  "prompt": "Use case: stylized-concept. Asset type: a single 1024x1024 transparent decorative decal atlas for an existing Korean top-down 2D game, Element Eater. The supplied image is a STYLE AND COLOR REFERENCE ONLY, do not redraw its room layout. Create one square atlas divided into 2 columns and 2 rows of equal 512x512 cells, with no visible grid. One separate centered flat decorative decal in each cell, wide transparent margins so the four drawings never touch. Top left: irregular small patch of muted olive moss with a few very short grass sprouts and little earth cracks, seen from above. Top right: shallow scattered fragments of weathered tan sandstone with a little dust and moss; all fragments are very low and walkable, not large boulders. Bottom left: a worn circular sandstone floor inlay, viewed exactly from above, with a simple concentric ring and broken geometric radial engraving, like a forgotten ruin mosaic, no letters or elemental symbols; diffuse worn broken outer edge, NO opaque rectangular floor patch. Bottom right: a small low cluster of grass and tiny weathered tan stone chips with one tiny fern, low profile, no tall foliage. Match the reference's warm gray beige stone and restrained desaturated olive greens, detailed hand-painted game sprite illustration with clean readable silhouettes. Mild top-left lighting, only delicate contact shadows. These are subtle environmental decorations for sparse placement, not interactive items. True transparent background around every decal, no checkerboard painted into the pixels, no labels, no text, no UI, no characters, no weapons, no flames, no water or glowing magic, no tall pillars or collision-looking props."
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "element-eater.basic-projectiles.v1",
+  "frameSize": 160,
+  "pivot": [
+    80,
+    80
+  ],
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
+  "fps": 12,
+  "frameCount": 8,
+  "drawRatioToHero": 0.5,
+  "note": "Space 기본 공격 비행 연출 시안. 수치·발사 시점은 초기안. R 스킬 및 본게임 전투와 별도.",
+  "elements": {
+    "neutral": {
+      "name": "무속성",
+      "title": "아이보리 충격탄",
+      "description": "부드러운 압축탄과 크림색 바람 꼬리",
+      "image": "neutral-flight.png"
+    },
+    "water": {
+      "name": "물",
+      "title": "물방울탄",
+      "description": "푸른 물방울과 흐르는 물결 꼬리",
+      "image": "water-flight.png"
+    },
+    "fire": {
+      "name": "불",
+      "title": "불꽃탄",
+      "description": "뜨거운 불씨와 일렁이는 주황 불꽃",
+      "image": "fire-flight.png"
+    },
+    "wind": {
+      "name": "바람",
+      "title": "회오리탄",
+      "description": "연두색 압축 공기와 소용돌이",
+      "image": "wind-flight.png"
+    },
+    "earth": {
+      "name": "흙",
+      "title": "돌조각탄",
+      "description": "각진 황갈색 돌과 먼지·작은 파편",
+      "image": "earth-flight.png"
+    },
+    "lightning": {
+      "name": "번개",
+      "title": "전기탄",
+      "description": "노란 지그재그와 보랏빛 전기 가지",
+      "image": "lightning-flight.png"
+    }
+  }
+}

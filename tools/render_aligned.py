@@ -7,7 +7,7 @@ def render(project,out,assets=None):
     catalog=json.loads((out/'catalog.json').read_text(encoding='utf-8'))
     assets=Path(assets) if assets else out/'sprites'
     elements=catalog['elements'];states=['idle','walk','attack','ingest'];dirs=['down','left','right','up']
-    names=['정면','왼쪽','오른쪽','뒷면'];sheets={};orbs={}
+    names=['정면','왼쪽','오른쪽','뒷면'];sheets={};orbs={};projectiles={}
     (out/'previews').mkdir(exist_ok=True);(out/'orbs').mkdir(exist_ok=True)
     font=lambda size:ImageFont.truetype('C:/Windows/Fonts/malgun.ttf',size)
     for element,entry in elements.items():
@@ -15,6 +15,8 @@ def render(project,out,assets=None):
         key='water' if element=='neutral' else element
         orb=Image.open(project/f'assets/items/elements/break-release-v3/sprites/{key}-orb.png').convert('RGBA')
         orb.save(out/f'orbs/{element}-orb.png');orbs[element]=orb
+        shot=project/'assets/effects/basic-projectiles/v1'/f'{element}-flight.png'
+        if shot.exists():projectiles[element]=Image.open(shot).convert('RGBA')
     def pose(element,state,direction,t):
         row=dirs.index(direction);info=elements[element]['states'][state];phase=t%2;elapsed=None
         if info['loop']:frame=int(t*info['fps']+1e-6)%8
@@ -26,6 +28,12 @@ def render(project,out,assets=None):
         def item():
             if state=='attack' and elapsed is not None and elapsed>=.25:
                 m=elements[element]['mouths'][direction];v={'down':(0,1),'left':(-1,0),'right':(1,0),'up':(0,-1)}[direction];distance=(elapsed-.25)*160;x,y=m[0]+v[0]*distance,m[1]+v[1]*distance;size=10
+                if element in projectiles:
+                    row=dirs.index(direction);frame=int((elapsed-.25)*12+1e-6)%8
+                    art=projectiles[element].crop((frame*160,row*160,(frame+1)*160,(row+1)*160))
+                    n=round(160*scale*.5);art=art.resize((n,n),Image.Resampling.LANCZOS)
+                    image.alpha_composite(art,(round(origin[0]+x*scale-n/2),round(origin[1]+y*scale-n/2)))
+                    return
             elif state=='ingest' and t%2<.4+4/12:
                 start={'down':(64,125),'left':(12,74),'right':(116,74),'up':(64,6)}[direction];m=elements[element]['ingestMouths'][direction];p=max(0,min(1,(max(0,t%2-.4)-1/12)/(2/12)));ease=p*p*(3-2*p);x,y=start[0]+(m[0]-start[0])*ease,start[1]+(m[1]-start[1])*ease;size=21*(1-p*.9)
             else:return

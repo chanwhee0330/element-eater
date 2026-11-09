@@ -1,0 +1,22 @@
+{
+  "tool": "built-in image_gen",
+  "use_case": "stylized-concept",
+  "output": "assets/ui/title/v1/title-screen-v1.png",
+  "public_preview": "outputs/previews/title-screen/title-screen-v1.png",
+  "transparent_background": false,
+  "references": [
+    {
+      "path": "assets/sprites/hero/neutral/hero-neutral-ingest.png",
+      "role": "hero-identity-only"
+    },
+    {
+      "path": "assets/concepts/neutral-style-reference.png",
+      "role": "element-colors-and-shapes-only"
+    },
+    {
+      "path": "outputs/previews/room-01/python-start.png",
+      "role": "environment-palette-only"
+    }
+  ],
+  "prompt": "Use case: stylized-concept.\nAsset type: polished title-screen key art for the Korean 2D game \"Element Eater\", a single finished illustration, near-square landscape 1000:900 aspect ratio to match the actual game window.\nInput image 1: CHARACTER IDENTITY reference only, an existing 4-direction ingestion sprite sheet. Reinterpret its ONE hero as a larger hand-painted illustration: tiny round ivory-cream body, two green leaf ears, small rounded arms and feet, cheerful simple dark eyes, pink cheeks, and an oversized round open mouth. Do not reproduce the sprite grid or multiple poses.\nInput image 2: ELEMENT COLOR/SHAPE reference only. It shows the five elemental hero forms; do not create a lineup of five heroes. Preserve distinct blue water, orange-red fire, mint-green wind, ochre-brown earth, golden-yellow lightning.\nInput image 3: ENVIRONMENT PALETTE reference only, the actual game screen. Use its muted warm gray-brown sandstone, charcoal cavern depth, olive moss and restrained sand-gold accents. Do not copy its map layout, HUD, enemies, bars or text.\nPrimary visual story: make EATING ELEMENTAL ORBS unmistakable at first glance. ONE adorable leaf-eared ivory hero in the middle-lower part of the picture, in an expressive three-quarter view facing slightly left, eagerly opening its BIG mouth and leaning back with tiny arms out as FIVE luminous spherical elemental orbs are drawn toward its mouth along a graceful curved inhalation trail. One blue water orb is just about to enter the mouth, while the other FOUR clearly separated orbs follow along the arc: orange fire with a flame core, pale mint-green wind with a miniature swirling core and one tiny leaf, ochre earth orb with a suspended faceted stone core, yellow lightning orb with a crisp branching spark core. Keep their glowing round outer diameter visibly equal. Orbs are friendly magical food, not projectile attacks or a beam being fired; motion trails must converge INTO the mouth. The hero remains ivory, softly lit by the orb colors, not a five-color hybrid body. No giant tongue, teeth, vacuum machine, handheld weapon, backpack or clothing.\nSetting: a weathered circular sandstone dais suspended above a misty chasm, broken ancient arches and ivy receding at both side edges, very subtle faint circular floor engravings. No jar, logs, pinwheel, battery or other source object being eaten; the hero consumes released floating orbs only.\nComposition: strong readable centered silhouette, large character taking roughly 35% of canvas height, energetic orb arc framing it from the left and upper-left. Clear hierarchy: title at top, hero eating orbs in central-lower scene, quiet dark strip in the bottom 13% reserved for future coded menu buttons. Keep all important material inside the middle 85% for safe crops. Do not fill every corner with particles.\nTypography: at the upper center, large beautifully crafted readable fantasy game logo in two stacked lines: \"ELEMENT\" and \"EATER\". Worn warm ivory/sand-gold beveled stone lettering, elegant sturdy shapes, subtle organic leaf flourish and five tiny restrained elemental accent lights. Below the English logo, correctly written small centered Korean subtitle exactly \"엘리먼트 이터\". No other wording. Do NOT draw START/QUIT buttons, key prompts, HUD or developer notes into the art.\nStyle: high-quality 2D hand-painted fantasy game splash illustration, charming and inviting rather than grim or photorealistic, clean readable cartoon character matching the reference, rich atmospheric depth and tactile ancient stone. Cinematic soft rim light, warm neutral environment harmonized with the real game; colorful orbs provide limited vibrant highlights without neon rainbow clutter. Finished commercial indie game title artwork, not a screenshot of gameplay, not pixel art, not a 3D render. Full-bleed opaque image, no watermark, no border."
+}

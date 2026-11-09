@@ -997,10 +997,10 @@
     "previewSpeedUnitsPerSecond": 5,
     "speedStatus": "initial-proposal",
     "spriteFrameSize": 128,
-    "referenceSolidHeightPixels": 95,
+    "referenceSolidHeightPixels": 89,
     "referenceCenterPixelsTopLeft": {
       "x": 66.0,
-      "y": 66.5
+      "y": 65.5
     },
     "spritePivotPixelsTopLeft": {
       "x": 64,

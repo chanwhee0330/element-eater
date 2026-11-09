@@ -46,11 +46,11 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         24,
-        17,
+        21,
         108,
         109
       ]
@@ -79,13 +79,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        25,
+        24,
         21,
-        105,
-        106
+        107,
+        109
       ]
     },
     "down_2": {
@@ -112,13 +112,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         24,
-        19,
-        106,
-        111
+        21,
+        107,
+        110
       ]
     },
     "down_3": {
@@ -145,12 +145,12 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        25,
-        17,
-        105,
+        24,
+        21,
+        106,
         110
       ]
     },
@@ -178,13 +178,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         24,
-        20,
+        21,
         107,
-        112
+        110
       ]
     },
     "down_5": {
@@ -211,13 +211,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        26,
-        23,
-        105,
-        114
+        25,
+        25,
+        106,
+        110
       ]
     },
     "down_6": {
@@ -244,12 +244,12 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        24,
-        18,
-        106,
+        23,
+        23,
+        107,
         109
       ]
     },
@@ -277,11 +277,11 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         24,
-        17,
+        21,
         108,
         109
       ]
@@ -310,13 +310,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        27,
-        20,
+        26,
+        23,
         99,
-        113
+        108
       ]
     },
     "left_1": {
@@ -343,13 +343,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        21,
+        31,
+        24,
         100,
-        114
+        107
       ]
     },
     "left_2": {
@@ -376,13 +376,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         29,
-        21,
+        24,
         100,
-        113
+        107
       ]
     },
     "left_3": {
@@ -409,13 +409,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         30,
-        23,
+        24,
         100,
-        109
+        107
       ]
     },
     "left_4": {
@@ -442,13 +442,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        28,
-        21,
+        27,
+        24,
         100,
-        112
+        107
       ]
     },
     "left_5": {
@@ -475,13 +475,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         28,
-        22,
-        104,
-        113
+        25,
+        103,
+        107
       ]
     },
     "left_6": {
@@ -508,13 +508,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         30,
-        22,
+        25,
         100,
-        114
+        107
       ]
     },
     "left_7": {
@@ -541,13 +541,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        27,
-        20,
+        26,
+        23,
         99,
-        113
+        108
       ]
     },
     "right_0": {
@@ -574,13 +574,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        18,
-        101,
-        111
+        29,
+        23,
+        102,
+        107
       ]
     },
     "right_1": {
@@ -607,13 +607,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         28,
-        22,
-        99,
-        114
+        25,
+        98,
+        108
       ]
     },
     "right_2": {
@@ -640,13 +640,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        29,
-        22,
+        28,
+        25,
         100,
-        113
+        107
       ]
     },
     "right_3": {
@@ -673,13 +673,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         29,
-        21,
+        25,
         99,
-        114
+        107
       ]
     },
     "right_4": {
@@ -706,13 +706,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         28,
-        24,
-        99,
-        113
+        27,
+        101,
+        107
       ]
     },
     "right_5": {
@@ -739,13 +739,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        27,
-        27,
-        100,
-        110
+        28,
+        26,
+        101,
+        107
       ]
     },
     "right_6": {
@@ -772,13 +772,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
+        26,
         27,
-        25,
         98,
-        108
+        107
       ]
     },
     "right_7": {
@@ -805,13 +805,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        30,
-        18,
-        101,
-        111
+        29,
+        23,
+        102,
+        107
       ]
     },
     "up_0": {
@@ -838,13 +838,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        25,
-        22,
+        24,
+        23,
         109,
-        112
+        109
       ]
     },
     "up_1": {
@@ -871,13 +871,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         25,
-        23,
+        25,
         105,
-        111
+        110
       ]
     },
     "up_2": {
@@ -904,11 +904,11 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         25,
-        22,
+        24,
         105,
         110
       ]
@@ -937,13 +937,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         25,
         22,
-        104,
-        111
+        105,
+        109
       ]
     },
     "up_4": {
@@ -970,13 +970,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        25,
-        28,
-        104,
-        111
+        26,
+        27,
+        103,
+        109
       ]
     },
     "up_5": {
@@ -1003,13 +1003,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         27,
         27,
-        103,
-        113
+        102,
+        109
       ]
     },
     "up_6": {
@@ -1036,13 +1036,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
         25,
         25,
         104,
-        111
+        109
       ]
     },
     "up_7": {
@@ -1069,13 +1069,13 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ],
       "opaqueBoundsInCell": [
-        25,
-        22,
+        24,
+        23,
         109,
-        112
+        109
       ]
     }
   },
@@ -1182,12 +1182,12 @@
   "orbIsSeparate": true,
   "orbDiameterInPreviewPixels": 24,
   "registration": {
-    "method": "shared-torso-ellipse",
+    "method": "shared-body-color-and-spans",
     "target": [
       64.0,
-      76.38,
-      33.66,
-      31.68
+      76,
+      34,
+      28
     ],
     "pivot": [
       64,
@@ -1195,10 +1195,11 @@
     ],
     "feetNeverDefinePerFrameCenter": true,
     "sameTargetAcrossAllForms": true,
+    "normalizeWidthAndHeight": true,
     "preserveCompletePose": true,
     "rectangularFootOverwrite": false
   },
-  "sha256": "606fdc6b69d9d9a237e660f88f328acb75654fd60e2faae7b0b3243030b4fa03",
+  "sha256": "7ad34d2788543e87cb953979d47a96a4525c891fa117d60397852df9ca97b8c1",
   "generator": {
     "command": "python tools/build_hero_ingest.py",
     "source": "source/raster/ingest-source.png"
@@ -1215,7 +1216,7 @@
     },
     "right": {
       "x": 84,
-      "y": 72
+      "y": 71
     },
     "up": {
       "x": 64,

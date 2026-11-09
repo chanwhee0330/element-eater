@@ -1,6 +1,6 @@
 """Write one portable HTML with embedded atlases, orbs and an animated fallback."""
 from pathlib import Path
-import base64,io,json
+import base64,io,json,copy
 from PIL import Image
 
 def data_uri(path,mime='image/png'):
@@ -17,10 +17,20 @@ def make_fallback(source,destination):
     frames[0].save(destination,save_all=True,append_images=frames[1:],duration=50,loop=0,disposal=2,optimize=False)
 
 def write_standalone(template,catalog,assets,orbs,fallback,destination):
+    catalog=copy.deepcopy(catalog)
     embedded={}
     for element,entry in catalog['elements'].items():
         for info in entry['states'].values():embedded[info['image']]=data_uri(Path(assets)/info['image'])
         key=f'orbs/{element}-orb.png';embedded[key]=data_uri(Path(orbs)/f'{element}-orb.png')
+    projectile_root=Path(__file__).resolve().parents[1]/'assets/effects/basic-projectiles/v1'
+    if (projectile_root/'catalog.json').exists():
+        projectile_catalog=json.loads((projectile_root/'catalog.json').read_text(encoding='utf-8'))
+        catalog['projectiles']={}
+        for element,entry in projectile_catalog['elements'].items():
+            key=f'projectiles/{element}-flight.png'
+            embedded[key]=data_uri(projectile_root/entry['image'])
+            catalog['projectiles'][element]={'image':key,'frameSize':projectile_catalog['frameSize'],
+                'fps':projectile_catalog['fps'],'drawRatioToHero':projectile_catalog['drawRatioToHero']}
     text=Path(template).read_text(encoding='utf-8')
     text=text.replace('/* CATALOG */',json.dumps(catalog,ensure_ascii=False)).replace('/* EMBEDDED_IMAGES */',json.dumps(embedded,separators=(',',':')))
     fallback_html='<div id="fallback" style="text-align:center"><img style="width:100%;max-width:650px;height:auto" alt="기본형과 5원소의 대기, 걷기, 공격, 구슬 먹기 애니메이션" src="'+data_uri(fallback,'image/gif')+'"></div>'

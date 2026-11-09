@@ -8,7 +8,7 @@ from torso_registration import fit_torso
 ELEMENTS={'neutral':'무속성','water':'물','fire':'불','wind':'바람','earth':'흙','lightning':'번개'}
 STATES={'idle':('대기',4,True),'walk':('걷기',10,True),'attack':('기본 공격',12,False),'ingest':('구슬 먹기',12,False)}
 DIRS=['down','left','right','up']
-MODEL=(64.,76.,34.,32.)
+MODEL=(64.,76.,34.,28.)
 
 def mouth_center(image,direction):
     if direction=='up':return [64,51]
@@ -87,8 +87,8 @@ def align_assets(source,destination,report=None):
     # Keep one target geometry across all six forms/directions/states.
     global_fit=min(1.,global_fit*.99)
     assert global_fit>.65,('unexpected art extent',global_fit)
-    target=(64.,114+(MODEL[1]-114)*global_fit,MODEL[2]*global_fit,MODEL[3]*global_fit)
-    corrected={};audit=[];catalog={'schema':'element-eater.hero-animations.aligned.v2','frameSize':128,'pivot':[64,114],'torsoTarget':list(target),'registrationMethod':'shared-torso-ellipse','elementCount':len(records),'sheetCount':len(records)*4,'frameCount':len(records)*128,'elements':{}}
+    target=(64.,round(114+(MODEL[1]-114)*global_fit),round(MODEL[2]*global_fit),round(MODEL[3]*global_fit))
+    corrected={};audit=[];catalog={'schema':'element-eater.hero-animations.aligned.v3','frameSize':128,'pivot':[64,114],'torsoTarget':list(target),'registrationMethod':'shared-body-color-and-spans','elementCount':len(records),'sheetCount':len(records)*4,'frameCount':len(records)*128,'elements':{}}
     for element,states in records.items():
         corrected[element]={};entry={'name':ELEMENTS[element],'states':{},'mouths':{},'ingestMouths':{}}
         for state,rows in states.items():
@@ -99,25 +99,30 @@ def align_assets(source,destination,report=None):
                     image=pose['image'];fitted=pose['fit'].copy()
                     aligned=render_registered(image,fitted,target)
                     after=fit_torso(aligned,element,target)
-                    best_error=math.hypot(after['cx']-target[0],after['cy']-target[1]);best=(aligned,after,fitted.copy())
-                    for _ in range(5):
-                        if best_error<.35:break
+                    def error_of(measured):
+                        return sum((measured[k]-v)**2 for k,v in zip(['cx','cy','rx','ry'],target))
+                    best_error=error_of(after);best=(aligned,after,fitted.copy())
+                    for _ in range(12):
+                        if best_error<.18:break
                         fitted['cx']+=fitted['rx']/target[2]*float(np.clip(after['cx']-target[0],-2,2))
                         fitted['cy']+=fitted['ry']/target[3]*float(np.clip(after['cy']-target[1],-2,2))
+                        fitted['rx']*=float(np.clip(after['rx']/target[2],.92,1.08))
+                        fitted['ry']*=float(np.clip(after['ry']/target[3],.92,1.08))
                         candidate=render_registered(image,fitted,target)
                         measured=fit_torso(candidate,element,target)
-                        error=math.hypot(measured['cx']-target[0],measured['cy']-target[1])
+                        error=error_of(measured)
                         if error<best_error:best_error=error;best=(candidate,measured,fitted.copy())
                         after=measured
                     aligned,after,fitted=best
-                    if best_error>1:
-                        origin=fitted.copy()
-                        for dx in [-1,-.5,0,.5,1]:
-                            for dy in [-2,-1,0,1,2]:
-                                adjusted=origin.copy();adjusted['cx']+=dx*origin['rx']/target[2];adjusted['cy']+=dy*origin['ry']/target[3]
-                                candidate=render_registered(image,adjusted,target);measured=fit_torso(candidate,element,target)
-                                error=math.hypot(measured['cx']-target[0],measured['cy']-target[1])
-                                if error<best_error:best_error=error;best=(candidate,measured,adjusted)
+                    if best_error>.35:
+                        for step in [.6,.3]:
+                            for key in ['cx','cy','rx','ry']:
+                                origin=best[2].copy()
+                                for delta in [-step,step]:
+                                    adjusted=origin.copy();adjusted[key]+=delta
+                                    candidate=render_registered(image,adjusted,target);measured=fit_torso(candidate,element,target)
+                                    error=error_of(measured)
+                                    if error<best_error:best_error=error;best=(candidate,measured,adjusted)
                         aligned,after,fitted=best
                     new_row.append(aligned)
                     audit.append({'element':element,'state':state,'direction':DIRS[row],'frame':col,'before':pose['fit'],'after':after,'target':list(target),'inputTorso':fitted})
@@ -140,7 +145,7 @@ def align_assets(source,destination,report=None):
             file=folder/f'hero-{element}-{state}.png';sheet.save(file)
             meta=copy.deepcopy(states[state][0][0]['meta'])
             meta['sha256']=hashlib.sha256(file.read_bytes()).hexdigest()
-            meta['registration']={'method':'shared-torso-ellipse','target':list(target),'pivot':[64,114],'feetNeverDefinePerFrameCenter':True,'sameTargetAcrossAllForms':True,'preserveCompletePose':True,'rectangularFootOverwrite':False}
+            meta['registration']={'method':'shared-body-color-and-spans','target':list(target),'pivot':[64,114],'feetNeverDefinePerFrameCenter':True,'sameTargetAcrossAllForms':True,'normalizeWidthAndHeight':True,'preserveCompletePose':True,'rectangularFootOverwrite':False}
             for row,direction in enumerate(DIRS):
                 for col in range(8):
                     key=f'{direction}_{col}'

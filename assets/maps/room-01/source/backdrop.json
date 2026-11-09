@@ -1,0 +1,6 @@
+{
+  "source": "abyss-source-v2.png",
+  "viewport": {"width": 1000, "height": 900, "unit": 36, "left": 140, "top": 64},
+  "collision": false,
+  "description": "바닥 돌색에 맞춘 저채도 회갈색·차콜 심연과 옅은 먼지 안개. 밟을 수 없는 원경 배경."
+}

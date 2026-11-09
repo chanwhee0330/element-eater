@@ -1,0 +1,9 @@
+{
+  "tool": "built-in image_gen",
+  "use_case": "lighting-weather",
+  "edit_target": "assets/maps/room-01/source/abyss-source-v1.png",
+  "palette_reference": "outputs/previews/room-01/python-start.png",
+  "output": "assets/maps/room-01/source/abyss-source-v2.png",
+  "transparent_background": false,
+  "prompt": "Use case: lighting-weather / precise palette edit. Asset type: existing game abyss background color harmonization. Input image 1 is the EDIT TARGET, the full-bleed overhead chasm painting. Input image 2 is a PALETTE REFERENCE ONLY: use its warm gray-beige sandstone floor as the intended palette family; DO NOT reproduce its UI, platforms, characters, text, geometry or layout. Edit ONLY the coloring and tonal treatment of image 1, preserving its rock silhouettes, composition, overhead viewpoint, mist shapes and open dark center. Remove the saturated cool blue/green/teal cast. Regrade the abyss to very low-saturation warm charcoal, smoky gray-brown and faint dusty olive-gray, like the same aged sandstone ruins seen much farther down in shadow. Fog should be neutral warm smoky gray, a bit darker and quieter than before, rocks subdued dark umber-gray. Keep subtle depth separation, not a flat brown image or a pure black void. The main playable beige floor will remain substantially lighter for readability but background and floor must belong to one coherent warm, weathered stone environment. No cyan, turquoise, blue glow, orange/sepia filter, strong yellow or bright fog. Do not change any shapes, add any subjects, or insert a walkable floor. Opaque background, no UI, no labels, no text."
+}

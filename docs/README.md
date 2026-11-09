@@ -4,6 +4,7 @@
 
 | 위치 | 내용 |
 | --- | --- |
+| [design/PRD.MD](design/PRD.MD) | Python/pico2d 개발 착수 요구사항, 확정/설계안/결정 필요 구분, 단계별 완료 기준 |
 | [design/GAME_DESIGN.md](design/GAME_DESIGN.md) | 원소, 조작, 전투와 환경 퍼즐의 전체 기획 |
 | [design/STAGES_AND_BOSS.md](design/STAGES_AND_BOSS.md) | 10개 방과 원소 변환 최종 보스의 상세 설계 |
 | [development/ROADMAP.md](development/ROADMAP.md) | 개발 순서, 완료 현황과 확인할 작업 |

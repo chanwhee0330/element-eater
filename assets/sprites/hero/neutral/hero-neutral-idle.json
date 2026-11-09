@@ -36,7 +36,7 @@
       },
       "opaqueBoundsInCell": [
         24,
-        17,
+        21,
         108,
         109
       ],
@@ -54,7 +54,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_1": {
@@ -69,10 +69,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        25,
-        20,
+        24,
+        22,
         107,
-        111
+        109
       ],
       "pico2dClip": {
         "left": 128,
@@ -88,7 +88,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_2": {
@@ -104,9 +104,9 @@
       },
       "opaqueBoundsInCell": [
         24,
-        20,
+        22,
         107,
-        112
+        110
       ],
       "pico2dClip": {
         "left": 256,
@@ -122,7 +122,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_3": {
@@ -137,10 +137,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        24,
-        20,
-        106,
-        112
+        23,
+        22,
+        107,
+        109
       ],
       "pico2dClip": {
         "left": 384,
@@ -156,7 +156,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_4": {
@@ -172,9 +172,9 @@
       },
       "opaqueBoundsInCell": [
         25,
-        18,
+        20,
         107,
-        112
+        110
       ],
       "pico2dClip": {
         "left": 512,
@@ -190,7 +190,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_5": {
@@ -206,9 +206,9 @@
       },
       "opaqueBoundsInCell": [
         25,
-        19,
-        106,
-        112
+        21,
+        107,
+        110
       ],
       "pico2dClip": {
         "left": 640,
@@ -224,7 +224,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_6": {
@@ -240,9 +240,9 @@
       },
       "opaqueBoundsInCell": [
         25,
-        18,
-        106,
-        108
+        22,
+        107,
+        110
       ],
       "pico2dClip": {
         "left": 768,
@@ -258,7 +258,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "down_7": {
@@ -274,9 +274,9 @@
       },
       "opaqueBoundsInCell": [
         25,
-        20,
+        24,
         107,
-        107
+        110
       ],
       "pico2dClip": {
         "left": 896,
@@ -292,7 +292,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_0": {
@@ -307,10 +307,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        27,
-        20,
+        26,
+        23,
         99,
-        113
+        108
       ],
       "pico2dClip": {
         "left": 0,
@@ -326,7 +326,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_1": {
@@ -341,10 +341,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        27,
-        21,
+        26,
+        24,
         99,
-        113
+        108
       ],
       "pico2dClip": {
         "left": 128,
@@ -360,7 +360,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_2": {
@@ -376,9 +376,9 @@
       },
       "opaqueBoundsInCell": [
         26,
-        21,
+        24,
         99,
-        114
+        107
       ],
       "pico2dClip": {
         "left": 256,
@@ -394,7 +394,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_3": {
@@ -409,10 +409,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        28,
-        21,
-        100,
-        114
+        27,
+        24,
+        101,
+        108
       ],
       "pico2dClip": {
         "left": 384,
@@ -428,7 +428,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_4": {
@@ -444,9 +444,9 @@
       },
       "opaqueBoundsInCell": [
         27,
-        21,
+        23,
         100,
-        113
+        108
       ],
       "pico2dClip": {
         "left": 512,
@@ -462,7 +462,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_5": {
@@ -477,10 +477,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        27,
-        21,
+        26,
+        23,
         99,
-        113
+        108
       ],
       "pico2dClip": {
         "left": 640,
@@ -496,7 +496,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_6": {
@@ -511,10 +511,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        27,
-        21,
+        26,
+        24,
         99,
-        113
+        108
       ],
       "pico2dClip": {
         "left": 768,
@@ -530,7 +530,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "left_7": {
@@ -546,9 +546,9 @@
       },
       "opaqueBoundsInCell": [
         27,
-        20,
-        99,
-        113
+        23,
+        100,
+        108
       ],
       "pico2dClip": {
         "left": 896,
@@ -564,7 +564,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_0": {
@@ -579,10 +579,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        30,
-        18,
-        101,
-        111
+        29,
+        23,
+        102,
+        107
       ],
       "pico2dClip": {
         "left": 0,
@@ -598,7 +598,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_1": {
@@ -614,9 +614,9 @@
       },
       "opaqueBoundsInCell": [
         30,
-        19,
-        101,
-        112
+        22,
+        102,
+        107
       ],
       "pico2dClip": {
         "left": 128,
@@ -632,7 +632,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_2": {
@@ -647,10 +647,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        30,
-        18,
-        101,
-        111
+        29,
+        23,
+        102,
+        107
       ],
       "pico2dClip": {
         "left": 256,
@@ -666,7 +666,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_3": {
@@ -682,9 +682,9 @@
       },
       "opaqueBoundsInCell": [
         30,
-        16,
-        101,
-        112
+        21,
+        102,
+        108
       ],
       "pico2dClip": {
         "left": 384,
@@ -700,7 +700,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_4": {
@@ -715,10 +715,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        30,
-        19,
-        101,
-        113
+        29,
+        22,
+        102,
+        108
       ],
       "pico2dClip": {
         "left": 512,
@@ -734,7 +734,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_5": {
@@ -749,10 +749,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        30,
-        19,
-        101,
-        110
+        29,
+        24,
+        102,
+        108
       ],
       "pico2dClip": {
         "left": 640,
@@ -768,7 +768,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_6": {
@@ -783,10 +783,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        30,
-        20,
-        101,
-        110
+        29,
+        25,
+        102,
+        107
       ],
       "pico2dClip": {
         "left": 768,
@@ -802,7 +802,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "right_7": {
@@ -818,9 +818,9 @@
       },
       "opaqueBoundsInCell": [
         28,
-        22,
+        25,
         102,
-        110
+        108
       ],
       "pico2dClip": {
         "left": 896,
@@ -836,7 +836,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_0": {
@@ -851,10 +851,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        25,
-        22,
+        24,
+        23,
         109,
-        112
+        109
       ],
       "pico2dClip": {
         "left": 0,
@@ -870,7 +870,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_1": {
@@ -886,9 +886,9 @@
       },
       "opaqueBoundsInCell": [
         24,
-        22,
+        23,
         109,
-        110
+        109
       ],
       "pico2dClip": {
         "left": 128,
@@ -904,7 +904,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_2": {
@@ -919,10 +919,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        24,
-        20,
-        109,
-        112
+        23,
+        21,
+        110,
+        109
       ],
       "pico2dClip": {
         "left": 256,
@@ -938,7 +938,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_3": {
@@ -953,10 +953,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        25,
-        17,
-        109,
-        114
+        24,
+        20,
+        110,
+        110
       ],
       "pico2dClip": {
         "left": 384,
@@ -972,7 +972,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_4": {
@@ -987,10 +987,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        25,
+        24,
         22,
         109,
-        111
+        109
       ],
       "pico2dClip": {
         "left": 512,
@@ -1006,7 +1006,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_5": {
@@ -1022,9 +1022,9 @@
       },
       "opaqueBoundsInCell": [
         25,
-        22,
-        109,
-        113
+        23,
+        108,
+        109
       ],
       "pico2dClip": {
         "left": 640,
@@ -1040,7 +1040,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_6": {
@@ -1055,10 +1055,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        26,
-        23,
-        108,
-        113
+        27,
+        24,
+        106,
+        109
       ],
       "pico2dClip": {
         "left": 768,
@@ -1074,7 +1074,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     },
     "up_7": {
@@ -1089,10 +1089,10 @@
         "y": 114
       },
       "opaqueBoundsInCell": [
-        26,
-        21,
+        25,
+        24,
         108,
-        113
+        109
       ],
       "pico2dClip": {
         "left": 896,
@@ -1108,7 +1108,7 @@
       },
       "registrationTarget": [
         64.0,
-        76.38
+        76
       ]
     }
   },
@@ -1170,7 +1170,7 @@
       "loop": true
     }
   },
-  "sha256": "0aceadc6ac80d60a68ca8dcc6fe538882fe9b29dc639ce972713cab9ea86b84b",
+  "sha256": "7bfd437f628dc9b03a63e8fbd280955bf8f27df5764108da1e3309399e835778",
   "generator": {
     "tool": "image_gen + RGBA atlas packing",
     "source": "source/raster/idle-source.png",
@@ -1185,12 +1185,12 @@
     "command": "python tools/build_hero_sprites.py"
   },
   "registration": {
-    "method": "shared-torso-ellipse",
+    "method": "shared-body-color-and-spans",
     "target": [
       64.0,
-      76.38,
-      33.66,
-      31.68
+      76,
+      34,
+      28
     ],
     "pivot": [
       64,
@@ -1198,6 +1198,7 @@
     ],
     "feetNeverDefinePerFrameCenter": true,
     "sameTargetAcrossAllForms": true,
+    "normalizeWidthAndHeight": true,
     "preserveCompletePose": true,
     "rectangularFootOverwrite": false
   }

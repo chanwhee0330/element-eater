@@ -1,0 +1,557 @@
+{
+  "schema": "element-eater.elemental-enemies.v1",
+  "frameSize": 160,
+  "root": [
+    80,
+    138
+  ],
+  "bodyCenter": [
+    80,
+    86
+  ],
+  "bodySize": [
+    72,
+    64
+  ],
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
+  "elementCount": 5,
+  "appearanceCount": 6,
+  "behaviorTypeCount": 2,
+  "sheetCount": 36,
+  "frameCount": 1152,
+  "elements": {
+    "neutral": {
+      "name": "무속성",
+      "isElemental": false,
+      "types": {
+        "melee": {
+          "name": "근접형",
+          "states": {
+            "idle": {
+              "image": "neutral/melee/enemy-neutral-melee-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "neutral/melee/enemy-neutral-melee-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "neutral/melee/enemy-neutral-melee-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        },
+        "ranged": {
+          "name": "원거리형",
+          "states": {
+            "idle": {
+              "image": "neutral/ranged/enemy-neutral-ranged-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "neutral/ranged/enemy-neutral-ranged-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "neutral/ranged/enemy-neutral-ranged-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        }
+      }
+    },
+    "water": {
+      "name": "물",
+      "isElemental": true,
+      "types": {
+        "melee": {
+          "name": "근접형",
+          "states": {
+            "idle": {
+              "image": "water/melee/enemy-water-melee-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "water/melee/enemy-water-melee-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "water/melee/enemy-water-melee-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        },
+        "ranged": {
+          "name": "원거리형",
+          "states": {
+            "idle": {
+              "image": "water/ranged/enemy-water-ranged-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "water/ranged/enemy-water-ranged-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "water/ranged/enemy-water-ranged-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        }
+      }
+    },
+    "fire": {
+      "name": "불",
+      "isElemental": true,
+      "types": {
+        "melee": {
+          "name": "근접형",
+          "states": {
+            "idle": {
+              "image": "fire/melee/enemy-fire-melee-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "fire/melee/enemy-fire-melee-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "fire/melee/enemy-fire-melee-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        },
+        "ranged": {
+          "name": "원거리형",
+          "states": {
+            "idle": {
+              "image": "fire/ranged/enemy-fire-ranged-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "fire/ranged/enemy-fire-ranged-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "fire/ranged/enemy-fire-ranged-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        }
+      }
+    },
+    "wind": {
+      "name": "바람",
+      "isElemental": true,
+      "types": {
+        "melee": {
+          "name": "근접형",
+          "states": {
+            "idle": {
+              "image": "wind/melee/enemy-wind-melee-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "wind/melee/enemy-wind-melee-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "wind/melee/enemy-wind-melee-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        },
+        "ranged": {
+          "name": "원거리형",
+          "states": {
+            "idle": {
+              "image": "wind/ranged/enemy-wind-ranged-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "wind/ranged/enemy-wind-ranged-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "wind/ranged/enemy-wind-ranged-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        }
+      }
+    },
+    "earth": {
+      "name": "흙",
+      "isElemental": true,
+      "types": {
+        "melee": {
+          "name": "근접형",
+          "states": {
+            "idle": {
+              "image": "earth/melee/enemy-earth-melee-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "earth/melee/enemy-earth-melee-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "earth/melee/enemy-earth-melee-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        },
+        "ranged": {
+          "name": "원거리형",
+          "states": {
+            "idle": {
+              "image": "earth/ranged/enemy-earth-ranged-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "earth/ranged/enemy-earth-ranged-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "earth/ranged/enemy-earth-ranged-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        }
+      }
+    },
+    "lightning": {
+      "name": "번개",
+      "isElemental": true,
+      "types": {
+        "melee": {
+          "name": "근접형",
+          "states": {
+            "idle": {
+              "image": "lightning/melee/enemy-lightning-melee-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "lightning/melee/enemy-lightning-melee-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "lightning/melee/enemy-lightning-melee-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        },
+        "ranged": {
+          "name": "원거리형",
+          "states": {
+            "idle": {
+              "image": "lightning/ranged/enemy-lightning-ranged-idle.png",
+              "fps": 6,
+              "loop": true,
+              "label": "대기"
+            },
+            "walk": {
+              "image": "lightning/ranged/enemy-lightning-ranged-walk.png",
+              "fps": 10,
+              "loop": true,
+              "label": "이동"
+            },
+            "attack": {
+              "image": "lightning/ranged/enemy-lightning-ranged-attack.png",
+              "fps": 12,
+              "loop": false,
+              "label": "공격"
+            }
+          },
+          "muzzle": {
+            "down": [
+              80,
+              106
+            ],
+            "left": [
+              45,
+              99
+            ],
+            "right": [
+              115,
+              99
+            ],
+            "up": [
+              80,
+              65
+            ]
+          }
+        }
+      }
+    }
+  }
+}

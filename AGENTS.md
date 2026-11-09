@@ -2,10 +2,10 @@
 
 - This project is Element Eater (엘리먼트 이터), a Korean 2D game course project.
 - Read `PROJECT_CONTEXT.md` and `docs/design/GAME_DESIGN.md` before changing game design or starting implementation.
-- The repository currently contains planning artifacts and concept images. Do not describe the game as implemented until runnable source exists.
+- 현재 저장소에는 Python/pico2d의 타이틀·1/2번 방 실행 코드가 있습니다. 물 획득/물 공격/물 R 회복은 구현했고, 나머지 원소 획득/R·3번 이후 방·보스는 아직 미구현입니다. 아래 에셋 제작 당시의 미구현 기록보다 이 최신 상태를 우선합니다.
 - Preserve the user's elemental roles: fire damage over time, water self healing, wind knockback, earth terrain creation, lightning multi-target chain attacks.
-- The user also confirmed body color and distinguishing appearance changes on ingestion, elemental enemies, and a strict one-to-one elemental attack cycle: water beats fire, fire beats wind, wind beats earth, earth beats lightning, lightning beats water. Non-matching elemental attacks, including same-element attacks, deal zero damage and apply no offensive effects.
-- The latest user-confirmed neutral basic attack deals low nonzero damage and retains slight knockback regardless of the target element. This supersedes the earlier zero-damage neutral rule. Neutral damage 5 is an initial proposal, not a user-confirmed number. Keep this explicit neutral exception separate from blocked elemental attacks and from wind's strong knockback. Knockback distances and timings remain proposals; game combat is not implemented yet.
+- 원소 적에 대한 1대1 상성은 물→불→바람→흙→번개→물입니다. 같은 원소를 포함한 나머지 원소 조합은 피해/공격 효과를 차단합니다. 섭취 후 몸 색/구분 외형이 바뀌는 규칙은 유지합니다.
+- 최신 사용자 확정(2026-11-10): **무속성 적은 무속성 및 다섯 원소 공격 모두에 큰 피해를 받습니다.** 앞선 물→무속성 낮은 피해안과 무속성 공격의 일률적인 낮은 피해안을 대체합니다. 무속성 기본 공격은 원소를 가진 적에게는 낮은 양의 피해·약한 넉백을 유지합니다. 무속성 적 큰 피해 15, 낮은 피해 5는 시험값이며 확정 수치가 아닙니다. 약한 넉백은 무속성 기본 공격에만 붙이고 바람의 강한 넉백과 구분합니다. 차단된 원소 공격은 넉백/추락을 유발하지 않습니다.
 - Latest user-confirmed controls: WASD movement, Q previous held type, E next held type, R skill, F ingest, Space basic attack. Aim in the last movement direction with no mouse aiming. Restart is in the Esc pause menu, not R.
 - Latest user-confirmed inventory: eaten elements stack as counts by type. Q/E select a held type; Space does not consume it. Each successfully activated R skill consumes one unit of its cast element. Exhausted types cannot be selected; no held types means neutral. This supersedes the old single-held-element, three-special-charges and zero-charge-persistence rules. Failed skill activations do not consume a unit in the current proposal.
 - Keep elemental basic attacks and special abilities separate: water Space attacks and water R self-healing are distinct. The selected stored type controls current appearance and HUD; already-created effects retain their cast element.

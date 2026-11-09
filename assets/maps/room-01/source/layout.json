@@ -1,0 +1,36 @@
+{
+  "schema": "element-eater.room-layout.v2",
+  "id": "room-01",
+  "name": "첫 번째 방 · 시작 섬과 전투 구역",
+  "status": "interactive-layout-preview",
+  "columns": 20,
+  "rows": 22,
+  "unitPixels": 64,
+  "seed": 1109,
+  "coordinateSystem": "왼쪽 위 원점, x 오른쪽/y 아래, 캐릭터 위치는 발밑 루트",
+  "assumption": "사용자 그림의 빨간 선 안쪽만 바닥. 바깥은 낭떠러지, 위 빗금은 중앙 벽. 정확한 칸 수·속도·가시 좌표는 시안.",
+  "defaultTile": "pit",
+  "floorRegions": [
+    {"x": 2, "y": 2, "width": 16, "height": 9},
+    {"x": 9, "y": 11, "width": 2, "height": 6},
+    {"x": 5, "y": 17, "width": 10, "height": 4}
+  ],
+  "regions": [
+    {"kind": "wall", "x": 7, "y": 6, "width": 6, "height": 2},
+    {"kind": "spikes", "x": 7, "y": 17, "width": 2, "height": 1},
+    {"kind": "spikes", "x": 11, "y": 17, "width": 2, "height": 1}
+  ],
+  "playerSpawn": {"element": "neutral", "x": 10, "y": 19.5, "facing": "up"},
+  "enemies": [
+    {"id": "melee-1", "element": "neutral", "behaviorType": "melee", "x": 5.5, "y": 9.5, "facing": "down"},
+    {"id": "melee-2", "element": "neutral", "behaviorType": "melee", "x": 14.5, "y": 9.5, "facing": "down"},
+    {"id": "ranged-1", "element": "neutral", "behaviorType": "ranged", "x": 5.5, "y": 4.5, "facing": "down"},
+    {"id": "ranged-2", "element": "neutral", "behaviorType": "ranged", "x": 14.5, "y": 4.5, "facing": "down"}
+  ],
+  "aggroTrigger": {"x": 2, "y": 2, "width": 16, "height": 9, "activation": "player-root-enters", "latchUntilReset": true, "targets": "melee"},
+  "plannedExit": {"x": 10, "y": 2.7},
+  "elementSources": [],
+  "preview": {"playerSpeed": 3.5, "meleeSpeed": 2, "fallSeconds": 0.65, "numericStatus": "initial-proposal", "damageImplemented": false},
+  "gameplayImplemented": true,
+  "implementationScope": "Python/pico2d 첫 방 이동·진입 추격·무속성 전투·체력/HUD·첫 방 출구/클리어. 원소·지형 피해·다른 방은 미구현."
+}

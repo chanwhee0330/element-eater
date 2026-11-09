@@ -1,0 +1,7 @@
+{
+  "tool": "built-in image_gen",
+  "use_case": "stylized-concept",
+  "output": "assets/maps/room-01/source/abyss-source-v1.png",
+  "transparent_background": false,
+  "prompt": "Use case: stylized-concept. Asset type: background-only matte painting to sit behind an existing top-down 2D fantasy ruin game. Make an atmospheric dark subterranean abyss seen from directly overhead, a deep chasm with soft desaturated blue-green fog drifting far below and distant jagged rocky silhouettes mostly along the far left/right borders and bottom corners. The image must feel like a deep place a player would FALL INTO, not a traversable landscape. No flat ground, no floor tiles, no pathways, no bridges, no islands, no hero, no monsters, no items, no architecture, no glowing magical circles, no interface and no text. The middle 65 percent should stay relatively open and very dark, with muted soft vapor wisps and faint irregular depth; a separate playable stone platform will be composited OVER it later. Keep the rocky silhouettes visually far beneath the camera, submerged in haze, with no sharp bright ridges that could be confused with foreground platforms. Hand-painted game background style matching muted sandstone ruins; cool dark petrol, charcoal slate, subdued moss-green and dim smoky teal. Subtle environmental detail and depth but low contrast and no bright light sources, no stars/outer space, no cyan neon, no flat pure black areas. Canvas landscape-ish 1000x900 proportions. Opaque full-bleed background. No border or vignette rectangle."
+}

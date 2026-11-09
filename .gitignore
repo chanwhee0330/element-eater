@@ -11,6 +11,38 @@
 !/outputs/presentations/first/엘리먼트_이터_90초_발표대본_허찬휘.pdf
 !/outputs/presentations/first/2023184037_허찬휘_엘리먼트이터_1차발표영상.mp4
 !/outputs/previews/
+!/outputs/previews/index.html
+!/outputs/previews/title-screen/
+!/outputs/previews/title-screen/title-screen-v1.png
+!/outputs/previews/title-screen/title-no-save.png
+!/outputs/previews/title-screen/title-with-save.png
+!/outputs/previews/title-screen/title-stage-02.png
+!/outputs/previews/room-02/
+!/outputs/previews/room-02/room-02-layout.png
+!/outputs/previews/room-02/python-start.png
+!/outputs/previews/room-02/python-water-form.png
+!/outputs/previews/room-02/python-water-combat.png
+!/outputs/previews/room-02/python-fire-shot.png
+!/outputs/previews/room-01/
+!/outputs/previews/room-01/room-01-layout.png
+!/outputs/previews/room-01/preview.html
+!/outputs/previews/room-01/python-start.png
+!/outputs/previews/room-01/python-chase.png
+!/outputs/previews/room-01/python-combat.png
+!/outputs/previews/room-01/python-pause.png
+!/outputs/previews/room-01/python-clear.png
+!/outputs/previews/elemental-enemies/
+!/outputs/previews/elemental-enemies/README.md
+!/outputs/previews/elemental-enemies/preview.html
+!/outputs/previews/elemental-enemies/melee.gif
+!/outputs/previews/elemental-enemies/ranged.gif
+!/outputs/previews/elemental-enemies/melee-still.png
+!/outputs/previews/elemental-enemies/ranged-still.png
+!/outputs/previews/basic-projectiles/
+!/outputs/previews/basic-projectiles/README.md
+!/outputs/previews/basic-projectiles/preview.html
+!/outputs/previews/basic-projectiles/projectiles.gif
+!/outputs/previews/basic-projectiles/preview-still.png
 !/outputs/previews/element-pickups/
 !/outputs/previews/element-pickups/element-pickups-designs.png
 !/outputs/previews/element-pickups/element-pickups-animation.gif
@@ -40,6 +72,7 @@
 !/outputs/previews/neutral-attack/neutral-attack-preview.gif
 
 # Python and local environments
+/saves/
 __pycache__/
 *.py[cod]
 .venv/

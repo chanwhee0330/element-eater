@@ -4,6 +4,7 @@ Pillow and NumPy are authoring dependencies. Gameplay has no NumPy dependency.
 Original ImageGen art is preserved; this stage only registers raster frames.
 """
 from pathlib import Path
+import shutil
 import argparse,json,os
 from align_hero_centers import align_assets
 from render_aligned import render
@@ -21,10 +22,16 @@ def main():
     out=args.output_dir or root/'outputs/previews/hero-elements'
     out.mkdir(parents=True,exist_ok=True)
     catalog,_,_,_=align_assets(source,assets)
+    from validate_hero_registered import validate
+    validate(assets,catalog)
     (out/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2),encoding='utf-8')
     render(root,out,assets)
     make_fallback(out/'all-elements-front.gif',out/'preview-fallback.gif')
     write_standalone(root/'tools/hero_elements_preview.html',catalog,assets,out/'orbs',out/'preview-fallback.gif',out/'preview.html')
+    shutil.copyfile(out/'preview.html',out/'standalone-preview.html')
+    if assets.resolve()==(root/'assets/sprites/hero').resolve() and out.resolve()==(root/'outputs/previews/hero-elements').resolve():
+        from refresh_hero_previews import refresh
+        refresh(root)
     print('Rebuilt 24 registered sheets / 768 frames.')
 
 if __name__=='__main__':main()

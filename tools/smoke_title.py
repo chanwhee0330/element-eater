@@ -80,6 +80,9 @@ def main():
             assert app.room.stage == 2
             app.room.outcome = 'clear'
             tick(app)
+            assert app.room.stage == 3 and app.save_store.load()['stage'] == 3
+            app.room.outcome = 'clear'
+            tick(app)
             assert app.save_store.load() is None
             app.return_to_title()
             assert app.continue_record is None

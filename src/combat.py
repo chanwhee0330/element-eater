@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class CombatTuning:
+    spike_damage: int = 10
     player_hp: int = 100
     melee_hp: int = 30
     ranged_hp: int = 40

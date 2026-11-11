@@ -83,11 +83,14 @@ class RoomTests(unittest.TestCase):
         advance(room)
         self.assertFalse(enemy.active)
 
-    def test_spikes_are_walkable_visual_contact_not_damage(self):
+    def test_spikes_are_walkable_and_damage_player(self):
         room = Room()
         room.player.x, room.player.y = 7.5, 17.5
         advance(room, seconds=.1)
         self.assertTrue(room.spike_contact)
+        self.assertEqual(room.player.hp, room.player.max_hp - room.tuning.spike_damage)
+        advance(room, seconds=.1)
+        self.assertEqual(room.player.hp, room.player.max_hp - room.tuning.spike_damage)
         self.assertEqual(room.player.falling, 0)
 
 

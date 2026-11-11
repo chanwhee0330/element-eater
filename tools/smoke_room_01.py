@@ -128,14 +128,23 @@ def main():
         tick(app)
         assert app.room.stage == 2 and app.room.outcome is None
         assert app.save_store.load()['stage'] == 2
-        # 다음 검사는 두 번째 방의 클리어/재시작도 확인한다.
+        # 다음 검사는 2→3번 전환과 마지막 방 클리어/재시작도 확인한다.
         for enemy in app.room.enemies:
             app.room.damage(enemy,enemy.max_hp)
         app.room.player.x = app.room.data['plannedExit']['x']
         app.room.player.y = app.room.data['plannedExit']['y']
         tick(app)
+        assert app.room.stage == 3 and app.room.outcome is None
+        assert app.save_store.load()['stage'] == 3
+        # 3번 방의 마지막 출구는 소각과 적 처치 후 클리어한다.
+        app.room.vine_time = app.room.vine_gate['burnDuration']
+        for enemy in app.room.enemies:
+            app.room.damage(enemy, enemy.max_hp)
+        exit_point = app.room.data['plannedExit']
+        app.room.player.x, app.room.player.y = exit_point['x'], exit_point['y']
+        tick(app)
         assert app.room.outcome == 'clear'
-        capture(app, ROOT / 'outputs/previews/room-01/python-clear.png')
+        capture(app, ROOT / 'outputs/previews/room-03/python-clear.png')
         key(app, p.SDLK_RETURN)
         assert app.room.remaining_enemies == 4 and not app.room.outcome
         app.new_game()

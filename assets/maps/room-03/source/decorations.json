@@ -1,0 +1,125 @@
+{
+  "schema": "element-eater.room-decorations.v1",
+  "atlas": "../../room-01/source/decor-atlas-v1.png",
+  "atlasGrid": {
+    "columns": 2,
+    "rows": 2
+  },
+  "slots": {
+    "moss": 0,
+    "rubble": 1,
+    "inlay": 2,
+    "grass": 3
+  },
+  "collision": false,
+  "placements": [
+    {
+      "kind": "inlay",
+      "x": 4.5,
+      "y": 20.5,
+      "width": 2.2,
+      "opacity": 0.6
+    },
+    {
+      "kind": "inlay",
+      "x": 20,
+      "y": 6.4,
+      "width": 2.6,
+      "opacity": 0.6
+    },
+    {
+      "kind": "moss",
+      "x": 6.6,
+      "y": 12.7,
+      "width": 1.1,
+      "opacity": 0.6
+    },
+    {
+      "kind": "grass",
+      "x": 15,
+      "y": 4,
+      "width": 1.1,
+      "opacity": 0.6
+    },
+    {
+      "kind": "moss",
+      "x": 25.8,
+      "y": 4,
+      "width": 1.0,
+      "opacity": 0.6
+    },
+    {
+      "kind": "rubble",
+      "x": 20.2,
+      "y": 17.8,
+      "width": 0.8,
+      "opacity": 0.6
+    },
+    {
+      "kind": "grass",
+      "x": 3.2,
+      "y": 21.9,
+      "width": 1.0,
+      "opacity": 0.6
+    }
+  ],
+  "wallRuns": [
+    {
+      "x": 2,
+      "y": 16,
+      "width": 4,
+      "height": 77,
+      "sconces": [
+        0.95,
+        3.48
+      ],
+      "banners": [
+        2.18
+      ],
+      "ivy": [
+        0.42
+      ]
+    },
+    {
+      "x": 6,
+      "y": 12,
+      "width": 5,
+      "height": 82,
+      "sconces": [
+        2.5
+      ],
+      "ivy": [
+        0.65,
+        4.4
+      ]
+    },
+    {
+      "x": 11,
+      "y": 16,
+      "width": 10,
+      "height": 46,
+      "sconces": [
+        3.1,
+        7.9
+      ],
+      "ivy": [
+        0.75,
+        9.35
+      ]
+    }
+  ],
+  "cliffSconces": [
+    [
+      11.8,
+      19
+    ],
+    [
+      19.8,
+      19
+    ],
+    [
+      16.3,
+      10
+    ]
+  ]
+}

@@ -33,7 +33,7 @@ def actor_from_data(data, template, room):
         raise ValueError('캐릭터 저장 형식 불일치')
     if data['kind'] != template.kind or data['name'] != template.name:
         raise ValueError('캐릭터 종류 불일치')
-    if data['element'] != template.element or data['attack_element'] not in ('neutral','water','fire'):
+    if data['element'] != template.element or data['attack_element'] not in ('neutral','water','fire','wind'):
         raise ValueError('캐릭터 원소 불일치')
     if data['facing'] not in DIRECTIONS or data['attack_facing'] not in DIRECTIONS:
         raise ValueError('방향 불일치')
@@ -87,8 +87,24 @@ def restore(record, room):
     if record.get('room_id') != candidate.data['id']:
         raise ValueError('방 불일치')
     state = record['state']
+    if candidate.reference_art and isinstance(state, dict) and 'reference_layout' not in state:
+        # 이전 잿불 정원의 좌표는 새 배경에 대응하지 않으므로 위치만 안전하게 다시 잡는다.
+        if not isinstance(state['enemies'], list) or not isinstance(state['sources'], list):
+            raise ValueError('저장 목록 형식 불일치')
+        if not all(isinstance(saved, dict) for saved in [state['player'], *state['enemies'], *state['sources']]):
+            raise ValueError('저장 항목 형식 불일치')
+        for saved, template in zip([state['player'], *state['enemies']], [candidate.player, *candidate.enemies]):
+            saved.update(x=template.x, y=template.y, falling=0, moving=False,
+                         attack_elapsed=-1, knockback_left=0)
+        for saved, template in zip(state['sources'], candidate.sources):
+            saved.update(x=template.x, y=template.y)
+        state.update(safe=list(candidate.safe), projectiles=[])
     if not isinstance(state, dict) or not isinstance(state['enemies'], list) or len(state['enemies']) != len(candidate.enemies):
         raise ValueError('적 목록 불일치')
+    if candidate.vine_gate:
+        candidate.vine_time = number(state.get('vine_time', -1), -1, candidate.vine_gate['burnDuration'])
+        if -1 < candidate.vine_time < 0:
+            raise ValueError('덤불 소각 시간 불일치')
     player = actor_from_data(state['player'],candidate.player,candidate)
     enemies = [actor_from_data(saved,template,candidate) for saved,template in zip(state['enemies'],candidate.enemies)]
     sources = state['sources']
@@ -121,17 +137,17 @@ def restore(record, room):
     if not isinstance(inventory,dict) or set(inventory) != set(ELEMENTS):
         raise ValueError('보관함 형식 불일치')
     for element,count in inventory.items():
-        if type(count) is not int or not 0 <= count <= 1_000_000 or (element != 'water' and count != 0):
+        if type(count) is not int or not 0 <= count <= 1_000_000 or (element not in ('water','fire') and count != 0):
             raise ValueError('지원하지 않는 보유 원소')
     selected = state['selected']
-    if selected != ('water' if inventory['water'] else 'neutral'):
+    if selected not in ([element for element, count in inventory.items() if count] or ['neutral']):
         raise ValueError('선택 원소 불일치')
     fire_aggro = boolean(state['fire_aggro'])
     ingest_elapsed = number(state['ingest_elapsed'],-1,candidate.tuning.ingest_duration)
     if ingest_elapsed < 0 and ingest_elapsed != -1:
         raise ValueError('섭취 시간 불일치')
     ingest_source,consumed,form = state['ingest_source'],boolean(state['ingest_consumed']),state['ingest_form']
-    if form not in ('neutral','water'):
+    if form not in ('neutral','water','fire'):
         raise ValueError('섭취 외형 불일치')
     if ingest_elapsed >= 0:
         source = next((s for s in restored_sources if s.id == ingest_source),None)
@@ -146,7 +162,7 @@ def restore(record, room):
     for shot in shots:
         if not isinstance(shot, dict) or set(shot) != {f.name for f in fields(Projectile)}:
             raise ValueError('탄환 형식 불일치')
-        if shot['owner'] not in ('hero','enemy') or shot['element'] not in ('neutral','water','fire'):
+        if shot['owner'] not in ('hero','enemy') or shot['element'] not in ('neutral','water','fire','wind'):
             raise ValueError('탄환 종류 불일치')
         for key in ('x', 'y', 'dx', 'dy', 'speed', 'remaining', 'age'):
             number(shot[key])
@@ -194,6 +210,10 @@ class SaveStore:
             'inventory':dict(room.inventory),'selected':room.selected,'sources':[asdict(s) for s in room.sources],
             'fire_aggro':room.fire_aggro,'ingest_elapsed':room.ingest_elapsed,'ingest_source':room.ingest_source,
             'ingest_consumed':room.ingest_consumed,'ingest_form':room.ingest_form}}
+        if room.vine_gate:
+            record['state']['vine_time'] = room.vine_time
+        if room.reference_art:
+            record['state']['reference_layout'] = 1
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_suffix('.tmp')
         temporary.write_text(json.dumps(record, ensure_ascii=False, allow_nan=False), encoding='utf-8')

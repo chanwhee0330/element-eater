@@ -5,7 +5,9 @@ import sys
 import time
 import math
 
-from .room import ROOT, Room
+from .room import ROOT, Room, STAGES
+from .elements import NAMES
+from .isometric import IsometricRoom
 from .ui import GameUI
 from .savegame import DEFAULT_SAVE, SaveStore, restore
 from .title import draw_title, hit_test
@@ -13,7 +15,7 @@ from .title import draw_title, hit_test
 
 class Application:
     width, height = 1000, 900
-    unit, left, top = 36, 140, 64
+    unit = IsometricRoom.sprite_height
     fixed_dt = 1 / 120
     menu = ('계속하기', '현재 방 재시작', '타이틀로 돌아가기', '게임 종료')
 
@@ -21,6 +23,7 @@ class Application:
         self.p = p
         self.room = Room()
         self.scene = 'title'
+        self.practice = False
         self.save_store = SaveStore(save_path)
         self.continue_record = self.save_store.load()
         self.title_index = 1
@@ -37,40 +40,47 @@ class Application:
         self.images, self.metadata = {}, {}
         self.keymap = {p.SDLK_w:'w',p.SDLK_a:'a',p.SDLK_s:'s',p.SDLK_d:'d',p.SDLK_SPACE:'attack',
                        p.SDLK_f:'ingest',p.SDLK_r:'skill',p.SDLK_q:'previous',p.SDLK_e:'next'}
-        self.load_room_images()
+        self.view = IsometricRoom(p, self.width, self.height)
+        self.view.load(self.room)
         self.title_image = p.load_image(str(ROOT / 'assets/ui/title/v1/title-screen-v1.png'))
         # 제자리 원거리형도 넉백 중에는 moving 상태가 되므로 walk 시트가 필요하다.
         for kind, states in [('hero', ('idle', 'walk', 'attack', 'ingest')), ('melee', ('idle', 'walk', 'attack')), ('ranged', ('idle', 'walk', 'attack'))]:
             for state in states:
-                stem = (ROOT / f'assets/sprites/hero/neutral/hero-neutral-{state}' if kind == 'hero'
-                        else ROOT / f'assets/sprites/enemies/elemental-v1/neutral/{kind}/enemy-neutral-{kind}-{state}')
-                self.images[kind, state] = p.load_image(str(stem.with_suffix('.png')))
-                self.metadata[kind, state] = json.loads(stem.with_suffix('.json').read_text(encoding='utf-8'))
-                element = 'water' if kind == 'hero' else 'fire'
-                stem = (ROOT / f'assets/sprites/hero/{element}/hero-{element}-{state}' if kind == 'hero'
-                        else ROOT / f'assets/sprites/enemies/elemental-v1/{element}/{kind}/enemy-{element}-{kind}-{state}')
-                self.images[kind, state, element] = p.load_image(str(stem.with_suffix('.png')))
-                self.metadata[kind, state, element] = json.loads(stem.with_suffix('.json').read_text(encoding='utf-8'))
+                elements = ('neutral', 'water', 'fire') if kind == 'hero' else ('neutral', 'fire', 'wind')
+                for element in elements:
+                    if kind == 'hero':
+                        stem = ROOT / f'assets/sprites/hero/{element}/hero-{element}-{state}'
+                    else:
+                        stem = ROOT / f'assets/sprites/enemies/elemental-v1/{element}/{kind}/enemy-{element}-{kind}-{state}'
+                    key = (kind, state) if element == 'neutral' else (kind, state, element)
+                    self.images[key] = p.load_image(str(stem.with_suffix('.png')))
+                    self.metadata[key] = json.loads(stem.with_suffix('.json').read_text(encoding='utf-8'))
         self.shot_images, self.shot_metadata = {}, {}
-        for element in ('neutral', 'water', 'fire'):
+        for element in ('neutral', 'water', 'fire', 'wind'):
             shot_path = ROOT / f'assets/effects/basic-projectiles/v1/{element}-flight'
             self.shot_images[element] = p.load_image(str(shot_path.with_suffix('.png')))
             self.shot_metadata[element] = json.loads(shot_path.with_suffix('.json').read_text(encoding='utf-8'))
-        self.source_images = {name: p.load_image(str(ROOT / f'assets/items/elements/break-release-v3/sprites/water-{name}.png'))
-                              for name in ('idle','damaged1','damaged2','break','orb')}
-        self.ui = GameUI(p, self.images['hero', 'idle'])
-        self.font, self.small = self.ui.fonts[18], self.ui.fonts[14]
-
-    def load_room_images(self):
-        self.background = self.p.load_image(str(self.room.map_path.parent / self.room.data['image']))
-        self.backdrop = self.p.load_image(str(self.room.map_path.parent / self.room.data['backdropImage']))
+        source_folder = ROOT / 'assets/items/elements/break-release-v3/sprites'
+        self.source_images = {
+            (element, name): p.load_image(str(source_folder / f'{element}-{name}.png'))
+            for element in ('water', 'fire') for name in ('idle','damaged1','damaged2','break','orb')
+        }
+        vine_folder = STAGES[3].parent
+        self.vine_image = p.load_image(str(vine_folder / 'vine-burn.png'))
+        self.vine_frames = json.loads((vine_folder / 'vine-burn.json').read_text(encoding='utf-8'))['frames']
+        self.stage_keys = {
+            key: stage for stage in STAGES
+            for key in (getattr(p, f'SDLK_{stage}'), getattr(p, f'SDLK_KP_{stage}'))
+        }
+        pickup_icons = p.load_image(str(ROOT / 'assets/items/elements/element-pickups.png'))
+        self.ui = GameUI(p, self.images['hero', 'idle'], pickup_icons)
+        self.font = self.ui.fonts[18]
 
     def advance_stage(self):
         hp, inventory, selected = self.room.player.hp, dict(self.room.inventory), self.room.selected
-        self.room = Room(stage=2)
+        self.room = Room(stage=self.room.stage + 1)
         self.room.player.hp = hp
         self.room.inventory, self.room.selected = inventory, selected
-        self.load_room_images()
         self.enter_play()
         self.save_progress()
 
@@ -87,6 +97,9 @@ class Application:
             self.save_progress()
 
     def save_progress(self):
+        if self.practice:
+            self.save_elapsed = 0
+            return
         try:
             if self.room.outcome == 'clear':
                 self.save_store.clear()
@@ -100,6 +113,8 @@ class Application:
             print(f'{self.save_error} {exc}', file=sys.stderr)
 
     def enter_play(self):
+        self.view.load(self.room)
+        self.unit = self.view.sprite_height * self.view.reference_scale
         self.scene = 'play'
         self.finished_save = False
         self.pause(False)
@@ -108,9 +123,9 @@ class Application:
         self.ui.last_time = self.room.elapsed
         self.ui.hp_trail = self.room.player.hp
 
-    def new_game(self):
-        self.room = Room()
-        self.load_room_images()
+    def new_game(self, stage=1, *, practice=False):
+        self.practice = practice
+        self.room = Room(stage=stage)
         self.enter_play()
         self.save_progress()
 
@@ -121,7 +136,7 @@ class Application:
             self.title_index = 1
             return
         restore(record, self.room)
-        self.load_room_images()
+        self.practice = False
         self.continue_record = record
         self.enter_play()
 
@@ -154,7 +169,9 @@ class Application:
                 if event.type == p.SDL_MOUSEBUTTONDOWN and event.button == p.SDL_BUTTON_LEFT:
                     self.activate_title(index)
         elif event.type == p.SDL_KEYDOWN:
-            if event.key in (p.SDLK_LEFT, p.SDLK_a, p.SDLK_RIGHT, p.SDLK_d, p.SDLK_TAB):
+            if event.key in self.stage_keys:
+                self.new_game(self.stage_keys[event.key], practice=True)
+            elif event.key in (p.SDLK_LEFT, p.SDLK_a, p.SDLK_RIGHT, p.SDLK_d, p.SDLK_TAB):
                 direction = -1 if event.key in (p.SDLK_LEFT, p.SDLK_a) else 1
                 self.title_index = (self.title_index+direction) % 3
                 if self.title_index == 0 and self.continue_record is None:
@@ -222,13 +239,16 @@ class Application:
             return
         self.accumulator += min(dt, .25)
         while self.accumulator >= self.fixed_dt:
-            self.room.update(self.keys | self.actions | ({'attack'} if self.attack_queued else set()), self.fixed_dt)
+            self.room.update(self.keys | self.actions | ({'attack'} if self.attack_queued else set()),
+                             self.fixed_dt)
             self.attack_queued = False
             self.actions.clear()
             self.accumulator -= self.fixed_dt
-            if self.room.outcome == 'clear' and self.room.stage == 1:
+            if self.room.outcome == 'clear' and self.room.stage + 1 in STAGES:
                 self.advance_stage()
                 return
+        player = self.room.player
+        self.view.follow(*(self.room.safe[:2] if player.falling else (player.x, player.y)))
         self.save_elapsed += min(dt, .25)
         if self.room.outcome and not self.finished_save:
             self.save_progress()
@@ -236,12 +256,8 @@ class Application:
         elif not self.room.outcome and self.save_elapsed >= 2:
             self.save_progress()
 
-    def point(self, x, y):
-        return self.left + x * self.unit, self.height - self.top - y * self.unit
-
-    def label(self, text, x, y, color=(222, 225, 205)):
-        px, py = self.point(x, y)
-        self.small.draw(px, py, text, color)
+    def point(self, x, y, z=0):
+        return self.view.point(x, y, z)
 
     def draw_actor(self, actor):
         attacking = actor.attack_elapsed >= 0
@@ -259,7 +275,9 @@ class Application:
         if actor.falling > 0:
             factor = max(.08, actor.falling / self.room.data['preview']['fallSeconds'])
         scale = self.unit / self.room.data['heroReferenceHeight'] * factor
-        root_x, root_y = self.point(actor.x, actor.y)
+        root_x, root_y = self.point(actor.x, actor.y, -38 * (1 - factor))
+        if not actor.falling:
+            self.view.draw_shadow(actor.x, actor.y)
         # JSON은 왼쪽 위 원점, pico2d는 왼쪽 아래. 발밑 루트로부터 칸 중심 계산.
         center_x = root_x + (width / 2 - pivot['x']) * scale
         center_y = root_y + (pivot['y'] - height / 2) * scale
@@ -274,70 +292,157 @@ class Application:
         image.opacify(1)
         self.p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
 
-    def draw_enemy_health(self, actor):
-        x, y = self.point(actor.x, actor.y)
-        self.ui.enemy_health(actor, x, y)
+        if actor.kind != 'hero' and not actor.falling:
+            self.ui.enemy_health(actor, root_x, root_y, offset=62 * self.view.reference_scale)
 
-    def draw_shots(self):
+    def draw_shot(self, shot):
         p = self.p
-        for shot in self.room.projectiles:
-            image, meta = self.shot_images[shot.element], self.shot_metadata[shot.element]
-            frame = meta['frames'][f'right_{int(shot.age*12)%8}']['pico2dClip']
-            x, y = self.point(shot.x, shot.y-.4)
-            p.SDL_SetTextureColorMod(image.texture, *((255,255,255) if shot.element != 'neutral' else (195,235,188) if shot.owner == 'hero' else (255,125,80)))
-            image.clip_composite_draw(frame['left'], frame['bottom'], frame['width'], frame['height'],
-                math.atan2(-shot.dy, shot.dx), '', x, y, 42, 42)
-            p.SDL_SetTextureColorMod(image.texture,255,255,255)
+        image, meta = self.shot_images[shot.element], self.shot_metadata[shot.element]
+        frame = meta['frames'][f'right_{int(shot.age * 12) % 8}']['pico2dClip']
+        x, y = self.point(shot.x, shot.y, 21)
+        dx, dy = self.view.project(shot.dx, shot.dy)
+        if shot.element == 'neutral':
+            tint = (195, 235, 188) if shot.owner == 'hero' else (255, 125, 80)
+            p.SDL_SetTextureColorMod(image.texture, *tint)
+        image.clip_composite_draw(frame['left'], frame['bottom'], frame['width'], frame['height'],
+                                  math.atan2(-dy, dx), '', x, y, 46, 46)
+        p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
 
     def draw_source(self, source):
         if source.phase == 'consumed':
             return
         x, y = self.point(source.x, source.y)
+        self.view.draw_shadow(source.x, source.y)
         if source.phase == 'orb':
-            x, y = self.point(source.x, source.y-.55-.04*math.sin(source.age*3))
+            y += self.unit * (.55 + .04 * math.sin(source.age * 3))
             size = self.unit
             if self.room.ingest_source == source.id and not self.room.ingest_consumed:
                 t = min(1,self.room.ingest_elapsed/self.room.tuning.ingest_event)
-                tx,ty = self.point(self.room.player.x,self.room.player.y-.55)
+                tx,ty = self.point(self.room.player.x, self.room.player.y, self.unit * .55)
                 x,y,size = x+(tx-x)*t,y+(ty-y)*t,size*(1-.5*t)
-            self.source_images['orb'].draw(x,y,size,size)
+            self.source_images[source.element, 'orb'].draw(x,y,size,size)
             return
         shake = math.sin(source.hit_time*80)*self.unit*.04*max(0,1-source.hit_time/.13)
         if source.phase == 'intact':
-            image,frame,pivot,scale = self.source_images['idle'],128,(64,114),self.unit/self.room.data['heroReferenceHeight']
+            image,frame,pivot,scale = self.source_images[source.element, 'idle'],128,(64,114),self.unit/self.room.data['heroReferenceHeight']
         else:
-            image = self.source_images[source.phase if source.phase in ('damaged1','damaged2') else 'break']
+            image = self.source_images[source.element, source.phase if source.phase in ('damaged1','damaged2') else 'break']
             frame,pivot,scale = 256,(128,228),self.unit/self.room.data['heroReferenceHeight']/2
         image.clip_draw(source.frame()*frame,0,frame,frame,
                         x+shake+(frame/2-pivot[0])*scale,y+(pivot[1]-frame/2)*scale,frame*scale,frame*scale)
         if source.phase != 'breaking':
             self.ui.begin()
             for i in range(3):
-                self.p.draw_circle(x+(i-1)*8,y+47,2,*((148,199,211) if i < source.hp else (75,80,72)),filled=True)
+                self.p.draw_circle(x+(i-1)*8,y+64 * self.view.reference_scale,2,*((148,199,211) if i < source.hp else (75,80,72)),filled=True)
 
     def draw_hud(self):
         key = ('hero','idle') if self.room.selected == 'neutral' else ('hero','idle',self.room.selected)
         self.ui.portrait = self.images[key]
+        if self.room.ingest_elapsed < 0:
+            orb = self.room.nearest_orb()
+            if orb is not None:
+                self.draw_prompt(orb, 'F', f'{NAMES[orb.element]} 구슬 섭취', 28)
+            else:
+                player = self.room.player
+                nearby = [s for s in self.room.sources if s.phase in ('intact', 'damaged1', 'damaged2')
+                          and math.hypot(s.x - player.x, s.y - player.y) < 2
+                          and self.room.line_clear(s.x, s.y, player.x, player.y)]
+                if nearby:
+                    source = min(nearby, key=lambda s: math.hypot(s.x - player.x, s.y - player.y))
+                    self.draw_prompt(source, 'SPACE', f'{NAMES[source.element]} 원천 파괴', 50)
         self.ui.hud(self.room, self.width, self.height)
-        if self.room.nearest_orb() is not None and self.room.ingest_elapsed < 0:
-            self.ui.key_label('F','물 구슬 섭취',self.width/2,105,28,13)
-        elif self.room.ingest_elapsed < 0 and any(s.phase in ('intact','damaged1','damaged2')
-                and math.hypot(s.x-self.room.player.x,s.y-self.room.player.y)<2
-                and self.room.line_clear(s.x,s.y,self.room.player.x,self.room.player.y) for s in self.room.sources):
-            self.ui.key_label('SPACE','물 원천 파괴',self.width/2,105,52,13)
+
+    def draw_prompt(self, source, key, label, key_width):
+        x, y = self.point(source.x, source.y, 91)
+        x = max(100, min(self.width - 100, x))
+        self.ui.begin()
+        self.ui.panel(x - 88, y - 17, 176, 34, accent=True)
+        self.ui.key_label(key, label, x, y, key_width, 13)
+
+    def draw_vine(self):
+        gate = self.room.vine_gate
+        frame = self.vine_frames[0]
+        if self.room.vine_time >= 0:
+            remaining = self.room.vine_time * 1000
+            for frame in self.vine_frames[1:]:
+                remaining -= frame['durationMs']
+                if remaining < 0:
+                    break
+        x, y = self.point(gate['x'] + gate['width'] / 2, gate['y'] + gate['height'])
+        clip, pivot = frame['pico2dClip'], frame['pivotPixelsTopLeft']
+        width, height = clip['width'], clip['height']
+        scale = gate['width'] * self.view.tile_width / (width * .82)
+        self.vine_image.clip_draw(clip['left'], clip['bottom'], width, height,
+                                  x, y + (pivot['y'] - height / 2) * scale,
+                                  width * scale, height * scale)
+
+    def draw_reference_exit(self):
+        x0, y0, x1, y1 = self.room.reference_art['doorPixels']
+        center = (x0 + x1) / 2
+        if self.room.exit_open:
+            self.ui.begin()
+            for row in range(21):
+                left, y = self.view.reference_point(x0 + 2, y1 - row)
+                right, _ = self.view.reference_point(x1 - 2, y1 - row)
+                self.p.draw_line(left, y, right, y, 116, 202, 178, 110 - row * 5)
+            exit_point = self.room.data['plannedExit']
+            self.view.draw_exit_marker(exit_point['x'], exit_point['y'], True)
+            return
+        radius = (x1 - x0) / 2
+        for offset in (-21, -14, -7, 0, 7, 14, 21):
+            top = y0 + radius - math.sqrt(radius ** 2 - offset ** 2)
+            x, upper = self.view.reference_point(center + offset, top + 2)
+            _, bottom = self.view.reference_point(center + offset, y1 - 1)
+            self.p.draw_line(x, bottom, x, upper, 178, 138, 94)
+        for row in (y1 - 37, y1 - 14):
+            left, y = self.view.reference_point(x0 + 4, row)
+            right, _ = self.view.reference_point(x1 - 4, row)
+            self.p.draw_line(left, y, right, y, 164, 126, 88)
 
     def draw_exit(self):
-        x, y = self.point(self.room.data['plannedExit']['x'], self.room.data['plannedExit']['y'])
+        if self.room.reference_art:
+            self.draw_reference_exit()
+            return
+        exit_point = self.room.data['plannedExit']
         opened = self.room.exit_open
-        color = (137, 211, 166) if opened else (111, 100, 76)
-        self.p.draw_rectangle(x-17, y-5, x+17, y+36, 18, 27, 27, filled=True)
-        self.p.draw_rectangle(x-17, y-5, x+17, y+36, *color)
+        x, y = self.point(exit_point['x'], self.room.data['floorRegions'][0]['y'])
+        self.ui.begin()
+        p = self.p
+
+        def arch(radius, spring, color):
+            p.draw_rectangle(x - radius, y, x + radius, y + spring, *color, filled=True)
+            for row in range(1, radius + 1):
+                span = round(math.sqrt(radius * radius - row * row))
+                p.draw_line(x - span, y + spring + row, x + span, y + spring + row, *color)
+
+        arch(30, 52, (45, 34, 52))
+        arch(28, 51, (128, 103, 127))
+        arch(23, 51, (94, 74, 101))
+        arch(20, 50, (25, 20, 34))
+        for side in (-1, 1):
+            for height in (15, 29, 43):
+                p.draw_line(x + side * 21, y + height, x + side * 28, y + height, 58, 44, 65)
+            for angle in (24, 52):
+                angle_rad = math.radians(angle)
+                p.draw_line(x + side * 22 * math.cos(angle_rad), y + 51 + 22 * math.sin(angle_rad),
+                            x + side * 28 * math.cos(angle_rad), y + 51 + 28 * math.sin(angle_rad), 58, 44, 65)
+        p.draw_rectangle(x - 5, y + 73, x + 5, y + 81, 155, 124, 136, filled=True)
+        self.ui.diamond(x, y + 77, 3, (172, 227, 196) if opened else (210, 168, 110))
+
         if opened:
-            self.p.draw_rectangle(x-12, y, x+12, y+31, 63, 98, 77, filled=True)
-            self.small.draw(x-30, y+52, '출구 개방', (168, 225, 178))
+            for row in range(27):
+                strength = (27 - row) / 27
+                span = round(19 - row * .16)
+                p.draw_line(x - span, y + row, x + span, y + row, 116, 202, 178, round(120 * strength))
+            p.draw_rectangle(x - 30, y - 5, x + 30, y, 82, 66, 91, filled=True)
+            p.draw_line(x - 24, y - 1, x + 24, y - 1, 157, 209, 179)
+            self.view.draw_exit_marker(exit_point['x'], exit_point['y'], opened)
         else:
-            for dx in (-9, 0, 9):
-                self.p.draw_line(x+dx, y-2, x+dx, y+33, *color)
+            for dx in (-14, -7, 0, 7, 14):
+                p.draw_line(x + dx, y + 1, x + dx, y + 56, 117, 93, 83)
+            for height in (15, 40):
+                p.draw_line(x - 19, y + height, x + 19, y + height, 157, 125, 94)
+            p.draw_rectangle(x - 30, y - 5, x + 30, y, 82, 66, 91, filled=True)
 
     def draw(self, present=True):
         p = self.p
@@ -347,21 +452,23 @@ class Application:
             if present:
                 p.update_canvas()
             return
-        p.draw_rectangle(0, 0, self.width, self.height, 5, 12, 19, filled=True)
-        self.backdrop.draw(self.width/2, self.height/2, self.width, self.height)
-        w, h = self.room.data['columns'] * self.unit, self.room.data['rows'] * self.unit
-        self.background.draw(self.left + w / 2, self.height - self.top - h / 2, w, h)
-        self.draw_exit()
-        actors = [a for a in [self.room.player, *self.room.enemies] if a.active]
-        layers = [(a.y,False,a) for a in actors]+[(s.y,True,s) for s in self.room.sources if s.phase != 'consumed']
-        for _,is_source,obj in sorted(layers,key=lambda item:item[0]):
-            if is_source:
-                self.draw_source(obj)
-            else:
-                self.draw_actor(obj)
-                if obj.kind != 'hero' and not obj.falling:
-                    self.draw_enemy_health(obj)
-        self.draw_shots()
+        self.view.draw_ground()
+        exit_point = self.room.data['plannedExit']
+        layers = [(depth, self.view.draw_wall, (wall,)) for depth, wall in self.view.walls]
+        layers.append((exit_point['y'], self.draw_exit, ()))
+        if self.room.reference_art:
+            origin_y = self.room.reference_art['originPixels'][1]
+            unit = self.room.reference_art['pixelsPerTile']
+            for rect in self.room.reference_art['coverPixels']:
+                layers.append(((rect[3] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
+        if not self.room.vine_open:
+            gate = self.room.vine_gate
+            layers.append((gate['y'] + gate['height'], self.draw_vine, ()))
+        layers.extend((a.y, self.draw_actor, (a,)) for a in (self.room.player, *self.room.enemies) if a.active)
+        layers.extend((s.y, self.draw_source, (s,)) for s in self.room.sources if s.phase != 'consumed')
+        layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
+        for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
+            draw_item(*args)
         for effect in self.room.feedback:
             age = effect.duration-effect.remaining
             x, y = self.point(effect.x, effect.y)
@@ -383,10 +490,10 @@ class Application:
         # SDL 종료 전에 텍스처를 해제한다.
         self.ui.release()
         self.images.clear()
-        self.background = None
-        self.backdrop = None
+        self.view.release()
         self.shot_images.clear()
         self.source_images.clear()
+        self.vine_image = None
         self.title_image = None
 
 

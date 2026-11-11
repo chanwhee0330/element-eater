@@ -9,7 +9,7 @@ from .elements import ELEMENTS, BEATS, Source
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_PATH = ROOT / 'assets/maps/room-01/room-01.json'
-STAGES = {n: ROOT / f'assets/maps/room-{n:02d}/room-{n:02d}.json' for n in (1, 2)}
+STAGES = {n: ROOT / f'assets/maps/room-{n:02d}/room-{n:02d}.json' for n in (1, 2, 3)}
 
 
 @dataclass
@@ -66,6 +66,9 @@ class Room:
         self.inventory = {element: 0 for element in ELEMENTS}
         self.selected = 'neutral'
         self.fire_aggro = False
+        self.reference_art = self.data.get('referenceArt')
+        self.vine_gate = self.data.get('vineGate')
+        self.vine_time = -1
         self.ingest_elapsed = -1
         self.ingest_source = None
         self.ingest_consumed = False
@@ -127,7 +130,11 @@ class Room:
             self.player.animation_time = 0
 
     def enemy_awake(self, enemy):
-        return self.fire_aggro if self.stage == 2 and enemy.element == 'fire' else self.aggro
+        if self.stage == 2 and enemy.element == 'fire':
+            return self.fire_aggro
+        if self.vine_gate and enemy.element == 'wind':
+            return self.vine_open and self.aggro
+        return self.aggro
 
     @property
     def remaining_enemies(self):
@@ -135,7 +142,16 @@ class Room:
 
     @property
     def exit_open(self):
-        return self.remaining_enemies == 0
+        return self.remaining_enemies == 0 and self.vine_open
+
+    @property
+    def vine_open(self):
+        return self.vine_gate is None or self.vine_time >= self.vine_gate['burnDuration']
+
+    def vine_contains(self, x, y):
+        gate = self.vine_gate
+        return (not self.vine_open and gate['x'] <= x < gate['x'] + gate['width']
+                and gate['y'] <= y < gate['y'] + gate['height'])
 
     @staticmethod
     def direction(facing):
@@ -229,6 +245,9 @@ class Room:
                 shot.x += shot.dx * distance/parts
                 shot.y += shot.dy * distance/parts
                 shot.remaining -= distance/parts
+                if (self.vine_contains(shot.x, shot.y) and self.vine_time < 0
+                        and shot.owner == 'hero' and shot.element == 'fire'):
+                    self.vine_time = 0
                 if self.tile(shot.x, shot.y) == 3 or not (0 <= shot.x < self.data['columns'] and 0 <= shot.y < self.data['rows']):
                     shot.active = False
                     self.feedback.append(Feedback(shot.x, shot.y-.4, '', shot.owner == 'hero', .16, .16))
@@ -260,6 +279,16 @@ class Room:
         self.projectiles[:] = [s for s in self.projectiles if s.active]
 
     def tile(self, x, y):
+        if self.vine_contains(x, y):
+            return 3
+        if self.reference_art:
+            for x0, y0, x1, y1 in self.reference_art['cover']:
+                if x0 <= x < x1 and y0 <= y < y1:
+                    return 3
+            for x0, y0, x1, y1 in self.reference_art['walkable']:
+                if x0 <= x < x1 and y0 <= y < y1:
+                    return 0
+            return 4
         x, y = math.floor(x), math.floor(y)
         if 0 <= x < self.data['columns'] and 0 <= y < self.data['rows']:
             return self.data['tiles'][y][x]
@@ -293,13 +322,13 @@ class Room:
 
     def distance_field(self):
         goal = math.floor(self.player.x), math.floor(self.player.y)
-        if self.tile(*goal) >= 3:
+        if self.tile(self.player.x, self.player.y) >= 3:
             return {}
         distances, queue = {goal: 0}, deque([goal])
         while queue:
             x, y = queue.popleft()
             for pos in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
-                if pos not in distances and self.tile(*pos) < 3 and self.fits(pos[0]+.5,pos[1]+.5,safe=True):
+                if pos not in distances and self.fits(pos[0]+.5,pos[1]+.5,safe=True):
                     distances[pos] = distances[(x, y)] + 1
                     queue.append(pos)
         return distances
@@ -335,6 +364,8 @@ class Room:
         if not math.isfinite(dt) or dt <= 0 or self.outcome:
             return
         dt = min(dt, .05)
+        if self.vine_gate and not self.vine_open and self.vine_time >= 0:
+            self.vine_time = min(self.vine_time + dt, self.vine_gate['burnDuration'])
         self.elapsed += dt
         player = self.player
         for source in self.sources:
@@ -379,7 +410,11 @@ class Room:
         self.move(player, dx / length * speed * dt, dy / length * speed * dt)
         player.animate(dt, was_moving)
         tile = self.tile(player.x, player.y)
-        self.spike_contact = tile == 5
+        self.spike_contact = tile == self.data['tileIds']['spikes']
+        if self.spike_contact:
+            self.damage(player, self.tuning.spike_damage)
+            if self.outcome:
+                return
         if tile == 4:
             player.falling = self.data['preview']['fallSeconds']
             player.attack_elapsed = -1

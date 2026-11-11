@@ -1,0 +1,172 @@
+{
+  "schema": "element-eater.environment-animation.v1",
+  "image": "vine-burn.png",
+  "imageSize": {
+    "width": 1774,
+    "height": 887
+  },
+  "loop": false,
+  "clearOnFinish": true,
+  "frames": [
+    {
+      "name": "intact",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 444,
+        "h": 444
+      },
+      "pivotPixelsTopLeft": {
+        "x": 222,
+        "y": 368
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 443,
+        "width": 444,
+        "height": 444
+      },
+      "durationMs": 0
+    },
+    {
+      "name": "burn-1",
+      "frame": {
+        "x": 444,
+        "y": 0,
+        "w": 443,
+        "h": 444
+      },
+      "pivotPixelsTopLeft": {
+        "x": 221.5,
+        "y": 368
+      },
+      "pico2dClip": {
+        "left": 444,
+        "bottom": 443,
+        "width": 443,
+        "height": 444
+      },
+      "durationMs": 85
+    },
+    {
+      "name": "burn-2",
+      "frame": {
+        "x": 887,
+        "y": 0,
+        "w": 443,
+        "h": 444
+      },
+      "pivotPixelsTopLeft": {
+        "x": 221.5,
+        "y": 368
+      },
+      "pico2dClip": {
+        "left": 887,
+        "bottom": 443,
+        "width": 443,
+        "height": 444
+      },
+      "durationMs": 85
+    },
+    {
+      "name": "burn-3",
+      "frame": {
+        "x": 1330,
+        "y": 0,
+        "w": 444,
+        "h": 444
+      },
+      "pivotPixelsTopLeft": {
+        "x": 222,
+        "y": 364
+      },
+      "pico2dClip": {
+        "left": 1330,
+        "bottom": 443,
+        "width": 444,
+        "height": 444
+      },
+      "durationMs": 110
+    },
+    {
+      "name": "burn-4",
+      "frame": {
+        "x": 0,
+        "y": 444,
+        "w": 444,
+        "h": 443
+      },
+      "pivotPixelsTopLeft": {
+        "x": 222,
+        "y": 366
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 0,
+        "width": 444,
+        "height": 443
+      },
+      "durationMs": 100
+    },
+    {
+      "name": "burn-5",
+      "frame": {
+        "x": 444,
+        "y": 444,
+        "w": 443,
+        "h": 443
+      },
+      "pivotPixelsTopLeft": {
+        "x": 221.5,
+        "y": 364
+      },
+      "pico2dClip": {
+        "left": 444,
+        "bottom": 0,
+        "width": 443,
+        "height": 443
+      },
+      "durationMs": 95
+    },
+    {
+      "name": "burn-6",
+      "frame": {
+        "x": 887,
+        "y": 444,
+        "w": 443,
+        "h": 443
+      },
+      "pivotPixelsTopLeft": {
+        "x": 221.5,
+        "y": 363
+      },
+      "pico2dClip": {
+        "left": 887,
+        "bottom": 0,
+        "width": 443,
+        "height": 443
+      },
+      "durationMs": 100
+    },
+    {
+      "name": "burn-7",
+      "frame": {
+        "x": 1330,
+        "y": 444,
+        "w": 444,
+        "h": 443
+      },
+      "pivotPixelsTopLeft": {
+        "x": 222,
+        "y": 364
+      },
+      "pico2dClip": {
+        "left": 1330,
+        "bottom": 0,
+        "width": 444,
+        "height": 443
+      },
+      "durationMs": 100
+    }
+  ]
+}

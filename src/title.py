@@ -30,5 +30,6 @@ def draw_title(app):
         if i == 0:
             subtitle = f'{app.continue_record["stage"]}번 스테이지' if enabled else '저장된 게임 없음'
             ui.text(subtitle, x+w/2, y-17, 11, ui.gold if enabled else (112, 105, 92))
+    ui.text('1 · 2 · 3  스테이지 바로가기', app.width / 2, 122, 13, ui.cream)
     if app.save_error:
-        ui.text(app.save_error, app.width/2, 112, 12, (226, 162, 127))
+        ui.text(app.save_error, app.width/2, 148, 12, (226, 162, 127))

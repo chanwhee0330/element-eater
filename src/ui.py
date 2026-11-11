@@ -2,19 +2,19 @@
 import ctypes
 import os
 import math
-from .elements import NAMES
+from .elements import ELEMENTS, NAMES
 from pathlib import Path
 
 
 class GameUI:
-    ink = (28, 29, 26)
+    ink = (28, 39, 32)
     cream = (234, 225, 204)
-    muted = (163, 157, 139)
+    muted = (173, 185, 157)
     gold = (171, 149, 99)
-    line = (102, 95, 77)
+    line = (112, 123, 92)
 
-    def __init__(self, p, portrait):
-        self.p, self.portrait = p, portrait
+    def __init__(self, p, portrait, pickup_icons):
+        self.p, self.portrait, self.pickup_icons = p, portrait, pickup_icons
         bundled = Path(p.__file__).parent / 'data/ConsolaMalgun.ttf'
         system_font = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts/malgun.ttf'
         path = system_font if system_font.is_file() else bundled
@@ -81,7 +81,7 @@ class GameUI:
     def keycap(self, text, cx, cy, width=40, disabled=False):
         color = (91, 88, 75) if disabled else (164, 148, 109)
         self.rounded(cx-width/2, cy-12, width, 25, 5, (*color, 170))
-        self.rounded(cx-width/2+1, cy-10, width-2, 22, 4, (41, 41, 34, 255))
+        self.rounded(cx-width/2+1, cy-10, width-2, 22, 4, (48, 61, 47, 255))
         self.text(text, cx, cy+1, 10, color if disabled else (225, 210, 173))
 
     def portrait_badge(self, cx, cy, radius=22):
@@ -93,72 +93,107 @@ class GameUI:
         # 원본 스프라이트의 투명 여백까지 고정하여 별도 원화를 만들지 않는다.
         self.portrait.clip_draw(0, 384, 128, 128, cx, cy+3, radius*2.2, radius*2.2)
 
-    def enemy_health(self, actor, x, y):
+    def enemy_health(self, actor, x, y, offset=62):
         self.begin()
-        y += 44
+        y += offset
         self.rounded(x-23, y-3, 46, 7, 3, (15, 17, 15, 240))
         fill = 42*max(0, actor.hp)/actor.max_hp
         if fill > 0:
             self.rounded(x-21, y-1, fill, 3, 1, (190, 106, 87, 255))
         self.rounded(x-23, y+7, 46, 16, 4, (25, 25, 22, 165))
         self.text(f'{actor.hp} / {actor.max_hp}', x, y+15, 11, (239, 229, 208))
-        if actor.element == 'fire':
-            self.rounded(x-38,y+25,76,16,4,(25,25,22,170))
-            self.text('불 · 약점 물',x,y+33,10,(226,182,146))
+        if actor.element in ('fire', 'wind'):
+            label, color = ('불 · 약점 물', (226,182,146)) if actor.element == 'fire' else ('바람 · 약점 불', (175,214,159))
+            self.rounded(x-46,y+25,92,16,4,(25,25,22,170))
+            self.text(label,x,y+33,10,color)
+
+    def minimap(self, room, width, top):
+        columns, rows = room.data['columns'], room.data['rows']
+        tile_ids = room.data['tileIds']
+        scale = min(5, 110 / max(columns, rows))
+        map_w, map_h = round(columns * scale), round(rows * scale)
+        x, y = width - 33 - map_w, top - 91 - map_h
+        self.panel(x - 8, y - 25, map_w + 16, map_h + 33)
+        self.p.draw_rectangle(x, y, x + map_w, y + map_h, 18, 23, 23, filled=True)
+        shades = {
+            tile_ids['wall']: (75, 76, 74),
+            tile_ids['spikes']: (157, 93, 96),
+        }
+        for row, tiles in enumerate(room.data['tiles']):
+            for col, tile in enumerate(tiles):
+                if tile == tile_ids['pit']:
+                    continue
+                left = round(x + col * scale)
+                bottom = round(y + map_h - (row + 1) * scale)
+                self.p.draw_rectangle(left, bottom, left + scale - 1, bottom + scale - 1,
+                                      *shades.get(tile, (122, 116, 128)), filled=True)
+        exit_point = room.data['plannedExit']
+        self.diamond(x + exit_point['x'] * scale, y + map_h - exit_point['y'] * scale,
+                     3, (168, 207, 155) if room.exit_open else (214, 176, 104))
+        player = room.player
+        self.p.draw_circle(x + player.x * scale, y + map_h - player.y * scale, 3, 240, 233, 197, filled=True)
+        self.text(f'{columns} × {rows}', x + map_w / 2, y - 13, 10, self.muted)
 
     def hud(self, room, width, height):
         self.begin()
-        cx = width/2
-        top = height-22
-        self.panel(24, top-64, 276, 64)
-        self.portrait_badge(56, top-32)
-        self.text('체력', 94, top-19, 12, self.muted, 'left')
-        self.text(f'{room.player.hp} / {room.player.max_hp}', 278, top-19, 13, self.cream, 'right')
-        bx, by, bw = 94, top-47, 184
-        self.rounded(bx-1, by-1, bw+2, 13, 6, (12, 13, 11, 255))
-        self.rounded(bx, by, bw, 11, 5, (63, 43, 37, 255))
-        delta = max(0, min(.1, room.elapsed-self.last_time))
-        if room.elapsed < self.last_time:
-            self.hp_trail = room.player.hp
+        cx = width / 2
+        top = height - 20
+        self.panel(20, top - 62, 240, 62)
+        self.text('체력', 36, top - 17, 13, self.muted, 'left')
+        self.text(f'{room.player.hp} / {room.player.max_hp}', 244, top - 17, 14, self.cream, 'right')
+        bx, by, bw = 36, top - 47, 208
+        delta = max(0, min(.1, room.elapsed - self.last_time))
         self.last_time = room.elapsed
-        self.hp_trail = max(room.player.hp, self.hp_trail-delta*50)
-        self.rounded(bx, by, bw*self.hp_trail/room.player.max_hp, 11, 5, (153, 122, 76, 255))
-        self.rounded(bx, by, bw*room.player.hp/room.player.max_hp, 11, 5, (174, 79, 65, 255))
-        if room.player.hp > 0:
-            self.p.draw_line(bx+5, by+8, bx+bw*room.player.hp/room.player.max_hp-4, by+8, 227, 143, 113, 100)
-        self.panel(cx-108, top-58, 216, 58, accent=True)
-        self.text(f'ROOM {room.stage:02d}', cx, top-13, 10, self.gold)
-        self.text('첫 번째 방' if room.stage == 1 else '두 번째 방', cx, top-36, 20)
-        for side in (-1, 1):
-            self.p.draw_line(cx+side*120, top-29, cx+side*148, top-29, *self.gold, 100)
-            self.diamond(cx+side*154, top-29, 2)
-        self.panel(width-244, top-64, 220, 64)
-        self.text('남은 적', width-134, top-16, 11, self.muted)
-        for side in (-1, 1):
-            self.diamond(width-134+side*60, top-39, 2)
-        self.text(f'{room.remaining_enemies} / {len(room.enemies)}', width-134, top-39, 18)
+        self.hp_trail = max(room.player.hp, self.hp_trail - delta * 50)
+        self.rounded(bx, by, bw, 11, 5, (56, 65, 51, 255))
+        self.rounded(bx, by, bw * self.hp_trail / room.player.max_hp, 11, 5, (159, 139, 87, 255))
+        self.rounded(bx, by, bw * room.player.hp / room.player.max_hp, 11, 5, (181, 208, 113, 255))
 
-        # 세 슬롯을 하나의 가운데 정렬 도크로 묶는다.
-        dock_x, dock_y = cx-280, 12
-        self.panel(dock_x, dock_y, 560, 66, radius=11)
-        element_text = NAMES[room.selected]+(f' × {room.inventory[room.selected]}' if room.selected != 'neutral' else '')
-        element_width = max(self.measure(element_text,16),self.measure('현재 원소',10))
-        element_left = dock_x+84-(40+14+element_width)/2
-        self.portrait_badge(element_left+20, 45, 18)
-        element_text_x = element_left+54+element_width/2
-        self.text(element_text,element_text_x,51,16)
-        self.text('Q/E 원소 선택' if room.selected != 'neutral' else '현재 원소',element_text_x,31,10,self.muted)
-        for x in (cx-112, cx+100):
-            self.p.draw_line(x, 27, x, 63, *self.line, 120)
-        self.key_label('SPACE','물 공격' if room.selected == 'water' else '기본 공격',cx,49,52)
-        ready = 1-min(1, room.player.attack_cooldown/room.tuning.player_interval)
-        self.rounded(cx-90, 25, 180, 4, 2, (63, 61, 47, 255))
-        self.rounded(cx-90, 25, 180*ready, 4, 2, (184, 173, 118, 255))
+        self.panel(cx - 122, top - 56, 244, 56, accent=True)
+        name = {1: '시작 섬', 2: '물의 유적'}.get(room.stage, room.data['name'])
+        self.text(f'{room.stage:02d} · {name}', cx, top - 27, 20)
+        self.panel(width - 180, top - 62, 160, 62)
+        self.text('남은 적', width - 100, top - 16, 11, self.muted)
+        self.text(f'{room.remaining_enemies} / {len(room.enemies)}', width - 100, top - 39, 18)
+        self.minimap(room, width, top)
+
+        self.panel(20, 16, 204, 67)
+        self.portrait_badge(53, 49, 21)
+        self.text(NAMES[room.selected], 88, 59, 16, align='left')
+        held = sum(room.inventory.values())
+        self.text(f'보유 원소 {held}개' if held else '보유 원소 없음', 88, 36, 11, self.muted, 'left')
+
+        slot_width = 60
+        dock_width = slot_width * len(ELEMENTS) + 20
+        dock_left = cx - dock_width / 2 - 26
+        self.panel(dock_left, 16, dock_width, 82)
+        for index, element in enumerate(ELEMENTS):
+            x = dock_left + 10 + index * slot_width
+            if element == room.selected:
+                self.rounded(x + 2, 37, slot_width - 4, 54, 5, (135, 141, 81, 94))
+            elif index:
+                self.p.draw_line(x, 44, x, 85, *self.line, 122)
+            count = room.inventory[element]
+            self.pickup_icons.opacify(1 if count else .58)
+            self.pickup_icons.clip_draw(0, (len(ELEMENTS) - index - 1) * 128,
+                                        128, 128, x + slot_width / 2, 72, 36, 36)
+            self.text(f'{NAMES[element]} {count}', x + slot_width / 2, 47, 12,
+                      self.cream if count else self.muted)
+        self.pickup_icons.opacify(1)
+        self.text('Q / E  원소 선택', dock_left + dock_width / 2, 28, 11, self.muted)
+
+        controls_left = width - 304
+        self.panel(controls_left, 16, 284, 67)
+        self.key_label('SPACE', f'{NAMES[room.selected]} 공격' if room.selected != 'neutral' else '기본 공격',
+                       controls_left + 77, 60, 44, 12)
         water = room.selected == 'water'
-        skill_x = self.key_label('R','자가 회복' if water else '원소 없음',cx+190,49,28,13,
-                                disabled=not water or room.player.hp >= room.player.max_hp)
-        self.text('물 1개 소모' if water else '고유 스킬',skill_x,31,10,(107,108,95))
-        self.key_label('ESC', '메뉴', width-66, 44, 36, 12)
+        self.key_label('R', '자가 회복' if water else '스킬 없음', controls_left + 217, 60, 24, 12,
+                       disabled=not water or room.player.hp >= room.player.max_hp)
+        ready = 1 - min(1, room.player.attack_cooldown / room.tuning.player_interval)
+        self.rounded(controls_left + 18, 41, 118, 3, 1, (63, 73, 55, 255))
+        self.rounded(controls_left + 18, 41, 118 * ready, 3, 1, (173, 191, 117, 255))
+        controls = '물 1개 소모   ·   ' if water else ''
+        self.text(controls + 'W ↑  A ←  S ↓  D →   ·   Esc  메뉴', controls_left + 142, 29, 10, self.muted)
 
     def modal(self, width, height, paused, menu, selected, outcome, stage=1):
         self.begin()
@@ -181,7 +216,7 @@ class GameUI:
         else:
             self.panel(cx-218, cy-123, 436, 246, accent=True, radius=14)
             self.text(f'ROOM {stage:02d} COMPLETE' if outcome == 'clear' else 'TRY AGAIN',cx,cy+89,10,self.gold)
-            self.text(('첫 번째 방 클리어' if stage == 1 else '두 번째 방 클리어') if outcome == 'clear' else '쓰러졌습니다',cx,cy+48,26)
+            self.text(f'{stage}번 방 클리어' if outcome == 'clear' else '쓰러졌습니다',cx,cy+48,26)
             p.draw_line(cx-118, cy+12, cx+118, cy+12, *self.line)
             self.diamond(cx, cy+12, 3)
             self.rounded(cx-141, cy-66, 282, 44, 7, (106, 91, 58, 90))
@@ -189,4 +224,4 @@ class GameUI:
             self.text('Esc  메뉴', cx, cy-99, 11, self.muted)
 
     def release(self):
-        self.portrait = None
+        self.portrait = self.pickup_icons = None

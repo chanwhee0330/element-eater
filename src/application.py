@@ -46,7 +46,7 @@ class Application:
         # 제자리 원거리형도 넉백 중에는 moving 상태가 되므로 walk 시트가 필요하다.
         for kind, states in [('hero', ('idle', 'walk', 'attack', 'ingest')), ('melee', ('idle', 'walk', 'attack')), ('ranged', ('idle', 'walk', 'attack'))]:
             for state in states:
-                elements = ('neutral', 'water', 'fire') if kind == 'hero' else ('neutral', 'fire', 'wind')
+                elements = ('neutral', 'water', 'fire', 'wind', 'earth') if kind == 'hero' else ('neutral', 'fire', 'wind', 'earth', 'lightning')
                 for element in elements:
                     if kind == 'hero':
                         stem = ROOT / f'assets/sprites/hero/{element}/hero-{element}-{state}'
@@ -56,18 +56,21 @@ class Application:
                     self.images[key] = p.load_image(str(stem.with_suffix('.png')))
                     self.metadata[key] = json.loads(stem.with_suffix('.json').read_text(encoding='utf-8'))
         self.shot_images, self.shot_metadata = {}, {}
-        for element in ('neutral', 'water', 'fire', 'wind'):
+        for element in ('neutral', 'water', 'fire', 'wind', 'earth', 'lightning'):
             shot_path = ROOT / f'assets/effects/basic-projectiles/v1/{element}-flight'
             self.shot_images[element] = p.load_image(str(shot_path.with_suffix('.png')))
             self.shot_metadata[element] = json.loads(shot_path.with_suffix('.json').read_text(encoding='utf-8'))
         source_folder = ROOT / 'assets/items/elements/break-release-v3/sprites'
         self.source_images = {
             (element, name): p.load_image(str(source_folder / f'{element}-{name}.png'))
-            for element in ('water', 'fire') for name in ('idle','damaged1','damaged2','break','orb')
+            for element in ('water', 'fire', 'wind', 'earth') for name in ('idle','damaged1','damaged2','break','orb')
         }
         vine_folder = STAGES[3].parent
         self.vine_image = p.load_image(str(vine_folder / 'vine-burn.png'))
         self.vine_frames = json.loads((vine_folder / 'vine-burn.json').read_text(encoding='utf-8'))['frames']
+        puzzle_folder = STAGES[4].parent
+        self.block_image = p.load_image(str(puzzle_folder / 'puzzle-block.png'))
+        self.gate_image = p.load_image(str(puzzle_folder / 'stone-gate.png'))
         self.stage_keys = {
             key: stage for stage in STAGES
             for key in (getattr(p, f'SDLK_{stage}'), getattr(p, f'SDLK_KP_{stage}'))
@@ -376,6 +379,68 @@ class Application:
                                   x, y + (pivot['y'] - height / 2) * scale,
                                   width * scale, height * scale)
 
+    def draw_earth_terrain(self, terrain):
+        left, top, right, bottom = terrain.bounds
+        x0, y1 = self.point(left, top)
+        x1, y0 = self.point(right, bottom)
+        self.ui.begin()
+        warning = terrain.remaining < .75 and int(self.room.elapsed * 12) % 2
+        color = (163, 124, 87, 190) if warning else (208, 157, 92, 255)
+        if terrain.kind == 'wall':
+            self.ui.rounded(x0, y0, x1 - x0, y1 - y0 + 17, 4, (100, 65, 46, 255))
+            y0 += 14
+            y1 += 17
+        else:
+            self.ui.rounded(x0, y0 - 4, x1 - x0, y1 - y0 + 4, 3, (112, 75, 48, 255))
+        self.ui.rounded(x0, y0, x1 - x0, y1 - y0, 3, color)
+        segments = max(1, round(max(right - left, bottom - top) * 1.6))
+        for i in range(1, segments):
+            if x1 - x0 > y1 - y0:
+                x = x0 + (x1 - x0) * i / segments
+                self.p.draw_line(x, y0 + 2, x, y1 - 2, 131, 91, 57)
+            else:
+                y = y0 + (y1 - y0) * i / segments
+                self.p.draw_line(x0 + 2, y, x1 - 2, y, 131, 91, 57)
+
+    def draw_turret_switch(self):
+        if not self.room.turrets_stopped:
+            return
+        x, y = self.point(*self.room.turret_room['switch'])
+        self.ui.begin()
+        self.ui.rounded(x - 22, y - 20, 44, 40, 4, (50, 91, 73, 255))
+        self.ui.rounded(x - 16, y - 14, 32, 28, 3, (118, 193, 135, 255))
+        self.p.draw_line(x - 7, y, x - 2, y - 5, 40, 79, 63)
+        self.p.draw_line(x - 2, y - 5, x + 8, y + 7, 40, 79, 63)
+
+    def draw_stone_gate(self):
+        left, top, right, bottom = self.room.puzzle['gatePixels']
+        scale = self.view.reference_scale
+        half = (right - left) // 2
+        visible = round(half * (1 - self.room.gate_time / self.room.gate_open_seconds))
+        if not self.room.plate_pressed:
+            x, y = self.view.reference_point((left + right) / 2, (top + bottom) / 2)
+            self.gate_image.draw(x, y, (right - left) * scale, (bottom - top) * scale)
+        elif visible:
+            for src_x, center in ((half - visible, left + visible / 2),
+                                  (right - left - half, right - visible / 2)):
+                x, y = self.view.reference_point(center, (top + bottom) / 2)
+                self.gate_image.clip_draw(src_x, 0, visible, bottom - top,
+                                          x, y, visible * scale, (bottom - top) * scale)
+
+    def draw_plate(self):
+        x, y = self.point(*self.room.puzzle['plate'])
+        scale = self.view.reference_scale
+        self.ui.begin()
+        border = (171, 251, 133, 255) if self.room.plate_pressed else (152, 191, 129, 255)
+        self.ui.rounded(x - 23 * scale, y - 20 * scale, 46 * scale, 40 * scale, 5, border)
+        self.ui.rounded(x - 20 * scale, y - 17 * scale, 40 * scale, 34 * scale, 4, (58, 83, 70, 255))
+        self.p.draw_circle(x, y, 8 * scale, *border[:3])
+
+    def draw_puzzle_block(self):
+        x, y = self.point(*self.room.block)
+        scale = self.view.reference_scale
+        self.block_image.draw(x, y + 12 * scale, 57 * scale, 51 * scale)
+
     def draw_reference_exit(self):
         x0, y0, x1, y1 = self.room.reference_art['doorPixels']
         center = (x0 + x1) / 2
@@ -453,14 +518,29 @@ class Application:
                 p.update_canvas()
             return
         self.view.draw_ground()
+        for terrain in self.room.earth_terrain:
+            if terrain.kind == 'floor':
+                self.draw_earth_terrain(terrain)
+        if self.room.turret_room:
+            self.draw_turret_switch()
+        if self.room.puzzle:
+            self.draw_plate()
         exit_point = self.room.data['plannedExit']
         layers = [(depth, self.view.draw_wall, (wall,)) for depth, wall in self.view.walls]
         layers.append((exit_point['y'], self.draw_exit, ()))
+        layers.extend((terrain.bounds[3], self.draw_earth_terrain, (terrain,))
+                      for terrain in self.room.earth_terrain if terrain.kind == 'wall')
         if self.room.reference_art:
             origin_y = self.room.reference_art['originPixels'][1]
             unit = self.room.reference_art['pixelsPerTile']
             for rect in self.room.reference_art['coverPixels']:
                 layers.append(((rect[3] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
+            for rect in self.room.reference_art.get('foregroundWallPixels', []):
+                layers.append(((rect[1] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
+        if self.room.puzzle:
+            layers.append((self.room.block[1], self.draw_puzzle_block, ()))
+            if not self.room.stone_gate_open:
+                layers.append((self.room.puzzle['gate'][3], self.draw_stone_gate, ()))
         if not self.room.vine_open:
             gate = self.room.vine_gate
             layers.append((gate['y'] + gate['height'], self.draw_vine, ()))
@@ -493,7 +573,7 @@ class Application:
         self.view.release()
         self.shot_images.clear()
         self.source_images.clear()
-        self.vine_image = None
+        self.vine_image = self.block_image = self.gate_image = None
         self.title_image = None
 
 

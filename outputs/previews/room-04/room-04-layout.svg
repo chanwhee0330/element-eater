@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720">
+<defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#333049"/><path d="M24 0H0V24" fill="none" stroke="#47435a"/></pattern><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#b9e29f"/></marker></defs>
+<rect x="0" y="0" width="960" height="720" rx="0" fill="#171522" stroke="none"/>
+<text x="46" y="53" fill="#bcb2cd" font-family="Malgun Gothic, sans-serif" font-size="17" text-anchor="start">엘리먼트 이터  /  4번 방</text>
+<text x="46" y="96" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="36" text-anchor="start">돌 발판실</text>
+<rect x="46" y="127" width="576" height="552" rx="10" fill="#201b2b" stroke="#40374e"/>
+<g transform="translate(70 139)">
+<path d="M192 24H336V72H480V264H336V288H408V408H336V504H192V456H72V408H24V312H72V288H192V264H48V72H192Z" fill="url(#grid)" stroke="#81758e" stroke-width="7" stroke-linejoin="round"/>
+<path d="M480 144V216" fill="none" stroke="#201b2b" stroke-width="9" />
+<path d="M480 144V216" fill="none" stroke="#df9f73" stroke-width="3" stroke-dasharray="5 6"/>
+<path d="M192 72H336" fill="none" stroke="#b9e29f" stroke-width="7" />
+<text x="264" y="55" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="17" text-anchor="middle">다음 방</text>
+<text x="264" y="108" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="18" text-anchor="middle">흙 적 전투 마당</text>
+<rect x="114" y="157" width="67" height="19" rx="3" fill="#8c809a" stroke="#afa2ba"/>
+<rect x="305" y="200" width="55" height="19" rx="3" fill="#8c809a" stroke="#afa2ba"/>
+<circle cx="124" cy="122" r="15" fill="#754e32" stroke="#f1bf80" stroke-width="2"/>
+<text x="124" y="127" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="14" text-anchor="middle">근</text>
+<circle cx="374" cy="225" r="15" fill="#754e32" stroke="#f1bf80" stroke-width="2"/>
+<text x="374" y="230" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="14" text-anchor="middle">근</text>
+<circle cx="393" cy="122" r="15" fill="#754e32" stroke="#f1bf80" stroke-width="2"/>
+<text x="393" y="127" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="14" text-anchor="middle">원</text>
+<text x="423" y="177" fill="#f0b087" font-family="Malgun Gothic, sans-serif" font-size="13" text-anchor="start">낭떠러지</text>
+<path d="M218 269H314" fill="none" stroke="#d9bb87" stroke-width="5" stroke-dasharray="7 4"/>
+<text x="324" y="275" fill="#ebd2ac" font-family="Malgun Gothic, sans-serif" font-size="13">발판 연동문</text>
+<text x="291" y="314" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="18" text-anchor="middle">돌 발판 퍼즐</text>
+<path d="M230 356H361" fill="none" stroke="#6e805f" stroke-width="12" stroke-linecap="round"/>
+<path d="M262 356H345" fill="none" stroke="#b9e29f" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="223" y="343" width="27" height="26" rx="5" fill="#988376" stroke="#e0c4a0"/>
+<rect x="354" y="342" width="31" height="28" rx="5" fill="#455a45" stroke="#a9db90"/>
+<text x="236" y="389" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="13" text-anchor="middle">퍼즐 돌</text>
+<text x="369" y="389" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="13" text-anchor="middle">발판</text>
+<text x="123" y="316" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="middle">바람개비 곁방</text>
+<circle cx="99" cy="353" r="11" fill="#a0c783"/>
+<path d="M94 348L104 358M104 348L94 358" fill="none" stroke="#24352d" stroke-width="2" />
+<circle cx="146" cy="353" r="11" fill="#a0c783"/>
+<path d="M141 348L151 358M151 348L141 358" fill="none" stroke="#24352d" stroke-width="2" />
+<text x="264" y="467" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="17" text-anchor="middle">입구</text>
+<path d="M264 438V408" fill="none" stroke="#b9e29f" stroke-width="2" marker-end="url(#arrow)"/>
+</g>
+<text x="651" y="166" fill="#b9e29f" font-family="Malgun Gothic, sans-serif" font-size="22" text-anchor="start">바람 획득</text>
+<text x="651" y="199" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">바람개비를 공격해 구슬을 방출</text>
+<text x="651" y="224" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">F로 섭취한 뒤 바람 선택</text>
+<text x="651" y="280" fill="#b9e29f" font-family="Malgun Gothic, sans-serif" font-size="22" text-anchor="start">돌 밀기</text>
+<text x="651" y="313" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">돌 왼쪽에서 오른쪽을 보고 R</text>
+<text x="651" y="338" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">레일 끝 발판에 돌이 고정</text>
+<text x="651" y="394" fill="#b9e29f" font-family="Malgun Gothic, sans-serif" font-size="22" text-anchor="start">흙 적 전투</text>
+<text x="651" y="427" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">Space로 흙 적 3명 공략</text>
+<text x="651" y="452" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">엄폐벽 뒤에서 사격을 피함</text>
+<text x="651" y="508" fill="#b9e29f" font-family="Malgun Gothic, sans-serif" font-size="22" text-anchor="start">출구 개방</text>
+<text x="651" y="541" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">발판 작동과 적 전멸 확인</text>
+<text x="651" y="566" fill="#f0ebf6" font-family="Malgun Gothic, sans-serif" font-size="16" text-anchor="start">두 조건이 충족되면 개방</text>
+<text x="651" y="645" fill="#bcb2cd" font-family="Malgun Gothic, sans-serif" font-size="14" text-anchor="start">위에서 내려다본 배치 시안</text>
+</svg>

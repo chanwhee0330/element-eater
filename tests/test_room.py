@@ -1,7 +1,7 @@
 """렌더러에 의존하지 않는 첫 방 플레이 시나리오 검사."""
 import math
 import unittest
-from src.room import Room
+from src.room import Room, RIM_HALF_X, RIM_HALF_Y
 
 
 def advance(room, keys=(), seconds=1, fps=120):
@@ -40,12 +40,46 @@ class RoomTests(unittest.TestCase):
         advance(room, 'w')
         self.assertGreaterEqual(room.player.y, 8.2)
         room.reset()
-        room.player.y = 14
+        room.player.y = 14.5
+        advance(room, 'a', .4)
+        self.assertEqual(room.player.falling, 0)
+        # 같은 지형에서 난간이 없는 구간의 낙하를 검사한다.
+        room.wall_bounds.pop((9, 14, 'vertical'))
         advance(room, 'a', .4)
         self.assertGreater(room.player.falling, 0)
         advance(room)
         self.assertEqual(room.player.falling, 0)
         self.assertLess(room.tile(room.player.x, room.player.y), 3)
+
+    def test_stone_rims_stop_the_player_before_the_visible_corner(self):
+        for stage, right in ((1, 15), (2, 16)):
+            with self.subTest(stage=stage):
+                room = Room(stage=stage)
+                player = room.player
+                player.x, player.y = right - 1.5, 19.5
+                room.move(player, 2, 2)
+                self.assertLessEqual(player.x, right - RIM_HALF_X - room.radius)
+                self.assertLess(player.y, 21 - RIM_HALF_Y)
+                self.assertEqual(room.tile(player.x, player.y), 0)
+
+                # 이전 버전에서 난간과 겹친 위치로 저장했어도 안쪽으로 돌아갈 수 있다.
+                player.x, player.y = right - .24, 19.5
+                room.move(player, -.5, 0)
+                self.assertAlmostEqual(player.x, right - .74)
+
+    def test_room_three_walls_stop_movement(self):
+        room = Room(stage=3)
+        room.player.x, room.player.y = 1, 18
+        advance(room, 'a', 1)
+        self.assertEqual(room.player.falling, 0)
+        self.assertGreaterEqual(room.player.x, .45)
+
+    def test_room_three_stops_at_the_spawn_courtyard_right_wall(self):
+        room = Room(stage=3)
+        room.player.x, room.player.y = (395 - 60) / 42, (850 - 62) / 42
+        advance(room, 'd', .5)
+        self.assertLess(60 + room.player.x * 42, 418)
+        self.assertEqual(room.player.falling, 0)
 
     def test_diagonal_speed_and_frame_rate_independence(self):
         rooms = [Room() for _ in range(3)]

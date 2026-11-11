@@ -1,11 +1,10 @@
 """두 방의 타일 좌표를 공유하는 입체 지도 렌더러."""
-from collections import defaultdict
 import ctypes
 import json
 import math
 import random
 
-from .room import ROOT
+from .room import ROOT, TILE_WIDTH, TILE_HEIGHT, RIM_HALF_X, RIM_HALF_Y
 
 
 class Mesh:
@@ -20,12 +19,12 @@ class Mesh:
         self.vertices.extend(zip(points, colors or (color,) * 4, uv))
         self.indices.extend(index + i for i in (0, 1, 2, 0, 2, 3))
 
-    def draw(self, p, image=None, offset=(0, 0), opacity=1):
+    def draw(self, p, image=None, offset=(0, 0)):
         if not self.vertices:
             return
         dx, dy = offset
         vertices = (p.SDL_Vertex * len(self.vertices))(*(
-            p.SDL_Vertex(p.SDL_FPoint(x + dx, y + dy), p.SDL_Color(*rgba[:3], round(rgba[3] * opacity)), p.SDL_FPoint(u, v))
+            p.SDL_Vertex(p.SDL_FPoint(x + dx, y + dy), p.SDL_Color(*rgba), p.SDL_FPoint(u, v))
             for (x, y), rgba, (u, v) in self.vertices
         ))
         indices = (ctypes.c_int * len(self.indices))(*self.indices)
@@ -42,7 +41,7 @@ def atlas_uv(image, col, row, columns, rows):
 
 
 class IsometricRoom:
-    tile_width, tile_height = 48, 30
+    tile_width, tile_height = TILE_WIDTH, TILE_HEIGHT
     sprite_height = 54
     rear_wall_height = 104
 
@@ -91,7 +90,8 @@ class IsometricRoom:
             if path not in self.reference_images:
                 self.reference_images[path] = self.p.load_image(str(path))
             self.reference_image = self.reference_images[path]
-            self.reference_scale = min(self.width / self.reference_image.w, self.height / self.reference_image.h)
+            self.reference_scale = max(1, self.width / self.reference_image.w,
+                                       self.height / self.reference_image.h)
             self.tile_width = self.tile_height = room.reference_art['pixelsPerTile'] * self.reference_scale
             self.walls = []
             self.follow(room.player.x, room.player.y)
@@ -106,8 +106,11 @@ class IsometricRoom:
             image = self.reference_image
             scale = self.reference_scale
             origin_x, origin_y = self.room.reference_art['originPixels']
-            self.origin = ((self.width - image.w * scale) / 2 + origin_x * scale,
-                           (self.height - image.h * scale) / 2 + origin_y * scale)
+            px, py = self.project(x, y)
+            left = self.width / 2 - px - origin_x * scale
+            top = self.height * .6 - py - origin_y * scale
+            self.origin = (round(max(self.width - image.w * scale, min(0, left)) + origin_x * scale),
+                           round(max(self.height - image.h * scale, min(0, top)) + origin_y * scale))
             return
         px, py = self.project(x, y)
         center_x = self.room.data['columns'] * self.tile_width / 2
@@ -136,10 +139,8 @@ class IsometricRoom:
 
     def draw_ground(self):
         if self.reference_image:
-            self.p.draw_rectangle(0, 0, self.width, self.height, 26, 21, 32, filled=True)
-            self.reference_image.draw(self.width / 2, self.height / 2,
-                                      self.reference_image.w * self.reference_scale,
-                                      self.reference_image.h * self.reference_scale)
+            image = self.reference_image
+            self.draw_reference_cover((0, 0, image.w, image.h))
             return
         self.backdrop.draw(self.width / 2, self.height / 2, self.width, self.height)
         width, height = self.terrain_size
@@ -161,17 +162,8 @@ class IsometricRoom:
         image.clip_draw(x0, image.h - y1, x1 - x0, y1 - y0, x, y,
                         (x1 - x0) * scale, (y1 - y0) * scale)
 
-    def draw_wall(self, wall):
-        mesh, x, y, height, is_perimeter = wall
-        if is_perimeter:
-            mesh.draw(self.p, self.atlas, self.origin)
-            return
-        player = self.room.player
-        # Keep the wall geometry and fade its surfaces when it obscures the player.
-        px, py = self.project(player.x, player.y)
-        wx, wy = self.project(x + .5, y + .5)
-        obscures_player = abs(px - wx) < self.tile_width * .95 and 0 < wy - py < height + 12
-        mesh.draw(self.p, self.atlas, self.origin, opacity=.42 if obscures_player else 1)
+    def draw_wall(self, mesh):
+        mesh.draw(self.p, self.atlas, self.origin)
 
     def wall_cell(self, x, y, height):
         mesh = Mesh()
@@ -217,7 +209,7 @@ class IsometricRoom:
                 self.floor_quad(floor, x, y, x + 1, y + 1, uv[rotation:] + uv[:rotation], color)
                 if tile == ids['wall']:
                     height = 42 if room.stage == 1 else 38
-                    walls.append((y + 1, (self.wall_cell(x, y, height), x, y, height, False)))
+                    walls.append((y + 1, self.wall_cell(x, y, height)))
 
         for entry in decor['placements']:
             slot = decor['slots'][entry['kind']]
@@ -280,12 +272,7 @@ class IsometricRoom:
                     self.face(ivy, (center + shift - .35, y + .04), (center + shift + .35, y + .04),
                               vine_top, vine_top - drop, (167, 190, 123, 240), uv=moss_uv)
 
-        # 높은 뒤쪽 벽이 이미 있는 경계는 낮은 외곽벽으로 덮지 않는다.
-        decorated_edges = {(column, top) for column in range(left, right)}
-        for run in decor.get('wallRuns', []):
-            decorated_edges.update((column, run['y'])
-                                   for column in range(run['x'], run['x'] + run['width']))
-        walls.extend(self.perimeter_walls(tiles, ids['pit'], decorated_edges))
+        walls.extend(self.perimeter_walls(self.room.rim_edges))
         for x, y in decor.get('cliffSconces', []):
             fixtures.append(self.project(x, y, -28))
 
@@ -326,43 +313,29 @@ class IsometricRoom:
         p.SDL_SetTextureBlendMode(terrain, p.SDL_BLENDMODE_BLEND)
         return backdrop, terrain, (width, height), (ox, oy), walls
 
-    def perimeter_walls(self, tiles, pit, decorated_edges):
-        rows, columns = len(tiles), len(tiles[0])
-        edges = []
-        axes_at = defaultdict(set)
-        for y, row in enumerate(tiles):
-            for x, tile in enumerate(row):
-                if tile == pit:
-                    continue
-                # 한 칸 너머의 앞쪽 절벽이 이미 이 경계를 구분한다.
-                cliff_behind = y >= 2 and tiles[y - 2][x] != pit
-                if (y == 0 or tiles[y - 1][x] == pit) and not cliff_behind and (x, y) not in decorated_edges:
-                    edges.append(((x, y), (x + 1, y), 'horizontal'))
-                if y + 1 == rows or tiles[y + 1][x] == pit:
-                    edges.append(((x, y + 1), (x + 1, y + 1), 'horizontal'))
-                if x == 0 or row[x - 1] == pit:
-                    edges.append(((x, y), (x, y + 1), 'vertical'))
-                if x + 1 == columns or row[x + 1] == pit:
-                    edges.append(((x + 1, y), (x + 1, y + 1), 'vertical'))
-
-        for start, end, axis in edges:
-            axes_at[start].add(axis)
-            axes_at[end].add(axis)
-        corners = {point for point, axes in axes_at.items() if len(axes) == 2}
+    def perimeter_walls(self, edges):
+        corners = self.room.rim_corners
         # 꼭짓점에는 모서리 돌을 한 번만 놓고, 양쪽 윗돌을 그 돌에 맞춘다.
-        half_x = 10 / self.tile_width
-        half_y = 10 / self.tile_height
+        half_x, half_y = RIM_HALF_X, RIM_HALF_Y
+        vertical = {start for start, _, axis in edges if axis == 'vertical'}
         for start, end, axis in edges:
+            if axis != 'horizontal':
+                continue
             x, y = start
-            end_x, end_y = end
-            if axis == 'horizontal':
-                left = x + (half_x if start in corners else 0)
-                right = end_x - (half_x if end in corners else 0)
-                yield y + half_y, self.rim_segment(left, y - half_y, right, y + half_y)
-            else:
-                top = y + (half_y if start in corners else 0)
-                bottom = end_y - (half_y if end in corners else 0)
-                yield bottom, self.rim_segment(x - half_x, top, x + half_x, bottom, front=False)
+            left = x + (half_x if start in corners else 0)
+            right = end[0] - (half_x if end in corners else 0)
+            yield y + half_y, self.rim_segment(left, y - half_y, right, y + half_y)
+
+        # 이어진 옆벽은 끝점의 깊이로 한 번만 그려 중간 타일에서 가림이 갈리지 않게 한다.
+        for x, y in sorted(vertical):
+            if (x, y - 1) in vertical and (x, y) not in corners:
+                continue
+            end_y = y + 1
+            while (x, end_y) in vertical and (x, end_y) not in corners:
+                end_y += 1
+            top = y + (half_y if (x, y) in corners else 0)
+            bottom = end_y - (half_y if (x, end_y) in corners else 0)
+            yield bottom, self.rim_segment(x - half_x, top, x + half_x, bottom, front=False)
         for x, y in sorted(corners):
             yield y + half_y, self.rim_segment(x - half_x, y - half_y, x + half_x, y + half_y)
 
@@ -387,7 +360,7 @@ class IsometricRoom:
         if not front:
             self.face(mesh, (x0, y1), (x1, y1), height, height - 5,
                       (186, 151, 178, 255), (137, 111, 149, 255), uv=uv)
-        return mesh, (x0 + x1) / 2 - .5, y1 - .5, height, True
+        return mesh
 
     def spike_tile(self, mesh, x, y):
         self.floor_quad(mesh, x, y, x + 1, y + 1, None, (131, 103, 85, 255))

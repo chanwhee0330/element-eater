@@ -45,6 +45,8 @@ class Source:
 
     def frame(self):
         if self.phase in ('intact', 'damaged1', 'damaged2'):
+            if self.element == 'wind':
+                return int(self.age * 12) % 24 if self.phase == 'intact' else int(self.age * 4) % 8
             return int(self.age*8) % 8
         if self.phase == 'breaking':
             return 4 if self.break_elapsed < .14 else 5 if self.break_elapsed < .31 else 6

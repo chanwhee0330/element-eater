@@ -6,7 +6,7 @@ import math
 import os
 from copy import deepcopy
 
-from .room import ROOT, Room, Actor, STAGES
+from .room import ROOT, Room, Actor, EarthTerrain, STAGES
 from .combat import Projectile
 from .elements import Source, ELEMENTS
 
@@ -29,11 +29,13 @@ def boolean(value):
 
 
 def actor_from_data(data, template, room):
+    if isinstance(data, dict):
+        data = {'wind_sliding': False, **data}
     if not isinstance(data, dict) or set(data) != {f.name for f in fields(Actor)}:
         raise ValueError('캐릭터 저장 형식 불일치')
     if data['kind'] != template.kind or data['name'] != template.name:
         raise ValueError('캐릭터 종류 불일치')
-    if data['element'] != template.element or data['attack_element'] not in ('neutral','water','fire','wind'):
+    if data['element'] != template.element or data['attack_element'] not in ('neutral','water','fire','wind','earth','lightning'):
         raise ValueError('캐릭터 원소 불일치')
     if data['facing'] not in DIRECTIONS or data['attack_facing'] not in DIRECTIONS:
         raise ValueError('방향 불일치')
@@ -47,11 +49,11 @@ def actor_from_data(data, template, room):
     limits = {'animation_time': 1_000_000_000, 'falling': room.data['preview']['fallSeconds'],
               'hit_flash': .16, 'invulnerable': room.tuning.invulnerability,
               'attack_cooldown': max(room.tuning.player_interval, room.tuning.melee_interval, room.tuning.ranged_interval),
-              'knockback_left': room.tuning.knockback_seconds}
+              'knockback_left': room.wind_enemy_push_seconds if data['wind_sliding'] else room.tuning.knockback_seconds}
     for key, maximum in limits.items():
         number(data[key], 0, maximum)
     number(data['attack_elapsed'], -1, room.tuning.attack_duration)
-    for key in ('active', 'moving', 'attack_emitted'):
+    for key in ('active', 'moving', 'attack_emitted', 'wind_sliding'):
         boolean(data[key])
     for key in ('attack_direction', 'knockback'):
         vector = data[key]
@@ -63,9 +65,11 @@ def actor_from_data(data, template, room):
         raise ValueError('생존 상태 불일치')
     if template.kind == 'hero' and not data['active']:
         raise ValueError('사망한 저장은 재개 불가')
-    if room.tile(data['x'], data['y']) == 3:
+    if room.tile(data['x'], data['y'], ignore_block=True) == 3:
         raise ValueError('벽 내부 위치')
     data = dict(data)
+    if data['wind_sliding'] and not data['knockback_left']:
+        data['wind_sliding'] = False
     data['attack_direction'], data['knockback'] = tuple(data['attack_direction']), tuple(data['knockback'])
     return Actor(**data)
 
@@ -105,6 +109,52 @@ def restore(record, room):
         candidate.vine_time = number(state.get('vine_time', -1), -1, candidate.vine_gate['burnDuration'])
         if -1 < candidate.vine_time < 0:
             raise ValueError('덤불 소각 시간 불일치')
+    if candidate.puzzle:
+        puzzle = state['stone_puzzle']
+        candidate.plate_pressed = boolean(puzzle['pressed'])
+        gate_default = candidate.gate_open_seconds if candidate.plate_pressed else 0
+        candidate.gate_time = number(puzzle.get('gate_time', gate_default), 0, gate_default)
+        candidate.block_direction = puzzle['direction']
+        if candidate.block_direction is not None and candidate.block_direction not in DIRECTIONS:
+            raise ValueError('퍼즐 이동 방향 불일치')
+        block = puzzle['block']
+        if not isinstance(block, list) or len(block) != 2:
+            raise ValueError('퍼즐 위치 형식 불일치')
+        x = number(block[0], 0, candidate.data['columns'])
+        y = number(block[1], 0, candidate.data['rows'])
+        if candidate.plate_pressed and (block != candidate.puzzle['plate'] or candidate.block_direction):
+            raise ValueError('발판 상태 불일치')
+        if candidate.tile(x, y, ignore_block=True) != 0:
+            raise ValueError('퍼즐 바닥 위치 불일치')
+        candidate.block = x, y
+    terrain = state.get('earth_terrain', [])
+    if not isinstance(terrain, list) or len(terrain) > 256:
+        raise ValueError('임시 지형 목록 불일치')
+    for entry in terrain:
+        kind, bounds = entry['kind'], entry['bounds']
+        if kind not in ('wall', 'floor') or not isinstance(bounds, list) or len(bounds) != 4:
+            raise ValueError('임시 지형 형식 불일치')
+        left, top, right, bottom = bounds
+        number(left, 0, candidate.data['columns'])
+        number(right, left, candidate.data['columns'])
+        number(top, 0, candidate.data['rows'])
+        number(bottom, top, candidate.data['rows'])
+        if left == right or top == bottom:
+            raise ValueError('임시 지형 면적 불일치')
+        if kind == 'floor':
+            bridge = candidate.turret_room
+            if not bridge or bounds not in (bridge['bridge'], bridge.get('previousBridge')):
+                raise ValueError('임시 바닥 위치 불일치')
+            bounds = bridge['bridge']
+        remaining = number(entry['remaining'], 0, candidate.earth_seconds)
+        candidate.earth_terrain.append(EarthTerrain(kind, tuple(bounds), remaining))
+    if candidate.turret_room:
+        turret = state['turret_room']
+        candidate.turrets_stopped = boolean(turret['stopped'])
+        candidate.turret_timer = number(turret['timer'], 0, .85)
+        candidate.next_turret = turret['next']
+        if type(candidate.next_turret) is not int or candidate.next_turret not in (0, 1):
+            raise ValueError('포대 순서 불일치')
     player = actor_from_data(state['player'],candidate.player,candidate)
     enemies = [actor_from_data(saved,template,candidate) for saved,template in zip(state['enemies'],candidate.enemies)]
     sources = state['sources']
@@ -128,6 +178,17 @@ def restore(record, room):
         raise ValueError('안전 위치 불일치')
     number(safe[0],0,candidate.data['columns'])
     number(safe[1],0,candidate.data['rows'])
+    if candidate.reference_art and state.get('reference_layout') == 1:
+        # 이전 바닥 경계에 걸쳐 저장된 위치를 새 바닥 안으로 옮긴다.
+        if not candidate.fits(safe[0], safe[1], safe=True):
+            safe = list(candidate.safe)
+        if candidate.tile(player.x, player.y) == 4 and not player.falling:
+            player.x, player.y = safe[:2]
+        for enemy, template in zip(enemies, candidate.enemies):
+            if enemy.active and not enemy.falling and candidate.tile(enemy.x, enemy.y) == 4:
+                enemy.x, enemy.y = template.x, template.y
+    if (candidate.puzzle or candidate.earth_terrain) and not candidate.fits(safe[0], safe[1], safe=True):
+        safe = list(candidate.safe)
     if not candidate.fits(safe[0],safe[1],safe=True):
         raise ValueError('위험한 복귀 위치')
     elapsed = number(state['elapsed'], 0, 1_000_000_000)
@@ -137,7 +198,7 @@ def restore(record, room):
     if not isinstance(inventory,dict) or set(inventory) != set(ELEMENTS):
         raise ValueError('보관함 형식 불일치')
     for element,count in inventory.items():
-        if type(count) is not int or not 0 <= count <= 1_000_000 or (element not in ('water','fire') and count != 0):
+        if type(count) is not int or not 0 <= count <= 1_000_000 or (element not in ('water','fire','wind','earth') and count != 0):
             raise ValueError('지원하지 않는 보유 원소')
     selected = state['selected']
     if selected not in ([element for element, count in inventory.items() if count] or ['neutral']):
@@ -147,7 +208,7 @@ def restore(record, room):
     if ingest_elapsed < 0 and ingest_elapsed != -1:
         raise ValueError('섭취 시간 불일치')
     ingest_source,consumed,form = state['ingest_source'],boolean(state['ingest_consumed']),state['ingest_form']
-    if form not in ('neutral','water','fire'):
+    if form not in ('neutral','water','fire','wind','earth'):
         raise ValueError('섭취 외형 불일치')
     if ingest_elapsed >= 0:
         source = next((s for s in restored_sources if s.id == ingest_source),None)
@@ -162,7 +223,7 @@ def restore(record, room):
     for shot in shots:
         if not isinstance(shot, dict) or set(shot) != {f.name for f in fields(Projectile)}:
             raise ValueError('탄환 형식 불일치')
-        if shot['owner'] not in ('hero','enemy') or shot['element'] not in ('neutral','water','fire','wind'):
+        if shot['owner'] not in ('hero','enemy') or shot['element'] not in ('neutral','water','fire','wind','earth','lightning'):
             raise ValueError('탄환 종류 불일치')
         for key in ('x', 'y', 'dx', 'dy', 'speed', 'remaining', 'age'):
             number(shot[key])
@@ -210,10 +271,19 @@ class SaveStore:
             'inventory':dict(room.inventory),'selected':room.selected,'sources':[asdict(s) for s in room.sources],
             'fire_aggro':room.fire_aggro,'ingest_elapsed':room.ingest_elapsed,'ingest_source':room.ingest_source,
             'ingest_consumed':room.ingest_consumed,'ingest_form':room.ingest_form}}
+        if room.puzzle:
+            record['state']['stone_puzzle'] = {
+                'block': list(room.block), 'direction': room.block_direction, 'pressed': room.plate_pressed,
+                'gate_time': room.gate_time}
+        if room.earth_terrain:
+            record['state']['earth_terrain'] = [asdict(terrain) for terrain in room.earth_terrain]
+        if room.turret_room:
+            record['state']['turret_room'] = {
+                'stopped': room.turrets_stopped, 'timer': room.turret_timer, 'next': room.next_turret}
         if room.vine_gate:
             record['state']['vine_time'] = room.vine_time
         if room.reference_art:
-            record['state']['reference_layout'] = 1
+            record['state']['reference_layout'] = 2
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_suffix('.tmp')
         temporary.write_text(json.dumps(record, ensure_ascii=False, allow_nan=False), encoding='utf-8')

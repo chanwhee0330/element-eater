@@ -143,7 +143,8 @@ class CombatTests(unittest.TestCase):
 
     def test_knockback_can_drop_enemy_and_cannot_cross_wall(self):
         room, enemy = quiet_room()
-        enemy.x, enemy.y = 5.1, 19
+        room.wall_bounds.pop((5, 19, 'vertical'))
+        enemy.x, enemy.y = 5.1, 19.5
         room.damage(enemy, 5, (-1, 0))
         step(room, .2)
         self.assertGreater(enemy.falling, 0)

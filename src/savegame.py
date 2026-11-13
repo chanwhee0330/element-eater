@@ -109,6 +109,27 @@ def restore(record, room):
         candidate.vine_time = number(state.get('vine_time', -1), -1, candidate.vine_gate['burnDuration'])
         if -1 < candidate.vine_time < 0:
             raise ValueError('덤불 소각 시간 불일치')
+    if candidate.fire_barriers:
+        extinguished = state['extinguished']
+        if (not isinstance(extinguished, list)
+                or any(type(index) is not int or not 0 <= index < len(candidate.fire_barriers) for index in extinguished)
+                or len(set(extinguished)) != len(extinguished)):
+            raise ValueError('불길 진화 상태 불일치')
+        candidate.extinguished = set(extinguished)
+    if candidate.power_puzzle:
+        power = state['power_puzzle']
+        targets, levels = power['targets'], power['levels']
+        for values, minimum in ((targets, 1), (levels, 0)):
+            if not isinstance(values, list) or len(values) != 3 or any(
+                type(value) is not int or not minimum <= value <= 3 for value in values
+            ):
+                raise ValueError('전도체 단계 불일치')
+        candidate.power_connected = boolean(power['connected'])
+        if candidate.power_connected and targets != levels:
+            raise ValueError('전도체 연결 상태 불일치')
+        candidate.gate_time = number(power['gate_time'], 0,
+                                     candidate.gate_open_seconds if candidate.power_connected else 0)
+        candidate.power_targets, candidate.power_levels = targets, levels
     if candidate.puzzle:
         puzzle = state['stone_puzzle']
         candidate.plate_pressed = boolean(puzzle['pressed'])
@@ -198,17 +219,25 @@ def restore(record, room):
     if not isinstance(inventory,dict) or set(inventory) != set(ELEMENTS):
         raise ValueError('보관함 형식 불일치')
     for element,count in inventory.items():
-        if type(count) is not int or not 0 <= count <= 1_000_000 or (element not in ('water','fire','wind','earth') and count != 0):
+        if type(count) is not int or not 0 <= count <= 1_000_000 or (element not in ELEMENTS and count != 0):
             raise ValueError('지원하지 않는 보유 원소')
     selected = state['selected']
-    if selected not in ([element for element, count in inventory.items() if count] or ['neutral']):
+    lightning_charged = boolean(state.get('lightning_charged', False))
+    lightning_attack = boolean(state.get('lightning_attack', False))
+    if selected != 'neutral' and not lightning_attack and (selected not in inventory or not inventory[selected]):
         raise ValueError('선택 원소 불일치')
+    if lightning_charged and (selected != 'lightning' or lightning_attack):
+        raise ValueError('번개 충전 상태 불일치')
+    if lightning_attack:
+        if (selected != 'lightning' or player.attack_element != 'lightning' or player.attack_elapsed < 0
+                or (not player.attack_emitted and not inventory['lightning'])):
+            raise ValueError('번개 공격 상태 불일치')
     fire_aggro = boolean(state['fire_aggro'])
     ingest_elapsed = number(state['ingest_elapsed'],-1,candidate.tuning.ingest_duration)
     if ingest_elapsed < 0 and ingest_elapsed != -1:
         raise ValueError('섭취 시간 불일치')
     ingest_source,consumed,form = state['ingest_source'],boolean(state['ingest_consumed']),state['ingest_form']
-    if form not in ('neutral','water','fire','wind','earth'):
+    if form not in ('neutral', *ELEMENTS):
         raise ValueError('섭취 외형 불일치')
     if ingest_elapsed >= 0:
         source = next((s for s in restored_sources if s.id == ingest_source),None)
@@ -242,6 +271,7 @@ def restore(record, room):
     candidate.safe,candidate.elapsed,candidate.aggro = tuple(safe),elapsed,aggro
     candidate.spike_contact,candidate.projectiles = spike,projectiles
     candidate.inventory,candidate.selected,candidate.fire_aggro = inventory,selected,fire_aggro
+    candidate.lightning_charged, candidate.lightning_attack = lightning_charged, lightning_attack
     candidate.ingest_elapsed,candidate.ingest_source = ingest_elapsed,ingest_source
     candidate.ingest_consumed,candidate.ingest_form = consumed,form
     room.__dict__.update(candidate.__dict__)
@@ -269,8 +299,15 @@ class SaveStore:
             'safe': list(room.safe), 'aggro': room.aggro, 'elapsed': room.elapsed,
             'spike_contact':room.spike_contact,'projectiles':[asdict(s) for s in room.projectiles],
             'inventory':dict(room.inventory),'selected':room.selected,'sources':[asdict(s) for s in room.sources],
+            'lightning_charged': room.lightning_charged, 'lightning_attack': room.lightning_attack,
             'fire_aggro':room.fire_aggro,'ingest_elapsed':room.ingest_elapsed,'ingest_source':room.ingest_source,
             'ingest_consumed':room.ingest_consumed,'ingest_form':room.ingest_form}}
+        if room.fire_barriers:
+            record['state']['extinguished'] = sorted(room.extinguished)
+        if room.power_puzzle:
+            record['state']['power_puzzle'] = {
+                'targets': room.power_targets, 'levels': room.power_levels,
+                'connected': room.power_connected, 'gate_time': room.gate_time}
         if room.puzzle:
             record['state']['stone_puzzle'] = {
                 'block': list(room.block), 'direction': room.block_direction, 'pressed': room.plate_pressed,

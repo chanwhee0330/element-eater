@@ -29,6 +29,10 @@ class CombatTuning:
     elemental_speed: float = 8
     elemental_range: float = 6
     heal_amount: int = 20
+    lightning_damage: int = 15
+    lightning_range: int = 320
+    lightning_jump_range: int = 200
+    lightning_max_targets: int = 3
     ingest_range: float = 1.25
     ingest_duration: float = 8 / 12
     ingest_event: float = 4 / 12

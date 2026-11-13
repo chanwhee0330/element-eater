@@ -39,14 +39,14 @@ class Application:
         self.accumulator = 0
         self.images, self.metadata = {}, {}
         self.keymap = {p.SDLK_w:'w',p.SDLK_a:'a',p.SDLK_s:'s',p.SDLK_d:'d',p.SDLK_SPACE:'attack',
-                       p.SDLK_f:'ingest',p.SDLK_r:'skill',p.SDLK_q:'previous',p.SDLK_e:'next'}
+                       p.SDLK_g:'connect',p.SDLK_f:'ingest',p.SDLK_r:'skill',p.SDLK_q:'previous',p.SDLK_e:'next'}
         self.view = IsometricRoom(p, self.width, self.height)
         self.view.load(self.room)
         self.title_image = p.load_image(str(ROOT / 'assets/ui/title/v1/title-screen-v1.png'))
         # 제자리 원거리형도 넉백 중에는 moving 상태가 되므로 walk 시트가 필요하다.
         for kind, states in [('hero', ('idle', 'walk', 'attack', 'ingest')), ('melee', ('idle', 'walk', 'attack')), ('ranged', ('idle', 'walk', 'attack'))]:
             for state in states:
-                elements = ('neutral', 'water', 'fire', 'wind', 'earth') if kind == 'hero' else ('neutral', 'fire', 'wind', 'earth', 'lightning')
+                elements = ('neutral', 'water', 'fire', 'wind', 'earth', 'lightning')
                 for element in elements:
                     if kind == 'hero':
                         stem = ROOT / f'assets/sprites/hero/{element}/hero-{element}-{state}'
@@ -63,7 +63,7 @@ class Application:
         source_folder = ROOT / 'assets/items/elements/break-release-v3/sprites'
         self.source_images = {
             (element, name): p.load_image(str(source_folder / f'{element}-{name}.png'))
-            for element in ('water', 'fire', 'wind', 'earth') for name in ('idle','damaged1','damaged2','break','orb')
+            for element in ('water', 'fire', 'wind', 'earth', 'lightning') for name in ('idle','damaged1','damaged2','break','orb')
         }
         vine_folder = STAGES[3].parent
         self.vine_image = p.load_image(str(vine_folder / 'vine-burn.png'))
@@ -71,6 +71,14 @@ class Application:
         puzzle_folder = STAGES[4].parent
         self.block_image = p.load_image(str(puzzle_folder / 'puzzle-block.png'))
         self.gate_image = p.load_image(str(puzzle_folder / 'stone-gate.png'))
+        power_folder = STAGES[6].parent
+        self.conductor_images = [p.load_image(str(power_folder / f'conductor-{level}.png')) for level in range(4)]
+        self.connect_image = p.load_image(str(power_folder / 'connect-switch.png'))
+        flame_path = ROOT / 'assets/effects/fire/campfire/campfire.json'
+        flame_sheet = json.loads(flame_path.read_text(encoding='utf-8'))
+        self.flame_image = p.load_image(str(flame_path.with_name(flame_sheet['meta']['image'])))
+        self.flame_frames = [frame['frame'] for frame in flame_sheet['frames']]
+        self.flame_spec = flame_sheet['meta']['pixelfx']
         self.stage_keys = {
             key: stage for stage in STAGES
             for key in (getattr(p, f'SDLK_{stage}'), getattr(p, f'SDLK_KP_{stage}'))
@@ -80,10 +88,15 @@ class Application:
         self.font = self.ui.fonts[18]
 
     def advance_stage(self):
-        hp, inventory, selected = self.room.player.hp, dict(self.room.inventory), self.room.selected
-        self.room = Room(stage=self.room.stage + 1)
-        self.room.player.hp = hp
-        self.room.inventory, self.room.selected = inventory, selected
+        previous = self.room
+        if previous.lightning_attack:
+            previous.lightning_charged = not previous.player.attack_emitted
+            previous.finish_lightning_attack()
+        self.room = Room(stage=previous.stage + 1)
+        self.room.player.hp = previous.player.hp
+        self.room.inventory = dict(previous.inventory)
+        self.room.selected = previous.selected
+        self.room.lightning_charged = previous.lightning_charged
         self.enter_play()
         self.save_progress()
 
@@ -221,7 +234,10 @@ class Application:
                         self.activate_menu()
                 elif event.key in self.keymap:
                     action = self.keymap[event.key]
-                    if action in ('ingest','skill','previous','next'):
+                    if action == 'connect':
+                        if not getattr(event, 'repeat', False):
+                            self.actions.add(action)
+                    elif action in ('ingest','skill','previous','next'):
                         self.actions.add(action)
                     else:
                         self.keys.add(action)
@@ -266,7 +282,11 @@ class Application:
         attacking = actor.attack_elapsed >= 0
         ingesting = actor.kind == 'hero' and self.room.ingest_elapsed >= 0
         state = 'ingest' if ingesting else 'attack' if attacking else 'walk' if actor.moving else 'idle'
-        element = (self.room.ingest_form if ingesting else self.room.selected) if actor.kind == 'hero' else actor.element
+        element = actor.element
+        if actor.kind == 'hero':
+            element = self.room.ingest_form if ingesting else self.room.selected
+            if attacking and self.room.lightning_attack:
+                element = actor.attack_element
         key = (actor.kind,state) if element == 'neutral' else (actor.kind,state,element)
         meta, image = self.metadata[key], self.images[key]
         fps = meta.get('fps', 12 if attacking else 4 if state == 'idle' else 10)
@@ -295,7 +315,9 @@ class Application:
         image.opacify(1)
         self.p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
 
-        if actor.kind != 'hero' and not actor.falling:
+        if actor.kind == 'hero':
+            self.draw_lightning_charge(actor, root_x, root_y)
+        elif not actor.falling:
             self.ui.enemy_health(actor, root_x, root_y, offset=62 * self.view.reference_scale)
 
     def draw_shot(self, shot):
@@ -378,6 +400,45 @@ class Application:
         self.vine_image.clip_draw(clip['left'], clip['bottom'], width, height,
                                   x, y + (pivot['y'] - height / 2) * scale,
                                   width * scale, height * scale)
+        player = self.room.player
+        if self.room.fire_barriers and self.room.vine_time < 0 and math.hypot(
+                player.x - gate['x'] - gate['width'] / 2, player.y - gate['y'] - gate['height']) < 3:
+            self.ui.key_label('SPACE', '불로 덩굴 태우기', x, y - 15, 45, 12)
+
+    def draw_fire_barrier(self, index):
+        left, top, right, bottom = self.room.fire_barriers[index]
+        count = round((right - left) * 1.6)
+        y = (top + bottom) / 2
+        scale = self.view.reference_scale
+        if index not in self.room.extinguished:
+            pivot_y = self.flame_spec['pivot'][1]
+            frame_time = int(self.room.elapsed * self.flame_spec['fps'])
+            for column in range(count):
+                frame = self.flame_frames[(frame_time + 7 * column + index * 5) % len(self.flame_frames)]
+                x = left + (column + .5) * (right - left) / count
+                px, py = self.point(x, y)
+                width, height = frame['w'], frame['h']
+                flame_scale = .82 * scale
+                self.flame_image.clip_draw(frame['x'], self.flame_image.h - frame['y'] - height,
+                                           width, height, px, py + (pivot_y - height / 2) * flame_scale,
+                                           width * flame_scale, height * flame_scale)
+            player = self.room.player
+            x = (left + right) / 2
+            if math.hypot(player.x - x, player.y - y) < 3:
+                px, py = self.point(x, bottom)
+                self.ui.key_label('SPACE', '물로 불길 끄기', px, py - 15, 45, 12)
+        else:
+            age = self.room.elapsed - self.room.steam.get(index, -1)
+            if age >= .8:
+                return
+            self.ui.begin()
+            for column in range(count):
+                x = left + (column + .5) * (right - left) / count
+                px, py = self.point(x, y)
+                drift = math.sin(column * 2.1 + age * 5) * age * 9
+                self.p.draw_circle(px + drift * scale, py + (8 + age * 36) * scale,
+                                   round((4 + age * 14) * scale), 194, 227, 222,
+                                   round(115 * (1 - age / .8)), filled=True)
 
     def draw_earth_terrain(self, terrain):
         left, top, right, bottom = terrain.bounds
@@ -412,20 +473,103 @@ class Application:
         self.p.draw_line(x - 7, y, x - 2, y - 5, 40, 79, 63)
         self.p.draw_line(x - 2, y - 5, x + 8, y + 7, 40, 79, 63)
 
-    def draw_stone_gate(self):
-        left, top, right, bottom = self.room.puzzle['gatePixels']
+    def draw_stone_gate(self, puzzle, opening):
+        left, top, right, bottom = puzzle['gatePixels']
         scale = self.view.reference_scale
-        half = (right - left) // 2
-        visible = round(half * (1 - self.room.gate_time / self.room.gate_open_seconds))
-        if not self.room.plate_pressed:
+        half = self.gate_image.w // 2
+        fraction = 1 - self.room.gate_time / self.room.gate_open_seconds
+        visible = round(half * fraction)
+        if not opening:
             x, y = self.view.reference_point((left + right) / 2, (top + bottom) / 2)
             self.gate_image.draw(x, y, (right - left) * scale, (bottom - top) * scale)
         elif visible:
-            for src_x, center in ((half - visible, left + visible / 2),
-                                  (right - left - half, right - visible / 2)):
+            width = (right - left) * visible / self.gate_image.w
+            for src_x, center in ((half - visible, left + width / 2),
+                                  (self.gate_image.w - half, right - width / 2)):
                 x, y = self.view.reference_point(center, (top + bottom) / 2)
-                self.gate_image.clip_draw(src_x, 0, visible, bottom - top,
-                                          x, y, visible * scale, (bottom - top) * scale)
+                self.gate_image.clip_draw(src_x, 0, visible, self.gate_image.h,
+                                          x, y, width * scale, (bottom - top) * scale)
+
+    def draw_power_floor(self):
+        puzzle = self.room.power_puzzle
+        x, y = puzzle['switch']
+        sx, sy = self.point(x, y)
+        color = (255, 193, 82) if self.room.power_connected else (133, 88, 52)
+        for cx, cy in puzzle['conductors']:
+            px, py = self.point(cx, cy)
+            self.p.draw_line(px, py, px, sy, *color)
+            self.p.draw_line(px, sy, sx, sy, *color)
+        gx, gy, gr, gb = puzzle['gate']
+        end_x, end_y = self.point((gx + gr) / 2, gb)
+        self.p.draw_line(sx, sy, end_x, end_y, *color)
+        scale = self.view.reference_scale
+        self.connect_image.draw(sx, sy, 47 * scale, 47 * scale)
+        if not self.room.power_connected:
+            self.ui.key_label('G', '연결', sx, sy - 34 * scale, 26, size=13)
+
+    def draw_conductor(self, index):
+        x, y = self.point(*self.room.power_puzzle['conductors'][index])
+        scale = self.view.reference_scale
+        level = self.room.power_levels[index]
+        target = self.room.power_targets[index]
+        self.conductor_images[level].draw(x, y + 18 * scale, 66 * scale, 67 * scale)
+        hit = self.room.power_hits[index]
+        phase = int(self.room.elapsed * 14) + index * 5
+        if level == 0:
+            self.ui.begin()
+            brightness = round(90 + 34 * math.sin(self.room.elapsed * 5 + index * 2))
+            self.p.draw_circle(x, y + 25 * scale, max(1, round(2 * scale)),
+                               255, 197, 92, brightness, filled=True)
+        for terminal, (tx, ty) in enumerate(((-16, 37), (1, 40), (12, 37))):
+            if terminal >= level and not (hit and terminal == 0):
+                continue
+            px, py = x + tx * scale, y + ty * scale
+            tick = phase + terminal * 3
+            length = (4 + tick % 4 + 24 * hit) * scale
+            side = -1 if tick % 2 else 1
+            self.draw_electric_arc(px, py, px + side * length, py + length, 2 * scale,
+                                   225 if hit or self.room.power_connected else 155, tick)
+        self.ui.text(f'{chr(65 + index)} {level}/{target}', x, y - 22 * scale, 14)
+        if self.room.power_flash:
+            radius = round((14 + 45 * self.room.power_flash) * scale)
+            self.p.draw_circle(x, y + 30 * scale, radius, 255, 232, 143)
+
+    def draw_electric_arc(self, x, y, tx, ty, offset, alpha, phase):
+        dx, dy = tx - x, ty - y
+        length = math.hypot(dx, dy) or 1
+        bend = min(offset, length * .3) * (-1 if phase % 2 else 1) / length
+        bolt = [(x, y)]
+        for fraction, side in ((.25, 1), (.5, -.7), (.75, .5)):
+            bolt.append((x + dx * fraction - dy * bend * side,
+                         y + dy * fraction + dx * bend * side))
+        bolt.append((tx, ty))
+        self.ui.begin()
+        for (x0, y0), (x1, y1) in zip(bolt, bolt[1:]):
+            for spread in (-1, 1):
+                self.p.draw_line(x0 + spread, y0, x1 + spread, y1, 77, 155, 255, alpha // 2)
+            self.p.draw_line(x0, y0, x1, y1, 222, 249, 255, alpha)
+
+    def draw_lightning_charge(self, actor, root_x, root_y):
+        if actor.falling or not (self.room.lightning_charged or
+                                 (self.room.lightning_attack and not actor.attack_emitted)):
+            return
+        tick = int(self.room.elapsed * 14)
+        center_y = root_y + self.unit * .42
+        for index in range(3):
+            angle = tick * .24 + index * math.tau / 3
+            x = root_x + math.cos(angle) * self.unit * .54
+            y = center_y + math.sin(angle) * self.unit * .42
+            end = angle + .36 + ((tick + index) % 3) * .10
+            tx = root_x + math.cos(end) * self.unit * .65
+            ty = center_y + math.sin(end) * self.unit * .50
+            self.draw_electric_arc(x, y, tx, ty, self.unit * .08, 225, tick + index)
+
+    def draw_lightning(self):
+        alpha = min(255, round(self.room.lightning_time * 1600))
+        points = [self.point(x, y, self.unit * .5) for x, y in self.room.lightning_path]
+        phase = int(self.room.lightning_time * 36)
+        for (x, y), (tx, ty) in zip(points, points[1:]):
+            self.draw_electric_arc(x, y, tx, ty, 9, alpha, phase)
 
     def draw_plate(self):
         x, y = self.point(*self.room.puzzle['plate'])
@@ -525,6 +669,8 @@ class Application:
             self.draw_turret_switch()
         if self.room.puzzle:
             self.draw_plate()
+        if self.room.power_puzzle:
+            self.draw_power_floor()
         exit_point = self.room.data['plannedExit']
         layers = [(depth, self.view.draw_wall, (wall,)) for depth, wall in self.view.walls]
         layers.append((exit_point['y'], self.draw_exit, ()))
@@ -540,15 +686,25 @@ class Application:
         if self.room.puzzle:
             layers.append((self.room.block[1], self.draw_puzzle_block, ()))
             if not self.room.stone_gate_open:
-                layers.append((self.room.puzzle['gate'][3], self.draw_stone_gate, ()))
+                layers.append((self.room.puzzle['gate'][3], self.draw_stone_gate,
+                               (self.room.puzzle, self.room.plate_pressed)))
+        if self.room.power_puzzle:
+            puzzle = self.room.power_puzzle
+            layers.extend((y, self.draw_conductor, (i,)) for i, (_, y) in enumerate(puzzle['conductors']))
+            if not self.room.power_gate_open:
+                layers.append((puzzle['gate'][3], self.draw_stone_gate, (puzzle, self.room.power_connected)))
         if not self.room.vine_open:
             gate = self.room.vine_gate
             layers.append((gate['y'] + gate['height'], self.draw_vine, ()))
+        layers.extend((bounds[3], self.draw_fire_barrier, (index,))
+                      for index, bounds in enumerate(self.room.fire_barriers))
         layers.extend((a.y, self.draw_actor, (a,)) for a in (self.room.player, *self.room.enemies) if a.active)
         layers.extend((s.y, self.draw_source, (s,)) for s in self.room.sources if s.phase != 'consumed')
         layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
         for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
             draw_item(*args)
+        if self.room.lightning_time:
+            self.draw_lightning()
         for effect in self.room.feedback:
             age = effect.duration-effect.remaining
             x, y = self.point(effect.x, effect.y)
@@ -573,6 +729,8 @@ class Application:
         self.view.release()
         self.shot_images.clear()
         self.source_images.clear()
+        self.conductor_images.clear()
+        self.connect_image = self.flame_image = None
         self.vine_image = self.block_image = self.gate_image = None
         self.title_image = None
 

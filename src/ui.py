@@ -184,17 +184,20 @@ class GameUI:
 
         controls_left = width - 304
         self.panel(controls_left, 16, 284, 67)
-        self.key_label('SPACE', f'{NAMES[room.selected]} 공격' if room.selected != 'neutral' else '기본 공격',
-                       controls_left + 77, 60, 44, 12)
+        charged = room.lightning_charged or (room.lightning_attack and not room.player.attack_emitted)
+        attack = f'{NAMES[room.selected]} 공격' if room.selected != 'neutral' else '기본 공격'
+        self.key_label('SPACE', '연쇄 번개' if charged else attack, controls_left + 77, 60, 44, 12)
         water = room.selected == 'water'
-        terrain_skill = room.selected in ('wind', 'earth')
-        skill = {'water': '자가 회복', 'wind': '돌풍', 'earth': '지형 생성'}.get(room.selected, '스킬 없음')
-        self.key_label('R', skill, controls_left + 217, 60, 24, 12,
-                       disabled=not (terrain_skill or (water and room.player.hp < room.player.max_hp)))
+        skills = {'water': '자가 회복', 'wind': '돌풍', 'earth': '지형 생성', 'lightning': '번개 충전'}
+        skill = '충전 중' if charged else skills.get(room.selected, '스킬 없음')
+        skill_ready = room.selected in skills and (not water or room.player.hp < room.player.max_hp)
+        self.key_label('R', skill, controls_left + 217, 60, 24, 12, disabled=not skill_ready)
         ready = 1 - min(1, room.player.attack_cooldown / room.tuning.player_interval)
         self.rounded(controls_left + 18, 41, 118, 3, 1, (63, 73, 55, 255))
         self.rounded(controls_left + 18, 41, 118 * ready, 3, 1, (173, 191, 117, 255))
-        controls = f'{NAMES[room.selected]} 1개 소모   ·   ' if water or terrain_skill else ''
+        controls = f'{NAMES[room.selected]} 1개 소모   ·   ' if room.selected in skills else ''
+        if room.selected == 'lightning':
+            controls = '적중 시 1개 소모   ·   '
         self.text(controls + 'W ↑  A ←  S ↓  D →   ·   Esc  메뉴', controls_left + 142, 29, 10, self.muted)
 
     def modal(self, width, height, paused, menu, selected, outcome, stage=1):

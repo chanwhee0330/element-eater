@@ -1,10 +1,17 @@
-"""두 방의 타일 좌표를 공유하는 입체 지도 렌더러."""
+"""타일 좌표를 공유하는 입체 지도 렌더러."""
 import ctypes
 import json
 import math
 import random
 
 from .room import ROOT, TILE_WIDTH, TILE_HEIGHT, RIM_HALF_X, RIM_HALF_Y
+
+
+WALL_RIM = (110, 126, 178, 255)
+WALL_TOP = (151, 176, 238, 255)
+WALL_LIP = (205, 221, 255, 255)
+WALL_FACE = (144, 157, 198, 255)
+WALL_BASE = (87, 100, 148, 255)
 
 
 class Mesh:
@@ -90,7 +97,7 @@ class IsometricRoom:
             if path not in self.reference_images:
                 self.reference_images[path] = self.p.load_image(str(path))
             self.reference_image = self.reference_images[path]
-            self.reference_scale = max(1, self.width / self.reference_image.w,
+            self.reference_scale = max(room.reference_art.get('minimumScale', 1), self.width / self.reference_image.w,
                                        self.height / self.reference_image.h)
             self.tile_width = self.tile_height = room.reference_art['pixelsPerTile'] * self.reference_scale
             self.walls = []
@@ -113,6 +120,14 @@ class IsometricRoom:
                            round(max(self.height - image.h * scale, min(0, top)) + origin_y * scale))
             return
         px, py = self.project(x, y)
+        if self.room.acquisition:
+            columns, rows = self.room.data['columns'], self.room.data['rows']
+            rear_y = self.room.data['floorRegions'][0]['y']
+            top_limit = 115 - rear_y * self.tile_height + self.rear_wall_height
+            left = min(0, max(self.width - columns * self.tile_width, self.width / 2 - px))
+            top = min(top_limit, max(self.height - rows * self.tile_height - 60, self.height * .58 - py))
+            self.origin = round(left), round(top)
+            return
         center_x = self.room.data['columns'] * self.tile_width / 2
         rear_y = self.room.data['floorRegions'][0]['y']
         _, wall_top = self.project(0, rear_y, self.rear_wall_height)
@@ -137,12 +152,14 @@ class IsometricRoom:
         self.p.SDL_SetRenderDrawBlendMode(self.p.pico2d.renderer, self.p.SDL_BLENDMODE_BLEND)
         marker.draw(self.p, offset=self.origin)
 
-    def draw_ground(self):
+    def draw_ground(self, draw_under_terrain=None):
         if self.reference_image:
             image = self.reference_image
             self.draw_reference_cover((0, 0, image.w, image.h))
             return
         self.backdrop.draw(self.width / 2, self.height / 2, self.width, self.height)
+        if draw_under_terrain:
+            draw_under_terrain()
         width, height = self.terrain_size
         ox, oy = self.terrain_origin
         dx, dy = self.origin
@@ -165,6 +182,20 @@ class IsometricRoom:
     def draw_wall(self, mesh):
         mesh.draw(self.p, self.atlas, self.origin)
 
+    def wall_cap(self, mesh, x0, y0, x1, y1, height):
+        self.floor_quad(mesh, x0, y0, x1, y1, self.cap_uv, WALL_RIM, height)
+        inset_x, inset_y = 1.2 / self.tile_width, 1.1 / self.tile_height
+        self.floor_quad(mesh, x0 + inset_x, y0 + inset_y, x1 - inset_x, y1 - inset_y,
+                        self.cap_uv, WALL_TOP, height)
+        self.floor_quad(mesh, x0 + inset_x, y1 - 2 * inset_y, x1 - inset_x, y1 - inset_y,
+                        self.cap_uv, WALL_LIP, height)
+
+    def wall_shadow(self, mesh, left, right, y):
+        near, far = (23, 24, 44, 116), (23, 24, 44, 0)
+        mesh.quad((self.project(left, y), self.project(right, y),
+                   self.project(right, y + .26), self.project(left, y + .26)),
+                  colors=(near, near, far, far))
+
     def wall_cell(self, x, y, height):
         mesh = Mesh()
         tile = self.room.data['tileIds']['wall']
@@ -174,8 +205,8 @@ class IsometricRoom:
         v0 += (v1 - v0) * .6
         uv = ((u0, v0), (u1, v0), (u1, v1), (u0, v1))
         if self.room.tile(x + .5, y + 1.5) != tile:
-            self.face(mesh, (x, y + 1), (x + 1, y + 1), height, 0, (216, 198, 213, 255), uv=uv)
-        self.floor_quad(mesh, x, y, x + 1, y + 1, self.cap_uv, (210, 204, 217, 255), height)
+            self.face(mesh, (x, y + 1), (x + 1, y + 1), height, 0, WALL_FACE, WALL_BASE, uv=uv)
+        self.wall_cap(mesh, x, y, x + 1, y + 1, height)
         return mesh
 
     def build(self, room):
@@ -185,11 +216,12 @@ class IsometricRoom:
         cols, rows = data['columns'], data['rows']
         backdrop = p.load_image(str(folder / data['backdropImage']))
         p.SDL_SetTextureColorMod(backdrop.texture, 103, 92, 136)
-        decor = json.loads((folder / 'source/decorations.json').read_text(encoding='utf-8'))
-        decor_atlas = p.load_image(str(folder / 'source' / decor['atlas']))
+        decor = json.loads((folder / data.get('decorations', 'source/decorations.json')).read_text(encoding='utf-8'))
+        decor_path = data.get('decorationsImage', 'source/' + decor['atlas'])
+        decor_atlas = p.load_image(str(folder / decor_path))
         p.SDL_SetTextureScaleMode(decor_atlas.texture, p.SDL_ScaleModeLinear)
 
-        cliff, floor, spikes, rugs, decals, rear, banners = (Mesh() for _ in range(7))
+        cliff, floor, floor_light, shadows, spikes, rugs, decals, rear, banners = (Mesh() for _ in range(9))
         walls = []
         randomizer = random.Random(data['seed'])
         for y, row in enumerate(tiles):
@@ -203,13 +235,16 @@ class IsometricRoom:
                     self.spike_tile(spikes, x, y)
                     continue
                 brightness = randomizer.randint(218, 255)
-                color = (brightness, brightness - 5, min(255, brightness + 3), 255)
+                color = (min(255, brightness + 11), min(255, brightness + 8), brightness - 11, 255)
                 uv = self.cap_uv if tile == ids['crackedFloor'] else self.floor_uv
                 rotation = randomizer.randrange(4)
                 self.floor_quad(floor, x, y, x + 1, y + 1, uv[rotation:] + uv[:rotation], color)
+                self.floor_quad(floor_light, x, y, x + 1, y + 1, None, (197, 157, 127, 41))
                 if tile == ids['wall']:
                     height = 42 if room.stage == 1 else 38
                     walls.append((y + 1, self.wall_cell(x, y, height)))
+                    if y + 1 < rows and tiles[y + 1][x] in (ids['floor'], ids['mossFloor'], ids['crackedFloor']):
+                        self.wall_shadow(shadows, x, x + 1, y + 1)
 
         for entry in decor['placements']:
             slot = decor['slots'][entry['kind']]
@@ -233,9 +268,10 @@ class IsometricRoom:
         right = left + arena['width']
         exit_x = data['plannedExit']['x']
         self.face(rear, (exit_x - .6, top), (exit_x + .6, top),
-                  self.rear_wall_height, 81, (224, 208, 226, 255))
-        self.floor_quad(rear, exit_x - .6, top - .24, exit_x + .6, top,
-                        self.cap_uv, (223, 207, 215, 255), self.rear_wall_height)
+                  self.rear_wall_height, 81, WALL_FACE, WALL_BASE)
+        self.wall_cap(rear, exit_x - .6, top - .24, exit_x + .6, top, self.rear_wall_height)
+        self.wall_shadow(shadows, left, exit_x - .6, top)
+        self.wall_shadow(shadows, exit_x + .6, right, top)
         fixtures = []
         for x in range(left, right):
             if x == exit_x - 1:
@@ -260,6 +296,7 @@ class IsometricRoom:
             rear_ends.append((x, x + run['width'], y, height))
             for column in range(x, x + run['width']):
                 self.rear_wall(rear, column, y, height=height)
+            self.wall_shadow(shadows, x, x + run['width'], y)
             for offset in run.get('sconces', []):
                 fixtures.append(self.project(x + offset, y + .03, height * .56))
             for offset in run.get('banners', []):
@@ -283,8 +320,7 @@ class IsometricRoom:
                 half = 10 / self.tile_width
                 for base in range(22, height, 17):
                     self.face(rear, (corner_x - half, edge_y), (corner_x + half, edge_y),
-                              min(base + 17, height), base, (240, 211, 230, 255),
-                              (176, 151, 180, 255), uv=self.cap_uv)
+                              min(base + 17, height), base, WALL_TOP, WALL_FACE, uv=self.cap_uv)
 
         ox, oy = 12, 120
         width, height = cols * self.tile_width + 24, rows * self.tile_height + oy + 112
@@ -300,7 +336,8 @@ class IsometricRoom:
             p.SDL_RenderClear(renderer)
             p.SDL_SetRenderDrawBlendMode(renderer, p.SDL_BLENDMODE_BLEND)
             for mesh, image in ((cliff, self.atlas), (floor, self.atlas), (spikes, None),
-                                (rugs, self.atlas), (decals, decor_atlas), (rear, self.atlas), (banners, self.atlas), (ivy, decor_atlas)):
+                                (floor_light, None), (rugs, self.atlas), (decals, decor_atlas),
+                                (shadows, None), (rear, self.atlas), (banners, self.atlas), (ivy, decor_atlas)):
                 mesh.draw(p, image, (ox, oy))
             for x, y in fixtures:
                 self.sconce(round(x + ox), self.height - round(y + oy))
@@ -348,18 +385,9 @@ class IsometricRoom:
         u1 = u0 + (u1 - u0) * (x1 - x0)
         uv = ((u0, v0), (u1, v0), (u1, v1), (u0, v1))
         if front:
-            self.face(mesh, (x0, y1), (x1, y1), height, 0,
-                      (201, 177, 200, 255), (126, 106, 137, 255), uv=uv)
-            self.face(mesh, (x0, y1), (x1, y1), height, height - 4,
-                      (229, 201, 219, 255), (164, 137, 165, 255), uv=uv)
-        # 윗돌의 어두운 바깥선과 밝은 윗면으로 경계의 폭을 읽기 쉽게 한다.
-        self.floor_quad(mesh, x0, y0, x1, y1, self.cap_uv, (155, 130, 156, 255), height)
-        inset_x, inset_y = 1 / self.tile_width, 1 / self.tile_height
-        self.floor_quad(mesh, x0 + inset_x, y0 + inset_y, x1 - inset_x, y1 - inset_y,
-                        self.cap_uv, (250, 225, 242, 255), height)
-        if not front:
-            self.face(mesh, (x0, y1), (x1, y1), height, height - 5,
-                      (186, 151, 178, 255), (137, 111, 149, 255), uv=uv)
+            self.face(mesh, (x0, y1), (x1, y1), height, 0, WALL_FACE, WALL_BASE, uv=uv)
+        self.wall_cap(mesh, x0, y0, x1, y1, height)
+        self.face(mesh, (x0, y1), (x1, y1), height, height - 3, WALL_TOP, WALL_FACE, uv=uv)
         return mesh
 
     def spike_tile(self, mesh, x, y):
@@ -382,14 +410,13 @@ class IsometricRoom:
         height = self.rear_wall_height if height is None else height
         start, end = (x, y), (x + length, y)
         bounds = (x, y - .24, x + length, y)
-        shade = (224, 208, 226, 255)
         # 한 칸 폭의 입면은 아틀라스 반쪽을 사용해 벽돌 비율을 유지한다.
         u0, v0 = self.brick_uv[0]
         u1, v1 = self.brick_uv[2]
         mid = (u0 + u1) / 2
         uv = ((u0, v0), (mid, v0), (mid, v1), (u0, v1))
-        self.face(mesh, start, end, height, 0, shade, (136, 120, 148, 255), uv=uv)
-        self.floor_quad(mesh, *bounds, self.cap_uv, (223, 207, 215, 255), height)
+        self.face(mesh, start, end, height, 0, WALL_FACE, WALL_BASE, uv=uv)
+        self.wall_cap(mesh, *bounds, height)
 
     def sconce(self, x, y):
         p = self.p

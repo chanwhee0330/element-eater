@@ -13,8 +13,8 @@ class GameUI:
     gold = (171, 149, 99)
     line = (112, 123, 92)
 
-    def __init__(self, p, portrait, pickup_icons):
-        self.p, self.portrait, self.pickup_icons = p, portrait, pickup_icons
+    def __init__(self, p, portrait, orb_icons):
+        self.p, self.portrait, self.orb_icons = p, portrait, orb_icons
         bundled = Path(p.__file__).parent / 'data/ConsolaMalgun.ttf'
         system_font = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts/malgun.ttf'
         path = system_font if system_font.is_file() else bundled
@@ -150,7 +150,7 @@ class GameUI:
         self.rounded(bx, by, bw * room.player.hp / room.player.max_hp, 11, 5, (181, 208, 113, 255))
 
         self.panel(cx - 122, top - 56, 244, 56, accent=True)
-        name = {1: '시작 섬', 2: '물의 유적'}.get(room.stage, room.data['name'])
+        name = room.data['name']
         self.text(f'{room.stage:02d} · {name}', cx, top - 27, 20)
         self.panel(width - 180, top - 62, 160, 62)
         self.text('남은 적', width - 100, top - 16, 11, self.muted)
@@ -160,27 +160,24 @@ class GameUI:
         self.panel(20, 16, 204, 67)
         self.portrait_badge(53, 49, 21)
         self.text(NAMES[room.selected], 88, 59, 16, align='left')
-        held = sum(room.inventory.values())
-        self.text(f'보유 원소 {held}개' if held else '보유 원소 없음', 88, 36, 11, self.muted, 'left')
+        learned = [element for element in ELEMENTS if room.inventory[element]]
+        held = len(learned)
+        self.text(f'배운 원소 {held}종' if held else '배운 원소 없음', 88, 36, 11, self.muted, 'left')
 
-        slot_width = 60
-        dock_width = slot_width * len(ELEMENTS) + 20
-        dock_left = cx - dock_width / 2 - 26
-        self.panel(dock_left, 16, dock_width, 82)
-        for index, element in enumerate(ELEMENTS):
-            x = dock_left + 10 + index * slot_width
-            if element == room.selected:
-                self.rounded(x + 2, 37, slot_width - 4, 54, 5, (135, 141, 81, 94))
-            elif index:
-                self.p.draw_line(x, 44, x, 85, *self.line, 122)
-            count = room.inventory[element]
-            self.pickup_icons.opacify(1 if count else .58)
-            self.pickup_icons.clip_draw(0, (len(ELEMENTS) - index - 1) * 128,
-                                        128, 128, x + slot_width / 2, 72, 36, 36)
-            self.text(f'{NAMES[element]} {count}', x + slot_width / 2, 47, 12,
-                      self.cream if count else self.muted)
-        self.pickup_icons.opacify(1)
-        self.text('Q / E  원소 선택', dock_left + dock_width / 2, 28, 11, self.muted)
+        if held:
+            slot_width = 60
+            dock_width = max(118, slot_width * held + 20)
+            dock_left = cx - dock_width / 2 - 26
+            self.panel(dock_left, 16, dock_width, 82)
+            for index, element in enumerate(learned):
+                x = dock_left + (dock_width - slot_width * held) / 2 + index * slot_width
+                if element == room.selected:
+                    self.rounded(x + 2, 37, slot_width - 4, 54, 5, (135, 141, 81, 94))
+                elif index:
+                    self.p.draw_line(x, 44, x, 85, *self.line, 122)
+                self.orb_icons[element].draw(x + slot_width / 2, 72, 36, 36)
+                self.text(NAMES[element], x + slot_width / 2, 47, 12)
+            self.text('Q / E  원소 선택', dock_left + dock_width / 2, 28, 11, self.muted)
 
         controls_left = width - 304
         self.panel(controls_left, 16, 284, 67)
@@ -195,10 +192,7 @@ class GameUI:
         ready = 1 - min(1, room.player.attack_cooldown / room.tuning.player_interval)
         self.rounded(controls_left + 18, 41, 118, 3, 1, (63, 73, 55, 255))
         self.rounded(controls_left + 18, 41, 118 * ready, 3, 1, (173, 191, 117, 255))
-        controls = f'{NAMES[room.selected]} 1개 소모   ·   ' if room.selected in skills else ''
-        if room.selected == 'lightning':
-            controls = '적중 시 1개 소모   ·   '
-        self.text(controls + 'W ↑  A ←  S ↓  D →   ·   Esc  메뉴', controls_left + 142, 29, 10, self.muted)
+        self.text('W ↑  A ←  S ↓  D →   ·   Esc  메뉴', controls_left + 142, 29, 10, self.muted)
 
     def modal(self, width, height, paused, menu, selected, outcome, stage=1):
         self.begin()
@@ -229,4 +223,4 @@ class GameUI:
             self.text('Esc  메뉴', cx, cy-99, 11, self.muted)
 
     def release(self):
-        self.portrait = self.pickup_icons = None
+        self.portrait = self.orb_icons = None

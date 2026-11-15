@@ -2,11 +2,10 @@
 from collections import Counter
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from dataclasses import asdict
 import json
 import unittest
 
-from src.room import Room
+from src.room import Room, EarthTerrain
 from src.elements import ELEMENTS,BEATS,WEAKNESS,Source
 from src.combat import Projectile
 from src.savegame import SaveStore,restore
@@ -21,20 +20,93 @@ class StageTwoTests(unittest.TestCase):
     def test_approved_layout_and_enemy_elements(self):
         room = Room(stage=2)
         self.assertEqual(room.stage,2)
-        self.assertEqual(Counter(e.element for e in room.enemies),{'neutral':2,'fire':2})
-        self.assertEqual(len(room.sources),2)
-        self.assertEqual((room.player.x,room.player.y),(10,19.5))
+        self.assertEqual(Counter(e.element for e in room.enemies), {'neutral':2,'fire':1})
+        self.assertEqual([source.phase for source in room.sources], ['sealed'])
+        self.assertEqual((room.player.x,room.player.y), (16.5,25.7))
 
     def test_fire_group_waits_for_upper_arena(self):
         room = Room(stage=2)
-        before = [(e.x,e.y) for e in room.enemies if e.element == 'fire']
-        advance(room,.4)
-        self.assertTrue(room.aggro)
-        self.assertFalse(room.fire_aggro)
-        self.assertEqual(before,[(e.x,e.y) for e in room.enemies if e.element == 'fire'])
-        room.player.x,room.player.y = 8,9
-        advance(room,.1)
-        self.assertTrue(room.fire_aggro)
+        enemy = room.enemies[-1]
+        room.player.x, room.player.y = 16.5, 14.5
+        self.assertFalse(room.enemy_awake(enemy))
+        room.inventory['water'] = 1
+        self.assertTrue(room.enemy_awake(enemy))
+
+    def test_sluice_requires_guard_clearance_and_interaction(self):
+        room = Room(stage=2)
+        room.player.x, room.player.y = room.acquisition['switch']
+        room.update({'connect'}, .01)
+        self.assertEqual(room.sources[0].phase, 'sealed')
+        for enemy in room.enemies[:2]:
+            room.damage(enemy, enemy.hp)
+        room.update(set(), .01)
+        self.assertEqual(room.sources[0].phase, 'sealed')
+        room.update({'connect'}, .01)
+        self.assertEqual(room.sources[0].phase, 'descending')
+        self.assertFalse(room.exit_open)
+
+    def test_reservoir_descent_is_saved_and_orb_is_edible_only_after_landing(self):
+        room = Room(stage=2)
+        room.player.x, room.player.y = room.acquisition['switch']
+        for enemy in room.enemies[:2]:
+            room.damage(enemy, enemy.hp)
+        room.update({'connect'}, .01)
+        orb = room.sources[0]
+        room.player.x, room.player.y = orb.x + 1.15, orb.y
+        advance(room, .65, ('ingest',))
+        self.assertEqual(orb.phase, 'descending')
+        self.assertFalse(room.start_ingest())
+        self.assertEqual(room.inventory['water'], 0)
+        with TemporaryDirectory() as folder:
+            store = SaveStore(Path(folder) / 'continue.json')
+            store.write(room)
+            restored = Room()
+            restore(store.load(), restored)
+        self.assertAlmostEqual(restored.sources[0].age, orb.age)
+        self.assertEqual(restored.sources[0].phase, 'descending')
+        advance(restored, 1.16)
+        self.assertTrue(restored.start_ingest())
+        advance(restored, .7)
+        self.assertEqual(restored.inventory['water'], 1)
+        self.assertFalse(restored.start_ingest())
+
+    def test_bridge_cannot_be_reached_past_first_fire_using_the_west_corridor(self):
+        room = Room(stage=2)
+        room.player.x, room.player.y = room.acquisition['switch']
+        self.assertNotIn((16,16), room.distance_field())
+        room.player.x, room.player.y = 16.5, 21.7
+        self.assertNotIn((16,16), room.distance_field())
+        room.extinguished.add(0)
+        self.assertIn((16,16), room.distance_field())
+        self.assertNotIn((16,10), room.distance_field())
+        room.extinguished.add(1)
+        self.assertIn((16,10), room.distance_field())
+
+    def test_later_fire_requires_first_fire_even_if_hit_from_the_side(self):
+        room = Room(stage=2)
+        for expected in (set(), {0, 1}):
+            room.projectiles.append(Projectile(12.5, 13, 1, 0, 'hero', 8, 6, 15, element='water'))
+            for _ in range(12):
+                room.update_projectiles(.05)
+            self.assertEqual(room.extinguished, expected)
+            room.extinguished.add(0)
+
+    def test_old_room_two_save_moves_orb_and_recovers_from_removed_path(self):
+        room = Room(stage=2)
+        room.player.x, room.player.y, room.player.hp = 14.5, 17.2, 76
+        room.safe = 14.5, 17.2, 'left'
+        room.sources[0].phase = 'orb'
+        with TemporaryDirectory() as folder:
+            store = SaveStore(Path(folder)/'continue.json')
+            store.write(room)
+            record = json.loads(store.path.read_text(encoding='utf-8'))
+            record['state']['sources'][0].update(x=11.8, y=17.72)
+            restore(record, room)
+        self.assertEqual((room.sources[0].x,room.sources[0].y), (9.55,14.67))
+        self.assertEqual(room.sources[0].phase, 'orb')
+        self.assertEqual(room.player.hp, 76)
+        self.assertTrue(room.fits(room.player.x,room.player.y,safe=True))
+        self.assertGreater(room.player.y, room.fire_barriers[0][3])
 
     def test_source_three_hits_persist_then_break_once_and_keep_orb(self):
         source = Source('test',0,0)
@@ -59,10 +131,11 @@ class StageTwoTests(unittest.TestCase):
                 self.assertEqual(source.hp,0 if attack == WEAKNESS[target] else 2)
 
     def test_projectile_damages_source_without_ingesting_it(self):
-        room = Room(stage=2)
+        room = Room()
         for e in room.enemies:
             e.active = False
-        room.player.x,room.player.y,room.player.facing = 5.5,14.5,'up'
+        room.player.x,room.player.y,room.player.facing = 10,19.5,'up'
+        room.sources.append(Source('test', 10, 18.25))
         room.start_attack(room.player)
         advance(room,.6)
         self.assertEqual(room.sources[0].phase,'damaged1')
@@ -91,10 +164,14 @@ class StageTwoTests(unittest.TestCase):
         source = room.sources[0]
         source.hp,source.phase = 0,'orb'
         self.assertFalse(room.start_ingest())
-        room.player.x,room.player.y = 6.7,13.35
+        room.player.x,room.player.y = source.x, source.y + .9
+        room.earth_terrain.append(EarthTerrain('wall',
+            (source.x-.3, source.y+.22, source.x+.3, source.y+.42), 1))
+        self.assertFalse(room.start_ingest())
+        room.earth_terrain.clear()
         self.assertTrue(room.start_ingest())
 
-    def test_water_skill_heals_consumes_only_on_success_and_exhausts_to_neutral(self):
+    def test_water_skill_repeats_without_consuming_the_unlock(self):
         room = Room(stage=2)
         room.inventory['water'],room.selected = 2,'water'
         self.assertFalse(room.heal())
@@ -102,19 +179,20 @@ class StageTwoTests(unittest.TestCase):
         room.player.hp = 65
         self.assertTrue(room.heal())
         self.assertEqual(room.player.hp,85)
-        self.assertEqual(room.inventory['water'],1)
+        self.assertEqual(room.inventory['water'],2)
         self.assertTrue(room.heal())
         self.assertEqual(room.player.hp,100)
-        self.assertEqual(room.selected,'neutral')
-        self.assertEqual(room.inventory['water'],0)
+        self.assertEqual(room.selected,'water')
+        self.assertEqual(room.inventory['water'],2)
 
-    def test_space_does_not_consume_and_cast_element_survives_skill_exhaustion(self):
+    def test_space_keeps_cast_element_after_switching(self):
         room = Room(stage=2)
         room.inventory['water'],room.selected,room.player.hp = 1,'water',50
         room.start_attack(room.player)
         self.assertEqual(room.inventory['water'],1)
-        self.assertTrue(room.heal())
-        self.assertEqual(room.selected,'neutral')
+        room.inventory['fire'] = 1
+        room.select_element(1)
+        self.assertEqual(room.selected,'fire')
         advance(room,.3)
         self.assertTrue(any(s.element == 'water' and s.owner == 'hero' for s in room.projectiles))
 
@@ -144,8 +222,8 @@ class StageTwoTests(unittest.TestCase):
             for e in room.enemies:
                 e.active = False
             room.sources[0].hp,room.sources[0].phase = 0,'orb'
-            room.sources[1].hit('neutral')
-            room.player.x,room.player.y = 5.5,13.35
+            orb = room.sources[0]
+            room.player.x,room.player.y = orb.x,orb.y + .8
             room.start_ingest()
             advance(room,.4)
             store.write(room)
@@ -154,7 +232,7 @@ class StageTwoTests(unittest.TestCase):
             result = Room()
             restore(record,result)
             self.assertEqual(result.stage,2)
-            self.assertEqual(result.sources[1].phase,'damaged1')
+            self.assertEqual(result.sources[0].phase,'consumed')
             advance(result,.4)
             self.assertEqual(result.inventory['water'],1)
             self.assertEqual(result.selected,'water')
@@ -180,22 +258,23 @@ class StageTwoTests(unittest.TestCase):
             self.assertEqual(restored.player.hp,73)
             self.assertEqual(restored.selected,'neutral')
 
-    def test_reset_second_stage_restores_source_and_clears_inventory(self):
+    def test_reset_second_stage_reseals_the_orb(self):
         room = Room(stage=2)
         room.sources[0].hit('lightning')
         room.inventory['water'],room.selected = 2,'water'
         room.reset()
         self.assertEqual(room.stage,2)
-        self.assertEqual([s.hp for s in room.sources],[3,3])
+        self.assertEqual([s.phase for s in room.sources], ['sealed'])
         self.assertEqual(room.inventory['water'],0)
         self.assertEqual(room.selected,'neutral')
 
     def test_enemy_routes_around_intact_water_source(self):
-        room = Room(stage=2)
-        room.player.x,room.player.y = 5.5,12.5
+        room = Room()
+        room.player.x,room.player.y = 9.5,9.5
         room.aggro = True
+        room.sources.append(Source('test', 7, 9.5))
         enemy = room.enemies[0]
-        enemy.x,enemy.y = 5.5,17
+        enemy.x,enemy.y = 5.5,9.5
         for other in room.enemies[1:]:
             other.active = False
         for _ in range(12*120):

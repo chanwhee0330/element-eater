@@ -1,4 +1,4 @@
-"""전력실 퍼즐과 번개 연쇄 공격 검사."""
+"""번개 습득과 연쇄 공격, 이어하기 및 전력 장치 검사."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -10,108 +10,116 @@ from src.savegame import SaveStore, restore
 class StageSixTests(unittest.TestCase):
     def setUp(self):
         self.room = Room(stage=6)
-        self.room.inventory['lightning'] = 1
-        self.room.selected = 'lightning'
 
-    def test_lightning_hits_three_distinct_enemies_of_any_element(self):
+    def learn_lightning(self):
         room = self.room
-        room.player.x, room.player.y, room.player.facing = 12, 21, 'right'
-        earth = Actor(14, 21, 'left', element='earth')
-        fire = Actor(17, 21, 'left', element='fire')
-        neutral = Actor(20, 21, 'left')
-        fourth = Actor(23, 21, 'left', element='lightning')
-        behind = Actor(10, 21, 'right', element='water')
-        room.enemies = [fourth, behind, neutral, fire, earth]
+        room.sources[-1].phase = 'consumed'
+        room.inventory['lightning'] = 1
+        room.selected = 'lightning'
 
-        room.inventory['water'] = 2
-        self.assertTrue(room.skill())
-        self.assertTrue(room.lightning_charged)
-        self.assertEqual(room.inventory['lightning'], 1)
-        self.assertEqual(earth.hp, 100)
-        self.assertTrue(room.start_attack(room.player))
-        self.assertEqual(room.inventory['lightning'], 1)
-        room.attack_tick(room.player, room.tuning.attack_event)
-        self.assertTrue(room.lightning_attack)
-        self.assertEqual([earth.hp, fire.hp, neutral.hp, fourth.hp, behind.hp], [85, 85, 85, 100, 100])
-        self.assertEqual(room.lightning_path, ((12, 21), (14, 21), (17, 21), (20, 21)))
-        self.assertEqual(room.inventory['lightning'], 0)
-        self.assertEqual(room.selected, 'lightning')
-        room.attack_tick(room.player, room.tuning.attack_duration)
-        self.assertFalse(room.lightning_attack)
-        self.assertEqual(room.selected, 'neutral')
-        self.assertEqual(room.inventory['water'], 2)
-
-    def test_lightning_cannot_start_or_chain_through_closed_gate(self):
+    def test_lightning_chains_to_three_valid_targets_and_never_consumes(self):
         room = self.room
-        room.player.x, room.player.y, room.player.facing = 17, 13, 'up'
-        blocked = Actor(17, 7, 'down', element='lightning')
-        room.enemies = [blocked]
+        self.learn_lightning()
+        room.player.x, room.player.y, room.player.facing = 13, 17.5, 'right'
+        first = Actor(15, 17.5, 'left', element='water')
+        second = Actor(17.5, 17.5, 'left')
+        third = Actor(20, 17.5, 'left', element='water')
+        fourth = Actor(21, 17.5, 'left', element='water')
+        wrong = Actor(14, 17.5, 'left', element='earth')
+        room.enemies = [wrong, fourth, third, second, first]
         self.assertTrue(room.skill())
         self.assertTrue(room.start_attack(room.player))
         room.attack_tick(room.player, room.tuning.attack_event)
-        self.assertTrue(room.lightning_charged)
-        self.assertEqual(room.inventory['lightning'], 1)
-        self.assertEqual(room.projectiles[0].element, 'lightning')
+        self.assertEqual([first.hp, second.hp, third.hp, fourth.hp, wrong.hp],
+                         [85, 85, 85, 100, 100])
+        self.assertEqual(room.lightning_path, ((13,17.5),(15,17.5),(17.5,17.5),(20,17.5)))
         room.attack_tick(room.player, room.tuning.attack_duration)
-        room.player.attack_cooldown = 0
+        self.assertEqual(room.inventory['lightning'], 1)
 
-        front = Actor(17, 10.5, 'down', element='wind')
-        room.enemies.append(front)
-        room.inventory['lightning'] = 2
+    def test_chain_cannot_pass_through_a_wall(self):
+        room = self.room
+        self.learn_lightning()
+        room.player.x, room.player.y, room.player.facing = 14, 8.5, 'right'
+        front = Actor(21.5, 8.5, 'left', element='water')
+        blocked = Actor(24.6, 8.5, 'left', element='water')
+        room.enemies = [front, blocked]
+        room.tuning = type(room.tuning)(lightning_range=400)
+        self.assertTrue(room.skill())
         self.assertTrue(room.start_attack(room.player))
         room.attack_tick(room.player, room.tuning.attack_event)
-        room.attack_tick(room.player, room.tuning.attack_duration)
         self.assertEqual(front.hp, 85)
         self.assertEqual(blocked.hp, 100)
-        self.assertEqual(room.inventory['lightning'], 1)
-        self.assertEqual(room.selected, 'lightning')
 
     def test_save_restores_charged_and_winding_up_attacks(self):
         room = self.room
-        room.inventory['water'] = 1
-        room.player.x, room.player.y, room.player.facing = 12, 21, 'right'
-        enemy = room.enemies[0]
-        enemy.x, enemy.y = 14, 21
+        self.learn_lightning()
+        room.player.x, room.player.y, room.player.facing = 18.6, 21.25, 'up'
         self.assertTrue(room.skill())
         with TemporaryDirectory() as temp:
             store = SaveStore(Path(temp) / 'save.json')
             store.write(room)
-            restored = Room()
-            restore(store.load(), restored)
-            self.assertTrue(restored.lightning_charged)
+            restore(store.load(), room)
+            self.assertTrue(room.lightning_charged)
 
-            self.assertTrue(restored.start_attack(restored.player))
-            store.write(restored)
+            self.assertTrue(room.start_attack(room.player))
+            store.write(room)
             restore(store.load(), room)
             self.assertTrue(room.lightning_attack)
-            self.assertEqual(room.inventory['lightning'], 1)
             room.attack_tick(room.player, room.tuning.attack_event)
-            self.assertEqual(room.inventory['lightning'], 0)
+            self.assertGreaterEqual(len(room.lightning_path), 2)
+            self.assertEqual(room.inventory['lightning'], 1)
 
-            store.write(room)
-            restore(store.load(), restored)
-            restored.attack_tick(restored.player, restored.tuning.attack_duration)
-            self.assertFalse(restored.lightning_attack)
-            self.assertEqual(restored.inventory['lightning'], 0)
-            self.assertEqual(restored.selected, 'neutral')
-            self.assertEqual(restored.inventory['water'], 1)
-
-    def test_wrong_conductor_levels_reset_then_allow_retry(self):
+    def test_breaker_opens_orb_then_relay_powers_exit_and_saves(self):
         room = self.room
-        room.power_targets[:] = [3, 2, 1]
-        room.power_levels[:] = [3, 1, 1]
-        room.player.x, room.player.y = room.power_puzzle['switch']
+        source, = room.sources
+        room.player.x, room.player.y = room.acquisition['switch']
+        room.update({'connect'}, .01)
+        self.assertEqual(source.phase, 'sealed')
+        for enemy in room.enemies[:2]:
+            room.damage(enemy, enemy.hp)
+        room.update({'connect'}, .01)
+        self.assertEqual(source.phase, 'orb')
+        self.assertEqual(room.tile(18, 19.75), 3)
+        room.player.x, room.player.y = source.x, source.y
+        room.update({'ingest'}, .01)
+        for _ in range(16):
+            room.update(set(), .05)
+        self.assertEqual(room.selected, 'lightning')
+        self.assertEqual(room.tile(18, 19.75), 0)
+        for enemy in room.enemies[2:]:
+            room.damage(enemy, enemy.hp)
+        room.player.x, room.player.y = room.acquisition['finalSwitch']
+        room.update({'connect'}, .01)
+        self.assertFalse(room.exit_open)
+        room.player.x, room.player.y, room.player.facing = 18.5, 14.45, 'up'
+        room.update({'attack'}, .01)
+        for _ in range(15):
+            room.update(set(), .05)
+        self.assertTrue(room.acquisition_relay)
+        room.player.x, room.player.y = room.acquisition['finalSwitch']
+        room.update({'connect'}, .01)
+        self.assertTrue(room.exit_open)
+        with TemporaryDirectory() as temp:
+            store = SaveStore(Path(temp)/'save.json')
+            store.write(room)
+            restore(store.load(), room)
+        self.assertTrue(room.acquisition_power)
+        self.assertTrue(room.exit_open)
 
+    def test_three_conductor_puzzle_still_resets_wrong_levels_in_room_nine(self):
+        room = Room(stage=9)
+        room.conductor_vine_time = room.conductor_vine['burnDuration']
+        room.extinguished = set(range(len(room.fire_barriers)))
+        room.plate_pressed = True
+        room.gate_time = room.gate_open_seconds
+        room.player.x, room.player.y = room.power_puzzle['switch']
+        targets = room.power_targets[:]
         room.update({'connect'}, .05)
-        self.assertFalse(room.power_gate_open)
         self.assertGreater(room.power_flash, 0)
         self.assertEqual(room.power_levels, [0, 0, 0])
-        self.assertEqual(room.power_targets, [3, 2, 1])
-
+        self.assertEqual(room.power_targets, targets)
         for _ in range(8):
             room.update(set(), .05)
-        room.power_levels[:] = room.power_targets
+        room.power_levels[:] = targets
         room.update({'connect'}, .05)
-        for _ in range(6):
-            room.update(set(), .05)
-        self.assertTrue(room.power_gate_open)
+        self.assertTrue(room.power_connected)

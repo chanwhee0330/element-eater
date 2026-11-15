@@ -6,11 +6,13 @@ import time
 import math
 
 from .room import ROOT, Room, STAGES
-from .elements import NAMES
+from .elements import ELEMENTS, NAMES
+from .boss import FORMS, FORM_SECONDS
 from .isometric import IsometricRoom
 from .ui import GameUI
 from .savegame import DEFAULT_SAVE, SaveStore, restore
 from .title import draw_title, hit_test
+from .acquisition_art import AcquisitionArt
 
 
 class Application:
@@ -80,12 +82,14 @@ class Application:
         self.flame_frames = [frame['frame'] for frame in flame_sheet['frames']]
         self.flame_spec = flame_sheet['meta']['pixelfx']
         self.stage_keys = {
-            key: stage for stage in STAGES
+            key: stage for stage in STAGES if stage < 10
             for key in (getattr(p, f'SDLK_{stage}'), getattr(p, f'SDLK_KP_{stage}'))
         }
-        pickup_icons = p.load_image(str(ROOT / 'assets/items/elements/element-pickups.png'))
-        self.ui = GameUI(p, self.images['hero', 'idle'], pickup_icons)
+        self.stage_keys.update({p.SDLK_0: 10, p.SDLK_KP_0: 10})
+        orb_icons = {element: self.source_images[element, 'orb'] for element in ELEMENTS}
+        self.ui = GameUI(p, self.images['hero', 'idle'], orb_icons)
         self.font = self.ui.fonts[18]
+        self.acquisition_art = AcquisitionArt(self)
 
     def advance_stage(self):
         previous = self.room
@@ -96,7 +100,7 @@ class Application:
         self.room.player.hp = previous.player.hp
         self.room.inventory = dict(previous.inventory)
         self.room.selected = previous.selected
-        self.room.lightning_charged = previous.lightning_charged
+        self.room.lightning_charged = previous.lightning_charged and self.room.selected == 'lightning'
         self.enter_play()
         self.save_progress()
 
@@ -130,7 +134,7 @@ class Application:
 
     def enter_play(self):
         self.view.load(self.room)
-        self.unit = self.view.sprite_height * self.view.reference_scale
+        self.unit = self.view.sprite_height * (1 if self.room.data.get('layoutRevision') else self.view.reference_scale)
         self.scene = 'play'
         self.finished_save = False
         self.pause(False)
@@ -234,11 +238,9 @@ class Application:
                         self.activate_menu()
                 elif event.key in self.keymap:
                     action = self.keymap[event.key]
-                    if action == 'connect':
+                    if action in ('connect','ingest','skill','previous','next'):
                         if not getattr(event, 'repeat', False):
                             self.actions.add(action)
-                    elif action in ('ingest','skill','previous','next'):
-                        self.actions.add(action)
                     else:
                         self.keys.add(action)
                     if event.key == p.SDLK_SPACE:
@@ -258,6 +260,7 @@ class Application:
             return
         self.accumulator += min(dt, .25)
         while self.accumulator >= self.fixed_dt:
+            was_learned = self.room.learned_room_element
             self.room.update(self.keys | self.actions | ({'attack'} if self.attack_queued else set()),
                              self.fixed_dt)
             self.attack_queued = False
@@ -266,6 +269,8 @@ class Application:
             if self.room.outcome == 'clear' and self.room.stage + 1 in STAGES:
                 self.advance_stage()
                 return
+            if not was_learned and self.room.learned_room_element:
+                self.save_progress()
         player = self.room.player
         self.view.follow(*(self.room.safe[:2] if player.falling else (player.x, player.y)))
         self.save_elapsed += min(dt, .25)
@@ -298,6 +303,9 @@ class Application:
         if actor.falling > 0:
             factor = max(.08, actor.falling / self.room.data['preview']['fallSeconds'])
         scale = self.unit / self.room.data['heroReferenceHeight'] * factor
+        is_boss = self.room.boss and actor is self.room.enemies[0]
+        if is_boss:
+            scale *= 2.1
         root_x, root_y = self.point(actor.x, actor.y, -38 * (1 - factor))
         if not actor.falling:
             self.view.draw_shadow(actor.x, actor.y)
@@ -317,7 +325,7 @@ class Application:
 
         if actor.kind == 'hero':
             self.draw_lightning_charge(actor, root_x, root_y)
-        elif not actor.falling:
+        elif not actor.falling and not is_boss:
             self.ui.enemy_health(actor, root_x, root_y, offset=62 * self.view.reference_scale)
 
     def draw_shot(self, shot):
@@ -334,12 +342,29 @@ class Application:
         p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
 
     def draw_source(self, source):
-        if source.phase == 'consumed':
+        if source.phase in ('sealed', 'consumed'):
+            return
+        if source.phase == 'descending':
+            if source.age < .13:
+                return
+            x, y = self.acquisition_art.reservoir_orb_position(source)
+            size = self.unit * (.72 + .28 * min(1, (source.age-.13)/.27))
+            self.source_images[source.element, 'orb'].draw(x, y, size, size)
+            return
+        if source.phase == 'igniting':
+            progress = source.age / self.room.forge['releaseSeconds']
+            if progress >= .48:
+                rise = min(1, (progress - .48) / .52)
+                x, y = self.point(source.x, source.y, 7 + (self.unit*.55-7)*rise)
+                size = self.unit * (.55 + .45*rise)
+                self.source_images[source.element, 'orb'].draw(x, y, size, size)
             return
         x, y = self.point(source.x, source.y)
         self.view.draw_shadow(source.x, source.y)
         if source.phase == 'orb':
             y += self.unit * (.55 + .04 * math.sin(source.age * 3))
+            if source.id == 'first-orb' and not (self.room.reservoir or self.room.forge):
+                y += self.unit * .92 * (1 - min(1, source.age / .48)) ** 2
             size = self.unit
             if self.room.ingest_source == source.id and not self.room.ingest_consumed:
                 t = min(1,self.room.ingest_elapsed/self.room.tuning.ingest_event)
@@ -378,17 +403,63 @@ class Application:
         self.ui.hud(self.room, self.width, self.height)
 
     def draw_prompt(self, source, key, label, key_width):
-        x, y = self.point(source.x, source.y, 91)
+        height = 165 if self.room.forge and source.id == 'first-orb' else 91
+        x, y = self.point(source.x, source.y, height)
         x = max(100, min(self.width - 100, x))
         self.ui.begin()
         self.ui.panel(x - 88, y - 17, 176, 34, accent=True)
         self.ui.key_label(key, label, x, y, key_width, 13)
 
-    def draw_vine(self):
-        gate = self.room.vine_gate
+    def draw_boss_status(self):
+        room = self.room
+        boss = room.enemies[0]
+        if not boss.active:
+            return
+        self.ui.begin()
+        for i, (x, y) in enumerate(room.boss['switches']):
+            sx, sy = self.point(x, y)
+            self.connect_image.draw(sx, sy, 38, 38)
+            if i in room.boss_switches:
+                self.p.draw_circle(sx, sy, 16, 164, 232, 129)
+            elif math.hypot(room.player.x-x, room.player.y-y) <= .9:
+                self.ui.key_label('G', '보호막 장치', sx, sy + 24, 24, size=13)
+        if not room.boss_exposed:
+            x, y = self.point(boss.x, boss.y)
+            self.p.draw_circle(x, y + 32, 53, 225, 188, 124)
+        if room.boss_warning:
+            tx, ty, _ = room.boss_warning
+            x, y = self.point(tx, ty)
+            bx, by = self.point(boss.x, boss.y)
+            if boss.element == 'earth':
+                self.p.draw_circle(x, y, round(self.unit * 1.15), 255, 152, 87)
+            else:
+                offsets = {
+                    'fire': (-.55, 0, .55), 'wind': (0,), 'lightning': (0,), 'water': (-.95, 0, .95),
+                }[boss.element]
+                angle = math.atan2(ty-boss.y, tx-boss.x)
+                length = 6 if boss.element == 'wind' else 24
+                for offset in offsets:
+                    ex, ey = self.point(boss.x + math.cos(angle+offset)*length,
+                                        boss.y + math.sin(angle+offset)*length)
+                    self.p.draw_line(bx, by, ex, ey, 246, 124, 88)
+        width, y = 310, self.height - 125
+        x = (self.width - width) // 2
+        self.ui.rounded(x, y, width, 36, 6, (31, 25, 39, 240))
+        self.ui.rounded(x+8, y+5, (width-16)*boss.hp/boss.max_hp, 6, 3, (218, 124, 95, 255))
+        phase = int(room.boss_time / FORM_SECONDS)
+        if room.boss_time % FORM_SECONDS >= FORM_SECONDS - 1.5:
+            upcoming = FORMS[(phase + 1) % len(FORMS)]
+            label = f'다음 {NAMES[upcoming]} · 약점 {NAMES[FORMS[phase % len(FORMS)]]}'
+        elif room.boss_exposed:
+            label = f'{NAMES[boss.element]} · 약점 {NAMES[FORMS[(phase-1) % len(FORMS)]]}'
+        else:
+            label = f'보호막 장치 {len(room.boss_switches) + int(room.power_connected)} / 4'
+        self.ui.text(label, self.width//2, y+22, 14)
+
+    def draw_vine(self, gate, burn_time):
         frame = self.vine_frames[0]
-        if self.room.vine_time >= 0:
-            remaining = self.room.vine_time * 1000
+        if burn_time >= 0:
+            remaining = burn_time * 1000
             for frame in self.vine_frames[1:]:
                 remaining -= frame['durationMs']
                 if remaining < 0:
@@ -401,13 +472,15 @@ class Application:
                                   x, y + (pivot['y'] - height / 2) * scale,
                                   width * scale, height * scale)
         player = self.room.player
-        if self.room.fire_barriers and self.room.vine_time < 0 and math.hypot(
+        can_burn = not self.room.forge or self.room.inventory['fire']
+        if self.room.fire_barriers and can_burn and burn_time < 0 and math.hypot(
                 player.x - gate['x'] - gate['width'] / 2, player.y - gate['y'] - gate['height']) < 3:
             self.ui.key_label('SPACE', '불로 덩굴 태우기', x, y - 15, 45, 12)
 
     def draw_fire_barrier(self, index):
         left, top, right, bottom = self.room.fire_barriers[index]
-        count = round((right - left) * 1.6)
+        vertical = bottom - top > right - left
+        count = max(1, round(max(right - left, bottom - top) * 1.6))
         y = (top + bottom) / 2
         scale = self.view.reference_scale
         if index not in self.room.extinguished:
@@ -415,8 +488,9 @@ class Application:
             frame_time = int(self.room.elapsed * self.flame_spec['fps'])
             for column in range(count):
                 frame = self.flame_frames[(frame_time + 7 * column + index * 5) % len(self.flame_frames)]
-                x = left + (column + .5) * (right - left) / count
-                px, py = self.point(x, y)
+                fraction = (column + .5) / count
+                x = (left + right) / 2 if vertical else left + fraction * (right - left)
+                px, py = self.point(x, top + fraction * (bottom - top) if vertical else y)
                 width, height = frame['w'], frame['h']
                 flame_scale = .82 * scale
                 self.flame_image.clip_draw(frame['x'], self.flame_image.h - frame['y'] - height,
@@ -441,27 +515,38 @@ class Application:
                                    round(115 * (1 - age / .8)), filled=True)
 
     def draw_earth_terrain(self, terrain):
+        if terrain.kind == 'floor' and self.room.acquisition and self.room.turret_room:
+            self.acquisition_art.bridge(terrain.bounds, 'earth', terrain.remaining / self.room.earth_seconds)
+            return
         left, top, right, bottom = terrain.bounds
         x0, y1 = self.point(left, top)
         x1, y0 = self.point(right, bottom)
         self.ui.begin()
         warning = terrain.remaining < .75 and int(self.room.elapsed * 12) % 2
         color = (163, 124, 87, 190) if warning else (208, 157, 92, 255)
+        grout = (131, 91, 57)
         if terrain.kind == 'wall':
-            self.ui.rounded(x0, y0, x1 - x0, y1 - y0 + 17, 4, (100, 65, 46, 255))
+            wall_base = (100, 65, 46, 255)
+            if not self.room.reference_art:
+                wall_base = (85, 57, 57, 255)
+                color = (127, 92, 79, 190) if warning else (159, 118, 96, 255)
+                grout = (108, 74, 66)
+            self.ui.rounded(x0, y0, x1 - x0, y1 - y0 + 17, 4, wall_base)
             y0 += 14
             y1 += 17
         else:
             self.ui.rounded(x0, y0 - 4, x1 - x0, y1 - y0 + 4, 3, (112, 75, 48, 255))
         self.ui.rounded(x0, y0, x1 - x0, y1 - y0, 3, color)
+        if terrain.kind == 'wall' and not self.room.reference_art:
+            self.p.draw_line(x0 + 4, y1 - 3, x1 - 4, y1 - 3, 203, 157, 123)
         segments = max(1, round(max(right - left, bottom - top) * 1.6))
         for i in range(1, segments):
             if x1 - x0 > y1 - y0:
                 x = x0 + (x1 - x0) * i / segments
-                self.p.draw_line(x, y0 + 2, x, y1 - 2, 131, 91, 57)
+                self.p.draw_line(x, y0 + 2, x, y1 - 2, *grout)
             else:
                 y = y0 + (y1 - y0) * i / segments
-                self.p.draw_line(x0 + 2, y, x1 - 2, y, 131, 91, 57)
+                self.p.draw_line(x0 + 2, y, x1 - 2, y, *grout)
 
     def draw_turret_switch(self):
         if not self.room.turrets_stopped:
@@ -477,7 +562,8 @@ class Application:
         left, top, right, bottom = puzzle['gatePixels']
         scale = self.view.reference_scale
         half = self.gate_image.w // 2
-        fraction = 1 - self.room.gate_time / self.room.gate_open_seconds
+        elapsed = self.room.power_gate_time if puzzle is self.room.power_puzzle else self.room.gate_time
+        fraction = 1 - elapsed / self.room.gate_open_seconds
         visible = round(half * fraction)
         if not opening:
             x, y = self.view.reference_point((left + right) / 2, (top + bottom) / 2)
@@ -574,6 +660,17 @@ class Application:
     def draw_plate(self):
         x, y = self.point(*self.room.puzzle['plate'])
         scale = self.view.reference_scale
+        reset = self.room.puzzle.get('reset')
+        if reset:
+            if self.room.stage >= 9 or self.room.data.get('requiredBridge'):
+                self.connect_image.draw(x, y, 38 * scale, 38 * scale)
+                rx, ry = self.point(*reset)
+                self.connect_image.draw(rx, ry, 24 * scale, 24 * scale)
+            if not self.room.plate_pressed and math.hypot(self.room.player.x - reset[0],
+                                                         self.room.player.y - reset[1]) <= .9:
+                rx, ry = self.point(*reset)
+                self.ui.text('G · 돌 복귀', rx, ry + 30, 13)
+            return
         self.ui.begin()
         border = (171, 251, 133, 255) if self.room.plate_pressed else (152, 191, 129, 255)
         self.ui.rounded(x - 23 * scale, y - 20 * scale, 46 * scale, 40 * scale, 5, border)
@@ -585,15 +682,19 @@ class Application:
         scale = self.view.reference_scale
         self.block_image.draw(x, y + 12 * scale, 57 * scale, 51 * scale)
 
+    def exit_visual(self):
+        return self.room.exit_open, (116, 202, 178)
+
     def draw_reference_exit(self):
         x0, y0, x1, y1 = self.room.reference_art['doorPixels']
         center = (x0 + x1) / 2
-        if self.room.exit_open:
+        opened, color = self.exit_visual()
+        if opened:
             self.ui.begin()
             for row in range(21):
                 left, y = self.view.reference_point(x0 + 2, y1 - row)
                 right, _ = self.view.reference_point(x1 - 2, y1 - row)
-                self.p.draw_line(left, y, right, y, 116, 202, 178, 110 - row * 5)
+                self.p.draw_line(left, y, right, y, *color, 110 - row * 5)
             exit_point = self.room.data['plannedExit']
             self.view.draw_exit_marker(exit_point['x'], exit_point['y'], True)
             return
@@ -613,7 +714,7 @@ class Application:
             self.draw_reference_exit()
             return
         exit_point = self.room.data['plannedExit']
-        opened = self.room.exit_open
+        opened, color = self.exit_visual()
         x, y = self.point(exit_point['x'], self.room.data['floorRegions'][0]['y'])
         self.ui.begin()
         p = self.p
@@ -642,7 +743,7 @@ class Application:
             for row in range(27):
                 strength = (27 - row) / 27
                 span = round(19 - row * .16)
-                p.draw_line(x - span, y + row, x + span, y + row, 116, 202, 178, round(120 * strength))
+                p.draw_line(x - span, y + row, x + span, y + row, *color, round(120 * strength))
             p.draw_rectangle(x - 30, y - 5, x + 30, y, 82, 66, 91, filled=True)
             p.draw_line(x - 24, y - 1, x + 24, y - 1, 157, 209, 179)
             self.view.draw_exit_marker(exit_point['x'], exit_point['y'], opened)
@@ -661,7 +762,18 @@ class Application:
             if present:
                 p.update_canvas()
             return
-        self.view.draw_ground()
+        background = self.acquisition_art.draw_wind_fog if self.room.stage == 4 else None
+        self.view.draw_ground(background)
+        self.acquisition_art.draw()
+        if self.room.boss and self.room.power_gate_open:
+            left, top, right, bottom = self.room.boss['shortcut']
+            x0, y1 = self.point(left, top)
+            x1, y0 = self.point(right, bottom)
+            self.ui.begin()
+            self.ui.rounded(x0, y0, x1-x0, y1-y0, 4, (104, 56, 105, 255))
+            for row in range(round(bottom-top)):
+                _, y = self.point(left, top + row)
+                self.p.draw_line(x0, y, x1, y, 170, 109, 150)
         for terrain in self.room.earth_terrain:
             if terrain.kind == 'floor':
                 self.draw_earth_terrain(terrain)
@@ -669,10 +781,20 @@ class Application:
             self.draw_turret_switch()
         if self.room.puzzle:
             self.draw_plate()
+        if self.room.sluice:
+            for key, active, instruction in (('wheel', self.room.sluice_wheel, 'G · 손잡이'),
+                                              ('pump', self.room.sluice_pump, '번개 Space · 펌프')):
+                x, y = self.point(*self.room.sluice[key])
+                self.connect_image.draw(x, y, 35, 35)
+                self.ui.text('작동 완료' if active else instruction, x, y+26, 13)
         if self.room.power_puzzle:
             self.draw_power_floor()
         exit_point = self.room.data['plannedExit']
         layers = [(depth, self.view.draw_wall, (wall,)) for depth, wall in self.view.walls]
+        if self.room.reservoir:
+            layers.append((self.room.reservoir['origin'][1], self.acquisition_art.draw_cistern, ()))
+        if self.room.forge:
+            layers.append((self.room.forge['origin'][1], self.acquisition_art.draw_forge, ()))
         layers.append((exit_point['y'], self.draw_exit, ()))
         layers.extend((terrain.bounds[3], self.draw_earth_terrain, (terrain,))
                       for terrain in self.room.earth_terrain if terrain.kind == 'wall')
@@ -683,11 +805,15 @@ class Application:
                 layers.append(((rect[3] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
             for rect in self.room.reference_art.get('foregroundWallPixels', []):
                 layers.append(((rect[1] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
+        if not self.room.sluice_open:
+            layers.append((self.room.sluice['gate'][3], self.draw_stone_gate, (self.room.sluice, False)))
         if self.room.puzzle:
             layers.append((self.room.block[1], self.draw_puzzle_block, ()))
-            if not self.room.stone_gate_open:
+            if not self.room.acquisition and (not self.room.stone_gate_open
+                    or self.room.data.get('requiredBridge') and not self.room.bridge_crossed):
                 layers.append((self.room.puzzle['gate'][3], self.draw_stone_gate,
-                               (self.room.puzzle, self.room.plate_pressed)))
+                               (self.room.puzzle, self.room.plate_pressed and
+                                (not self.room.data.get('requiredBridge') or self.room.bridge_crossed))))
         if self.room.power_puzzle:
             puzzle = self.room.power_puzzle
             layers.extend((y, self.draw_conductor, (i,)) for i, (_, y) in enumerate(puzzle['conductors']))
@@ -695,11 +821,15 @@ class Application:
                 layers.append((puzzle['gate'][3], self.draw_stone_gate, (puzzle, self.room.power_connected)))
         if not self.room.vine_open:
             gate = self.room.vine_gate
-            layers.append((gate['y'] + gate['height'], self.draw_vine, ()))
+            layers.append((gate['y'] + gate['height'], self.draw_vine, (gate, self.room.vine_time)))
+        gate = self.room.conductor_vine
+        if gate and self.room.conductor_vine_time < gate['burnDuration']:
+            layers.append((gate['y'] + gate['height'], self.draw_vine, (gate, self.room.conductor_vine_time)))
         layers.extend((bounds[3], self.draw_fire_barrier, (index,))
                       for index, bounds in enumerate(self.room.fire_barriers))
-        layers.extend((a.y, self.draw_actor, (a,)) for a in (self.room.player, *self.room.enemies) if a.active)
-        layers.extend((s.y, self.draw_source, (s,)) for s in self.room.sources if s.phase != 'consumed')
+        layers.extend((a.y, self.draw_actor, (a,)) for a in (self.room.player, *self.room.enemies)
+                      if a.active)
+        layers.extend((s.y, self.draw_source, (s,)) for s in self.room.sources if s.phase not in ('sealed', 'consumed'))
         layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
         for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
             draw_item(*args)
@@ -717,7 +847,10 @@ class Application:
             x, y = self.point(self.room.player.x, self.room.player.y)
             p.draw_circle(x, y + 13, 18, 243, 102, 80)
         self.draw_hud()
-        if self.room.outcome or self.paused:
+        self.acquisition_art.draw_prompt()
+        if self.room.boss:
+            self.draw_boss_status()
+        if self.paused or self.room.outcome:
             self.ui.modal(self.width,self.height,self.paused,self.menu,self.menu_index,self.room.outcome,self.room.stage)
         if present:
             p.update_canvas()
@@ -725,6 +858,10 @@ class Application:
     def release(self):
         # SDL 종료 전에 텍스처를 해제한다.
         self.ui.release()
+        self.acquisition_art.images.clear()
+        self.acquisition_art.waterworks.clear()
+        self.acquisition_art.forge_props.clear()
+        self.acquisition_art.wind_props.clear()
         self.images.clear()
         self.view.release()
         self.shot_images.clear()

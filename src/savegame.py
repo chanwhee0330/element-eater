@@ -9,6 +9,7 @@ from copy import deepcopy
 from .room import ROOT, Room, Actor, EarthTerrain, STAGES
 from .combat import Projectile
 from .elements import Source, ELEMENTS
+from .boss import FORMS, FORM_SECONDS
 
 DEFAULT_SAVE = ROOT / 'saves/continue.json'
 DIRECTIONS = {'up', 'down', 'left', 'right'}
@@ -30,7 +31,7 @@ def boolean(value):
 
 def actor_from_data(data, template, room):
     if isinstance(data, dict):
-        data = {'wind_sliding': False, **data}
+        data = {'wind_sliding': False, 'burn_ticks': 0, 'burn_delay': 0, **data}
     if not isinstance(data, dict) or set(data) != {f.name for f in fields(Actor)}:
         raise ValueError('캐릭터 저장 형식 불일치')
     if data['kind'] != template.kind or data['name'] != template.name:
@@ -52,6 +53,9 @@ def actor_from_data(data, template, room):
               'knockback_left': room.wind_enemy_push_seconds if data['wind_sliding'] else room.tuning.knockback_seconds}
     for key, maximum in limits.items():
         number(data[key], 0, maximum)
+    if type(data['burn_ticks']) is not int or not 0 <= data['burn_ticks'] <= 3:
+        raise ValueError('화상 상태 불일치')
+    number(data['burn_delay'], 0, .6 if data['burn_ticks'] else 0)
     number(data['attack_elapsed'], -1, room.tuning.attack_duration)
     for key in ('active', 'moving', 'attack_emitted', 'wind_sliding'):
         boolean(data[key])
@@ -75,7 +79,7 @@ def actor_from_data(data, template, room):
 
 
 def restore(record, room):
-    if not isinstance(record, dict) or type(record.get('version')) is not int or record['version'] not in (1,2) or type(record.get('stage')) is not int or record['stage'] not in STAGES:
+    if not isinstance(record, dict) or type(record.get('version')) is not int or record['version'] not in (1,2,3) or type(record.get('stage')) is not int or record['stage'] not in STAGES:
         raise ValueError('지원하지 않는 저장')
     record = deepcopy(record)
     if record['version'] == 1:
@@ -91,7 +95,25 @@ def restore(record, room):
     if record.get('room_id') != candidate.data['id']:
         raise ValueError('방 불일치')
     state = record['state']
-    if candidate.reference_art and isinstance(state, dict) and 'reference_layout' not in state:
+    if record['version'] < 3 and not candidate.sources:
+        selected = state['selected']
+        state.update(inventory=dict(candidate.inventory), sources=[], ingest_elapsed=-1,
+                     ingest_source=None, ingest_consumed=False, ingest_form='neutral',
+                     selected=selected if candidate.inventory.get(selected) else candidate.selected)
+        if state['selected'] != 'lightning':
+            state.update(lightning_charged=False, lightning_attack=False)
+    revision = candidate.data.get('layoutRevision')
+    previous_revision = candidate.data.get('previousLayoutRevision')
+    remap_positions = previous_revision is not None and state.get('map_revision') == previous_revision
+    if revision and state.get('map_revision') != revision and not remap_positions:
+        # 이전 방의 위치와 전투는 새 지도에서 초기화하고 체력과 해금 진행을 이어간다.
+        candidate.player.hp = number(state['player']['hp'], 1, candidate.player.max_hp)
+        selected = state.get('selected')
+        if selected in candidate.inventory and candidate.inventory[selected]:
+            candidate.selected = selected
+        room.__dict__.update(candidate.__dict__)
+        return
+    if remap_positions or (candidate.reference_art and isinstance(state, dict) and 'reference_layout' not in state):
         # 이전 잿불 정원의 좌표는 새 배경에 대응하지 않으므로 위치만 안전하게 다시 잡는다.
         if not isinstance(state['enemies'], list) or not isinstance(state['sources'], list):
             raise ValueError('저장 목록 형식 불일치')
@@ -103,12 +125,58 @@ def restore(record, room):
         for saved, template in zip(state['sources'], candidate.sources):
             saved.update(x=template.x, y=template.y)
         state.update(safe=list(candidate.safe), projectiles=[])
+        if remap_positions and state.get('ingest_source') == 'first-orb':
+            orb = candidate.sources[-1]
+            state['player'].update(x=orb.x, y=orb.y + .82, facing='up')
     if not isinstance(state, dict) or not isinstance(state['enemies'], list) or len(state['enemies']) != len(candidate.enemies):
         raise ValueError('적 목록 불일치')
+    inventory = state['inventory']
+    if not isinstance(inventory, dict) or set(inventory) != set(ELEMENTS):
+        raise ValueError('보관함 형식 불일치')
+    if any(type(count) is not int or not 0 <= count <= 1_000_000 for count in inventory.values()):
+        raise ValueError('지원하지 않는 보유 원소')
+    candidate.inventory = inventory
+    if candidate.acquisition:
+        progress = state['acquisition']
+        candidate.acquisition_relay = boolean(progress['relay'])
+        candidate.acquisition_power = boolean(progress['power'])
+        if candidate.acquisition_power and not candidate.acquisition_relay:
+            raise ValueError('전력 장치 상태 불일치')
     if candidate.vine_gate:
         candidate.vine_time = number(state.get('vine_time', -1), -1, candidate.vine_gate['burnDuration'])
         if -1 < candidate.vine_time < 0:
             raise ValueError('덤불 소각 시간 불일치')
+    if candidate.conductor_vine:
+        candidate.conductor_vine_time = number(state['conductor_vine_time'], -1,
+                                               candidate.conductor_vine['burnDuration'])
+        if -1 < candidate.conductor_vine_time < 0:
+            raise ValueError('전도체 덩굴 상태 불일치')
+    if candidate.boss:
+        boss = state['boss']
+        switches = boss['switches']
+        if not isinstance(switches, list) or any(type(i) is not int or not 0 <= i < 3 for i in switches):
+            raise ValueError('보호막 장치 상태 불일치')
+        candidate.boss_switches = set(switches)
+        candidate.boss_time = number(boss['time'], 0, 1_000_000_000)
+        candidate.boss_next_attack = number(boss['next_attack'], 0, 1_000_000_002)
+        candidate.boss_burn_until = number(boss.get('burn_until', 0), 0, candidate.boss_time + 2)
+        candidate.boss_burn_tick = number(boss.get('burn_tick', 0), 0, candidate.boss_time + .5)
+        warning = boss['warning']
+        if warning is not None:
+            if not isinstance(warning, list) or len(warning) != 3:
+                raise ValueError('보스 공격 예고 불일치')
+            candidate.boss_warning = (number(warning[0], 0, candidate.data['columns']),
+                                      number(warning[1], 0, candidate.data['rows']),
+                                      number(warning[2], candidate.boss_time, candidate.boss_time + 1))
+        candidate.enemies[0].element = FORMS[int(candidate.boss_time / FORM_SECONDS) % len(FORMS)]
+    if candidate.data.get('requiredBridge'):
+        candidate.bridge_crossed = boolean(state['bridge_crossed'])
+        candidate.bridge_entry_side = state.get('bridge_entry_side')
+        if candidate.bridge_entry_side not in (None, 'left', 'right'):
+            raise ValueError('흙 발판 진입 방향 불일치')
+    if candidate.sluice:
+        candidate.sluice_wheel = boolean(state['sluice_wheel'])
+        candidate.sluice_pump = boolean(state['sluice_pump'])
     if candidate.fire_barriers:
         extinguished = state['extinguished']
         if (not isinstance(extinguished, list)
@@ -127,7 +195,7 @@ def restore(record, room):
         candidate.power_connected = boolean(power['connected'])
         if candidate.power_connected and targets != levels:
             raise ValueError('전도체 연결 상태 불일치')
-        candidate.gate_time = number(power['gate_time'], 0,
+        candidate.power_gate_time = number(power['gate_time'], 0,
                                      candidate.gate_open_seconds if candidate.power_connected else 0)
         candidate.power_targets, candidate.power_levels = targets, levels
     if candidate.puzzle:
@@ -145,7 +213,7 @@ def restore(record, room):
         y = number(block[1], 0, candidate.data['rows'])
         if candidate.plate_pressed and (block != candidate.puzzle['plate'] or candidate.block_direction):
             raise ValueError('발판 상태 불일치')
-        if candidate.tile(x, y, ignore_block=True) != 0:
+        if candidate.tile(x, y, ignore_block=True) >= 3:
             raise ValueError('퍼즐 바닥 위치 불일치')
         candidate.block = x, y
     terrain = state.get('earth_terrain', [])
@@ -163,10 +231,10 @@ def restore(record, room):
         if left == right or top == bottom:
             raise ValueError('임시 지형 면적 불일치')
         if kind == 'floor':
-            bridge = candidate.turret_room
-            if not bridge or bounds not in (bridge['bridge'], bridge.get('previousBridge')):
+            previous = candidate.turret_room and candidate.turret_room.get('previousBridge')
+            if not candidate.earth_bridge or bounds not in (candidate.earth_bridge, previous):
                 raise ValueError('임시 바닥 위치 불일치')
-            bounds = bridge['bridge']
+            bounds = candidate.earth_bridge
         remaining = number(entry['remaining'], 0, candidate.earth_seconds)
         candidate.earth_terrain.append(EarthTerrain(kind, tuple(bounds), remaining))
     if candidate.turret_room:
@@ -182,16 +250,30 @@ def restore(record, room):
     if not isinstance(sources,list) or len(sources) != len(candidate.sources):
         raise ValueError('원천 목록 불일치')
     restored_sources = []
+    previous_reservoir_layout = False
     for saved,template in zip(sources,candidate.sources):
         if not isinstance(saved,dict) or set(saved) != {f.name for f in fields(Source)}:
             raise ValueError('원천 형식 불일치')
+        if (template.id == 'first-orb' and candidate.reservoir
+                and [saved['x'],saved['y']] == candidate.reservoir.get('previousOrb')):
+            saved = dict(saved, x=template.x, y=template.y)
+            previous_reservoir_layout = True
         if any(saved[key] != getattr(template,key) for key in ('id','x','y','element')):
             raise ValueError('원천 종류/좌표 불일치')
-        phases = {'intact':3,'damaged1':2,'damaged2':1,'breaking':0,'orb':0,'consumed':0}
+        phases = ({'sealed':0,'orb':0,'consumed':0} if template.id == 'first-orb' else
+                  {'intact':3,'damaged1':2,'damaged2':1,'breaking':0,'orb':0,'consumed':0})
+        if template.id == 'first-orb' and candidate.reservoir:
+            phases['descending'] = 0
+        if template.id == 'first-orb' and candidate.forge:
+            phases['igniting'] = 0
         if saved['phase'] not in phases or type(saved['hp']) is not int or saved['hp'] != phases[saved['phase']]:
             raise ValueError('원천 내구도/상태 불일치')
         for key in ('age','break_elapsed','hit_time'):
             number(saved[key],0,2_000_000_000)
+        if saved['phase'] == 'descending':
+            number(saved['age'], 0, candidate.reservoir['releaseSeconds'])
+        if saved['phase'] == 'igniting':
+            number(saved['age'], 0, candidate.forge['releaseSeconds'])
         restored_sources.append(Source(**saved))
     candidate.sources = restored_sources
     safe = state['safe']
@@ -199,6 +281,25 @@ def restore(record, room):
         raise ValueError('안전 위치 불일치')
     number(safe[0],0,candidate.data['columns'])
     number(safe[1],0,candidate.data['rows'])
+    if previous_reservoir_layout:
+        # 사라진 옆길 또는 아직 꺼지지 않은 불길 뒤에서 재개하지 않는다.
+        north = candidate.data['floorRegions'][0]
+        def accessible(x, y):
+            return candidate.fits(x, y, safe=True) and not any(
+                index not in candidate.extinguished and y < top
+                and (x >= left or y < north['y'] + north['height'])
+                for index, (left, top, _, _) in enumerate(candidate.fire_barriers))
+
+        if not accessible(*safe[:2]):
+            safe = list(candidate.safe)
+        if not accessible(player.x, player.y):
+            player.x, player.y, player.facing = safe
+            player.falling = 0
+            player.moving = False
+            player.attack_elapsed = -1
+        for enemy, template in zip(enemies, candidate.enemies):
+            if enemy.active and not enemy.falling and candidate.tile(enemy.x, enemy.y) == 4:
+                enemy.x, enemy.y = template.x, template.y
     if candidate.reference_art and state.get('reference_layout') == 1:
         # 이전 바닥 경계에 걸쳐 저장된 위치를 새 바닥 안으로 옮긴다.
         if not candidate.fits(safe[0], safe[1], safe=True):
@@ -215,12 +316,6 @@ def restore(record, room):
     elapsed = number(state['elapsed'], 0, 1_000_000_000)
     aggro = boolean(state['aggro'])
     spike = boolean(state['spike_contact'])
-    inventory = state['inventory']
-    if not isinstance(inventory,dict) or set(inventory) != set(ELEMENTS):
-        raise ValueError('보관함 형식 불일치')
-    for element,count in inventory.items():
-        if type(count) is not int or not 0 <= count <= 1_000_000 or (element not in ELEMENTS and count != 0):
-            raise ValueError('지원하지 않는 보유 원소')
     selected = state['selected']
     lightning_charged = boolean(state.get('lightning_charged', False))
     lightning_attack = boolean(state.get('lightning_attack', False))
@@ -245,6 +340,11 @@ def restore(record, room):
             raise ValueError('섭취 대상 불일치')
     elif ingest_source is not None or consumed:
         raise ValueError('끝난 섭취 상태 불일치')
+    if candidate.acquisition:
+        orb = restored_sources[-1]
+        eaten = orb.phase == 'consumed' and not (ingest_source == orb.id and consumed)
+        if bool(inventory[orb.element]) != eaten or candidate.acquisition_relay and not eaten:
+            raise ValueError('첫 원소 습득 상태 불일치')
     shots = state['projectiles']
     if not isinstance(shots, list) or len(shots) > 256:
         raise ValueError('탄환 목록 불일치')
@@ -294,7 +394,7 @@ class SaveStore:
     def write(self, room):
         if room.outcome or not room.player.active:
             return
-        record = {'version':2,'stage':room.stage,'room_id':room.data['id'],'state':{
+        record = {'version':3,'stage':room.stage,'room_id':room.data['id'],'state':{
             'player': asdict(room.player), 'enemies': [asdict(e) for e in room.enemies],
             'safe': list(room.safe), 'aggro': room.aggro, 'elapsed': room.elapsed,
             'spike_contact':room.spike_contact,'projectiles':[asdict(s) for s in room.projectiles],
@@ -302,12 +402,25 @@ class SaveStore:
             'lightning_charged': room.lightning_charged, 'lightning_attack': room.lightning_attack,
             'fire_aggro':room.fire_aggro,'ingest_elapsed':room.ingest_elapsed,'ingest_source':room.ingest_source,
             'ingest_consumed':room.ingest_consumed,'ingest_form':room.ingest_form}}
+        if room.data.get('requiredBridge'):
+            record['state']['bridge_crossed'] = room.bridge_crossed
+            record['state']['bridge_entry_side'] = room.bridge_entry_side
+        if room.acquisition:
+            record['state']['acquisition'] = {'relay': room.acquisition_relay, 'power': room.acquisition_power}
+        if room.sluice:
+            record['state'].update(sluice_wheel=room.sluice_wheel, sluice_pump=room.sluice_pump)
         if room.fire_barriers:
             record['state']['extinguished'] = sorted(room.extinguished)
         if room.power_puzzle:
             record['state']['power_puzzle'] = {
                 'targets': room.power_targets, 'levels': room.power_levels,
-                'connected': room.power_connected, 'gate_time': room.gate_time}
+                'connected': room.power_connected, 'gate_time': room.power_gate_time}
+        if room.conductor_vine:
+            record['state']['conductor_vine_time'] = room.conductor_vine_time
+        if room.boss:
+            record['state']['boss'] = {'switches': sorted(room.boss_switches), 'time': room.boss_time,
+                                       'next_attack': room.boss_next_attack, 'warning': room.boss_warning,
+                                       'burn_until': room.boss_burn_until, 'burn_tick': room.boss_burn_tick}
         if room.puzzle:
             record['state']['stone_puzzle'] = {
                 'block': list(room.block), 'direction': room.block_direction, 'pressed': room.plate_pressed,
@@ -321,6 +434,8 @@ class SaveStore:
             record['state']['vine_time'] = room.vine_time
         if room.reference_art:
             record['state']['reference_layout'] = 2
+        if room.data.get('layoutRevision'):
+            record['state']['map_revision'] = room.data['layoutRevision']
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_suffix('.tmp')
         temporary.write_text(json.dumps(record, ensure_ascii=False, allow_nan=False), encoding='utf-8')

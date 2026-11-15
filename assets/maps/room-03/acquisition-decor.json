@@ -1,0 +1,160 @@
+{
+  "schema": "element-eater.room-decorations.v1",
+  "atlas": "decor-atlas-v1.png",
+  "atlasGrid": {
+    "columns": 2,
+    "rows": 2
+  },
+  "slots": {
+    "moss": 0,
+    "rubble": 1,
+    "inlay": 2,
+    "grass": 3
+  },
+  "collision": false,
+  "placements": [
+    {
+      "kind": "rubble",
+      "x": 14.5,
+      "y": 5.5,
+      "width": 0.652550024843658,
+      "opacity": 0.4709625508336022,
+      "rotation": 6
+    },
+    {
+      "kind": "grass",
+      "x": 16.5,
+      "y": 5.5,
+      "width": 0.6967791804122183,
+      "opacity": 0.6263878251168222,
+      "rotation": 274
+    },
+    {
+      "kind": "grass",
+      "x": 16.5,
+      "y": 8.5,
+      "width": 0.5732056465829761,
+      "opacity": 0.6009596622501446,
+      "rotation": 358
+    },
+    {
+      "kind": "moss",
+      "x": 17.5,
+      "y": 14.5,
+      "width": 0.9812729428458491,
+      "opacity": 0.5344042339801127,
+      "rotation": 323
+    },
+    {
+      "kind": "grass",
+      "x": 9.5,
+      "y": 15.5,
+      "width": 0.6847494751305035,
+      "opacity": 0.6564315270523039,
+      "rotation": 357
+    },
+    {
+      "kind": "grass",
+      "x": 12.5,
+      "y": 15.5,
+      "width": 0.6770414260583437,
+      "opacity": 0.4891952610841081,
+      "rotation": 59
+    },
+    {
+      "kind": "rubble",
+      "x": 11.5,
+      "y": 18.5,
+      "width": 1.2435531602001328,
+      "opacity": 0.5207366249551952,
+      "rotation": 100
+    },
+    {
+      "kind": "rubble",
+      "x": 12.5,
+      "y": 18.5,
+      "width": 0.7013440849955253,
+      "opacity": 0.5659495281909075,
+      "rotation": 18
+    },
+    {
+      "kind": "grass",
+      "x": 13.5,
+      "y": 18.5,
+      "width": 0.841463395679437,
+      "opacity": 0.6273891067576457,
+      "rotation": 11
+    },
+    {
+      "kind": "grass",
+      "x": 19.5,
+      "y": 18.5,
+      "width": 0.9986444155245533,
+      "opacity": 0.6560486455636119,
+      "rotation": 58
+    },
+    {
+      "kind": "rubble",
+      "x": 12.5,
+      "y": 19.5,
+      "width": 0.9824824674293038,
+      "opacity": 0.6146348082477786,
+      "rotation": 248
+    },
+    {
+      "kind": "grass",
+      "x": 15.5,
+      "y": 19.5,
+      "width": 0.6027965637991974,
+      "opacity": 0.6241480122059426,
+      "rotation": 147
+    },
+    {
+      "kind": "grass",
+      "x": 20.5,
+      "y": 19.5,
+      "width": 0.5870936880201011,
+      "opacity": 0.6332357110166189,
+      "rotation": 184
+    },
+    {
+      "kind": "moss",
+      "x": 11.5,
+      "y": 24.5,
+      "width": 0.5372098250646388,
+      "opacity": 0.465005578191456,
+      "rotation": 126
+    },
+    {
+      "kind": "grass",
+      "x": 17.5,
+      "y": 25.5,
+      "width": 0.5588428760048584,
+      "opacity": 0.5056967682345812,
+      "rotation": 236
+    },
+    {
+      "kind": "moss",
+      "x": 11.5,
+      "y": 26.5,
+      "width": 0.7240874627140008,
+      "opacity": 0.6010167988533524,
+      "rotation": 79
+    },
+    {
+      "kind": "moss",
+      "x": 17.5,
+      "y": 26.5,
+      "width": 0.47673908136837034,
+      "opacity": 0.6545729494179626,
+      "rotation": 271
+    },
+    {
+      "kind": "inlay",
+      "x": 14,
+      "y": 26.1,
+      "width": 2.4,
+      "opacity": 0.52
+    }
+  ]
+}

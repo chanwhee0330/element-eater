@@ -52,33 +52,33 @@ class RoomTests(unittest.TestCase):
         self.assertLess(room.tile(room.player.x, room.player.y), 3)
 
     def test_stone_rims_stop_the_player_before_the_visible_corner(self):
-        for stage, right in ((1, 15), (2, 16)):
+        for stage, right, bottom, y in ((1, 15, 21, 19.5), (2, 21, 28, 26.5)):
             with self.subTest(stage=stage):
                 room = Room(stage=stage)
                 player = room.player
-                player.x, player.y = right - 1.5, 19.5
+                player.x, player.y = right - 1.5, y
                 room.move(player, 2, 2)
                 self.assertLessEqual(player.x, right - RIM_HALF_X - room.radius)
-                self.assertLess(player.y, 21 - RIM_HALF_Y)
-                self.assertEqual(room.tile(player.x, player.y), 0)
+                self.assertLess(player.y, bottom - RIM_HALF_Y)
+                self.assertLess(room.tile(player.x, player.y), 3)
 
                 # 이전 버전에서 난간과 겹친 위치로 저장했어도 안쪽으로 돌아갈 수 있다.
-                player.x, player.y = right - .24, 19.5
+                player.x, player.y = right - .24, y
                 room.move(player, -.5, 0)
                 self.assertAlmostEqual(player.x, right - .74)
 
     def test_room_three_walls_stop_movement(self):
         room = Room(stage=3)
-        room.player.x, room.player.y = 1, 18
+        room.player.x, room.player.y = 9.1, 20.5
         advance(room, 'a', 1)
         self.assertEqual(room.player.falling, 0)
-        self.assertGreaterEqual(room.player.x, .45)
+        self.assertGreaterEqual(room.player.x, 8 + RIM_HALF_X)
 
     def test_room_three_stops_at_the_spawn_courtyard_right_wall(self):
         room = Room(stage=3)
-        room.player.x, room.player.y = (395 - 60) / 42, (850 - 62) / 42
+        room.player.x, room.player.y = 16.2, 26.5
         advance(room, 'd', .5)
-        self.assertLess(60 + room.player.x * 42, 418)
+        self.assertLess(room.player.x, 18 - RIM_HALF_X)
         self.assertEqual(room.player.falling, 0)
 
     def test_diagonal_speed_and_frame_rate_independence(self):
@@ -120,6 +120,11 @@ class RoomTests(unittest.TestCase):
     def test_spikes_are_walkable_and_damage_player(self):
         room = Room()
         room.player.x, room.player.y = 7.5, 17.5
+        room.elapsed = 1.5
+        advance(room, seconds=.1)
+        self.assertFalse(room.spike_contact)
+        self.assertEqual(room.player.hp, room.player.max_hp)
+        room.elapsed = 2.2
         advance(room, seconds=.1)
         self.assertTrue(room.spike_contact)
         self.assertEqual(room.player.hp, room.player.max_hp - room.tuning.spike_damage)

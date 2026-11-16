@@ -199,15 +199,19 @@ class IsometricRoom:
     def wall_cell(self, x, y, height):
         mesh = Mesh()
         tile = self.room.data['tileIds']['wall']
+        self.masonry_block(mesh, x, y, x + 1, y + 1, height,
+                           front=self.room.tile(x + .5, y + 1.5) != tile)
+        return mesh
+
+    def masonry_block(self, mesh, left, top, right, bottom, height, *, front=True):
         u0, v0 = self.brick_uv[0]
         u1, v1 = self.brick_uv[2]
         # 낮은 엄폐물에는 벽돌 두 단만 보여 높이 차이를 읽기 쉽게 한다.
         v0 += (v1 - v0) * .6
         uv = ((u0, v0), (u1, v0), (u1, v1), (u0, v1))
-        if self.room.tile(x + .5, y + 1.5) != tile:
-            self.face(mesh, (x, y + 1), (x + 1, y + 1), height, 0, WALL_FACE, WALL_BASE, uv=uv)
-        self.wall_cap(mesh, x, y, x + 1, y + 1, height)
-        return mesh
+        if front:
+            self.face(mesh, (left, bottom), (right, bottom), height, 0, WALL_FACE, WALL_BASE, uv=uv)
+        self.wall_cap(mesh, left, top, right, bottom, height)
 
     def build(self, room):
         p = self.p

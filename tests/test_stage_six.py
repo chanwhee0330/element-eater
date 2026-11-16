@@ -1,4 +1,5 @@
 """번개 습득과 연쇄 공격, 이어하기 및 전력 장치 검사."""
+from math import ceil, floor
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -16,6 +17,17 @@ class StageSixTests(unittest.TestCase):
         room.sources[-1].phase = 'consumed'
         room.inventory['lightning'] = 1
         room.selected = 'lightning'
+
+    def test_shock_plates_fit_between_static_walls_and_closed_bulkheads(self):
+        room = self.room
+        walls = [*room.wall_bounds.values(), *room.acquisition['passages']]
+        for hazard in room.data['movingHazards']:
+            left, top, right, bottom = hazard['bounds']
+            with self.subTest(bounds=hazard['bounds']):
+                for y in range(floor(top), ceil(bottom)):
+                    for x in range(floor(left), ceil(right)):
+                        self.assertLess(room.data['tiles'][y][x], room.data['tileIds']['wall'])
+                self.assertFalse(any(left < r and l < right and top < b and t < bottom for l, t, r, b in walls))
 
     def test_lightning_chains_to_three_valid_targets_and_never_consumes(self):
         room = self.room
@@ -78,10 +90,19 @@ class StageSixTests(unittest.TestCase):
         for enemy in room.enemies[:2]:
             room.damage(enemy, enemy.hp)
         room.update({'connect'}, .01)
-        self.assertEqual(source.phase, 'orb')
+        self.assertEqual(source.phase, 'charging')
         self.assertEqual(room.tile(18, 19.75), 3)
         room.player.x, room.player.y = source.x, source.y
+        self.assertFalse(room.start_ingest())
+        self.assertTrue(all(room.hazard_state(hazard)[0] == 'idle' for hazard in room.data['movingHazards']))
+        for _ in range(54):
+            room.update(set(), .05)
+        self.assertEqual(source.phase, 'orb')
         room.update({'ingest'}, .01)
+        for _ in range(8):
+            room.update(set(), .05)
+        self.assertTrue(room.ingest_consumed)
+        self.assertEqual(room.tile(18, 19.75), 3)
         for _ in range(16):
             room.update(set(), .05)
         self.assertEqual(room.selected, 'lightning')
@@ -93,18 +114,63 @@ class StageSixTests(unittest.TestCase):
         self.assertFalse(room.exit_open)
         room.player.x, room.player.y, room.player.facing = 18.5, 14.45, 'up'
         room.update({'attack'}, .01)
+        flash_seen = False
         for _ in range(15):
             room.update(set(), .05)
+            flash_seen |= room.acquisition_relay_flash > 0
         self.assertTrue(room.acquisition_relay)
+        self.assertTrue(flash_seen)
+        self.assertEqual(room.acquisition_power_elapsed, -1)
         room.player.x, room.player.y = room.acquisition['finalSwitch']
         room.update({'connect'}, .01)
-        self.assertTrue(room.exit_open)
+        self.assertEqual(room.acquisition_power_elapsed, 0)
+        self.assertFalse(room.exit_open)
+        for _ in range(24):
+            room.update(set(), .05)
+        room.update({'connect'}, .01)
+        self.assertAlmostEqual(room.acquisition_power_elapsed, 1.21)
+        self.assertEqual(room.acquisition_relay_flash, 0)
+        self.assertEqual(room.powered_door_lift, 0)
         with TemporaryDirectory() as temp:
             store = SaveStore(Path(temp)/'save.json')
             store.write(room)
             restore(store.load(), room)
+            self.assertAlmostEqual(room.acquisition_power_elapsed, 1.21)
+            for _ in range(27):
+                room.update(set(), .05)
+            self.assertGreater(room.powered_door_lift, 0)
+            self.assertLess(room.powered_door_lift, 1)
+            self.assertFalse(room.exit_open)
+            for _ in range(10):
+                room.update(set(), .05)
+            self.assertTrue(room.exit_open)
+            store.write(room)
+            record = store.load()
+            del record['state']['acquisition']['powerElapsed']
+            restore(record, room)
         self.assertTrue(room.acquisition_power)
         self.assertTrue(room.exit_open)
+
+    def test_capacitor_formation_resumes_from_save_before_pickup(self):
+        room = self.room
+        for enemy in room.enemies[:2]:
+            room.damage(enemy, enemy.hp)
+        room.player.x, room.player.y = room.acquisition['switch']
+        room.update({'connect'}, .01)
+        for _ in range(18):
+            room.update(set(), .05)
+        with TemporaryDirectory() as temp:
+            store = SaveStore(Path(temp) / 'save.json')
+            store.write(room)
+            restore(store.load(), room)
+        source, = room.sources
+        self.assertEqual(source.phase, 'charging')
+        self.assertAlmostEqual(source.age, .9)
+        room.player.x, room.player.y = source.x, source.y
+        self.assertFalse(room.start_ingest())
+        for _ in range(36):
+            room.update(set(), .05)
+        self.assertTrue(room.start_ingest())
 
     def test_three_conductor_puzzle_still_resets_wrong_levels_in_room_nine(self):
         room = Room(stage=9)

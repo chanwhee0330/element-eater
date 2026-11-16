@@ -12,6 +12,9 @@
 | presentations/first | [1차 발표 PPT 7쪽](presentations/first/엘리먼트_이터_1차발표_허찬휘.pptx) |
 | presentations/first | [90초 발표 대본 PDF](presentations/first/엘리먼트_이터_90초_발표대본_허찬휘.pdf) |
 | presentations/first | [1차 발표 영상](presentations/first/2023184037_허찬휘_엘리먼트이터_1차발표영상.mp4) |
+| presentations/second | [2차 발표 PPT 6쪽](presentations/second/엘리먼트_이터_2차발표_허찬휘.pptx). 발표자 노트에 90초 대본과 2번 방 시연 순서 포함 |
+| presentations/second | [2차 발표 90초 대본 PDF](presentations/second/엘리먼트_이터_2차발표_90초_대본_허찬휘.pdf) |
+| presentations/second | [2차 발표 최종 영상](presentations/second/엘리먼트이터_2차발표_최종합본.mp4). 발표 앞부분, 2번 방 시연, 마무리 포함 |
 | previews/hero-neutral | [주인공 대기·걷기 미리보기 HTML](previews/hero-neutral/hero-neutral-preview.html) · [GIF](previews/hero-neutral/hero-neutral-preview.gif) · [전체 프레임 PNG](previews/hero-neutral/hero-neutral-contact.png) |
 | previews/neutral-attack | [무속성 공격·충격탄·약한 넉백 연출 GIF](previews/neutral-attack/neutral-attack-preview.gif) · [공격·효과 전체 프레임](previews/neutral-attack/neutral-attack-contact.png) |
 

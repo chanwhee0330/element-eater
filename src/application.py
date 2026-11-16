@@ -12,7 +12,7 @@ from .isometric import IsometricRoom
 from .ui import GameUI
 from .savegame import DEFAULT_SAVE, SaveStore, restore
 from .title import draw_title, hit_test
-from .acquisition_art import AcquisitionArt
+from .acquisition_art import AcquisitionArt, LIGHTNING_ORB_HEIGHT
 
 
 class Application:
@@ -344,6 +344,12 @@ class Application:
     def draw_source(self, source):
         if source.phase in ('sealed', 'consumed'):
             return
+        if source.phase == 'gathering':
+            self.acquisition_art.draw_wind_orb(source)
+            return
+        if source.phase == 'charging':
+            self.acquisition_art.draw_lightning_orb(source)
+            return
         if source.phase == 'descending':
             if source.age < .13:
                 return
@@ -362,8 +368,9 @@ class Application:
         x, y = self.point(source.x, source.y)
         self.view.draw_shadow(source.x, source.y)
         if source.phase == 'orb':
-            y += self.unit * (.55 + .04 * math.sin(source.age * 3))
-            if source.id == 'first-orb' and not (self.room.reservoir or self.room.forge):
+            height = LIGHTNING_ORB_HEIGHT if self.room.capacitor and source.id == 'first-orb' else self.unit * .55
+            y += height + self.unit * .04 * math.sin(source.age * 3)
+            if source.id == 'first-orb' and not (self.room.reservoir or self.room.forge or self.room.windmill or self.room.capacitor):
                 y += self.unit * .92 * (1 - min(1, source.age / .48)) ** 2
             size = self.unit
             if self.room.ingest_source == source.id and not self.room.ingest_consumed:
@@ -403,7 +410,12 @@ class Application:
         self.ui.hud(self.room, self.width, self.height)
 
     def draw_prompt(self, source, key, label, key_width):
-        height = 165 if self.room.forge and source.id == 'first-orb' else 91
+        height = 91
+        if source.id == 'first-orb':
+            if self.room.forge:
+                height = 165
+            elif self.room.capacitor:
+                height = 116
         x, y = self.point(source.x, source.y, height)
         x = max(100, min(self.width - 100, x))
         self.ui.begin()
@@ -549,9 +561,11 @@ class Application:
                 self.p.draw_line(x0 + 2, y, x1 - 2, y, *grout)
 
     def draw_turret_switch(self):
-        if not self.room.turrets_stopped:
+        room = self.room
+        x, y = self.point(*room.turret_room['switch'])
+        if not room.turrets_stopped:
+            self.connect_image.draw(x, y + 4, 42, 42)
             return
-        x, y = self.point(*self.room.turret_room['switch'])
         self.ui.begin()
         self.ui.rounded(x - 22, y - 20, 44, 40, 4, (50, 91, 73, 255))
         self.ui.rounded(x - 16, y - 14, 32, 28, 3, (118, 193, 135, 255))
@@ -620,7 +634,8 @@ class Application:
             radius = round((14 + 45 * self.room.power_flash) * scale)
             self.p.draw_circle(x, y + 30 * scale, radius, 255, 232, 143)
 
-    def draw_electric_arc(self, x, y, tx, ty, offset, alpha, phase):
+    def draw_electric_arc(self, x, y, tx, ty, offset, alpha, phase,
+                          *, glow=(77, 155, 255), core=(222, 249, 255)):
         dx, dy = tx - x, ty - y
         length = math.hypot(dx, dy) or 1
         bend = min(offset, length * .3) * (-1 if phase % 2 else 1) / length
@@ -632,8 +647,8 @@ class Application:
         self.ui.begin()
         for (x0, y0), (x1, y1) in zip(bolt, bolt[1:]):
             for spread in (-1, 1):
-                self.p.draw_line(x0 + spread, y0, x1 + spread, y1, 77, 155, 255, alpha // 2)
-            self.p.draw_line(x0, y0, x1, y1, 222, 249, 255, alpha)
+                self.p.draw_line(x0 + spread, y0, x1 + spread, y1, *glow, alpha // 2)
+            self.p.draw_line(x0, y0, x1, y1, *core, alpha)
 
     def draw_lightning_charge(self, actor, root_x, root_y):
         if actor.falling or not (self.room.lightning_charged or
@@ -666,6 +681,8 @@ class Application:
                 self.connect_image.draw(x, y, 38 * scale, 38 * scale)
                 rx, ry = self.point(*reset)
                 self.connect_image.draw(rx, ry, 24 * scale, 24 * scale)
+            elif self.room.puzzle.get('centeredSlide'):
+                self.acquisition_art.draw_counterweight_prop('lever', reset)
             if not self.room.plate_pressed and math.hypot(self.room.player.x - reset[0],
                                                          self.room.player.y - reset[1]) <= .9:
                 rx, ry = self.point(*reset)
@@ -678,6 +695,9 @@ class Application:
         self.p.draw_circle(x, y, 8 * scale, *border[:3])
 
     def draw_puzzle_block(self):
+        if self.room.puzzle.get('centeredSlide'):
+            self.acquisition_art.draw_counterweight_prop('stone', self.room.block)
+            return
         x, y = self.point(*self.room.block)
         scale = self.view.reference_scale
         self.block_image.draw(x, y + 12 * scale, 57 * scale, 51 * scale)
@@ -739,19 +759,24 @@ class Application:
         p.draw_rectangle(x - 5, y + 73, x + 5, y + 81, 155, 124, 136, filled=True)
         self.ui.diamond(x, y + 77, 3, (172, 227, 196) if opened else (210, 168, 110))
 
-        if opened:
+        lift = 1 if opened else self.room.powered_door_lift
+        if lift:
             for row in range(27):
                 strength = (27 - row) / 27
                 span = round(19 - row * .16)
-                p.draw_line(x - span, y + row, x + span, y + row, *color, round(120 * strength))
+                p.draw_line(x - span, y + row, x + span, y + row, *color, round(120 * strength * lift))
+        if opened:
             p.draw_rectangle(x - 30, y - 5, x + 30, y, 82, 66, 91, filled=True)
             p.draw_line(x - 24, y - 1, x + 24, y - 1, 157, 209, 179)
             self.view.draw_exit_marker(exit_point['x'], exit_point['y'], opened)
         else:
-            for dx in (-14, -7, 0, 7, 14):
-                p.draw_line(x + dx, y + 1, x + dx, y + 56, 117, 93, 83)
-            for height in (15, 40):
-                p.draw_line(x - 19, y + height, x + 19, y + height, 157, 125, 94)
+            risen = round(55 * lift * lift * (3 - 2 * lift))
+            if risen < 55:
+                for dx in (-14, -7, 0, 7, 14):
+                    p.draw_line(x + dx, y + 1 + risen, x + dx, y + 56, 117, 93, 83)
+            for height in (15 + risen, 40 + risen):
+                if height <= 56:
+                    p.draw_line(x - 19, y + height, x + 19, y + height, 157, 125, 94)
             p.draw_rectangle(x - 30, y - 5, x + 30, y, 82, 66, 91, filled=True)
 
     def draw(self, present=True):
@@ -762,7 +787,7 @@ class Application:
             if present:
                 p.update_canvas()
             return
-        background = self.acquisition_art.draw_wind_fog if self.room.stage == 4 else None
+        background = self.acquisition_art.draw_cliff_fog if self.room.stage in (4, 5) else None
         self.view.draw_ground(background)
         self.acquisition_art.draw()
         if self.room.boss and self.room.power_gate_open:
@@ -795,6 +820,13 @@ class Application:
             layers.append((self.room.reservoir['origin'][1], self.acquisition_art.draw_cistern, ()))
         if self.room.forge:
             layers.append((self.room.forge['origin'][1], self.acquisition_art.draw_forge, ()))
+        if self.room.windmill:
+            layers.append((self.room.windmill['base'][3], self.acquisition_art.draw_windmill, ()))
+        if self.room.capacitor:
+            layers.append((self.room.sources[-1].y, self.acquisition_art.draw_capacitor, ()))
+            if not self.room.learned_room_element:
+                layers.extend((bounds[3], self.acquisition_art.draw_bulkhead, (bounds, front, pillar))
+                              for bounds, front, pillar in self.acquisition_art.bulkhead_sections())
         layers.append((exit_point['y'], self.draw_exit, ()))
         layers.extend((terrain.bounds[3], self.draw_earth_terrain, (terrain,))
                       for terrain in self.room.earth_terrain if terrain.kind == 'wall')
@@ -859,9 +891,12 @@ class Application:
         # SDL 종료 전에 텍스처를 해제한다.
         self.ui.release()
         self.acquisition_art.images.clear()
+        self.acquisition_art.spike_props.clear()
         self.acquisition_art.waterworks.clear()
         self.acquisition_art.forge_props.clear()
         self.acquisition_art.wind_props.clear()
+        self.acquisition_art.quarry_props = None
+        self.acquisition_art.powerstation_props = None
         self.images.clear()
         self.view.release()
         self.shot_images.clear()

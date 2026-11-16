@@ -173,6 +173,9 @@
       27.3,
       20.4
     ],
+    "capacitor": {
+      "releaseSeconds": 2.65
+    },
     "guards": 2,
     "switch": [
       27.35,
@@ -182,10 +185,19 @@
       18.5,
       12.15
     ],
+    "coil": [
+      22.4,
+      11.4
+    ],
     "finalSwitch": [
       18.5,
       10.3
     ],
+    "powerCircuit": {
+      "coilAt": 1.0,
+      "doorAt": 2.35,
+      "openAt": 2.90
+    },
     "passages": [
       [
         10,
@@ -215,10 +227,10 @@
     {
       "kind": "shock",
       "bounds": [
-        27.95,
-        18.45,
-        29,
-        19.7
+        28.35,
+        19.4,
+        29.4,
+        20.65
       ],
       "offset": 1.2
     }

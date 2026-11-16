@@ -203,6 +203,38 @@
       "y": 23.8,
       "width": 2.4,
       "opacity": 0.52
+    },
+    {
+      "kind": "moss",
+      "x": 4.85,
+      "y": 9.2,
+      "width": 1.1,
+      "opacity": 0.64,
+      "rotation": 12
+    },
+    {
+      "kind": "rubble",
+      "x": 5.55,
+      "y": 14.65,
+      "width": 0.95,
+      "opacity": 0.62,
+      "rotation": 25
+    },
+    {
+      "kind": "grass",
+      "x": 12.7,
+      "y": 9.05,
+      "width": 0.8,
+      "opacity": 0.59,
+      "rotation": 28
+    },
+    {
+      "kind": "moss",
+      "x": 7.4,
+      "y": 8.9,
+      "width": 0.86,
+      "opacity": 0.6,
+      "rotation": 65
     }
   ]
 }

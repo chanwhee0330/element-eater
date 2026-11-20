@@ -1,0 +1,12 @@
+{
+  "image": "quarry-laser.png",
+  "frameSize": 64,
+  "fps": 12,
+  "frames": 12,
+  "rows": {
+    "emitter": 0,
+    "receiver": 1,
+    "receiver-cut": 2,
+    "impact": 3
+  }
+}

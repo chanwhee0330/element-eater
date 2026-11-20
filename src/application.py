@@ -13,6 +13,8 @@ from .ui import GameUI
 from .savegame import DEFAULT_SAVE, SaveStore, restore
 from .title import draw_title, hit_test
 from .acquisition_art import AcquisitionArt, LIGHTNING_ORB_HEIGHT
+from .garden_art import GardenArt
+from .quarry_art import QuarryArt
 
 
 class Application:
@@ -90,6 +92,8 @@ class Application:
         self.ui = GameUI(p, self.images['hero', 'idle'], orb_icons)
         self.font = self.ui.fonts[18]
         self.acquisition_art = AcquisitionArt(self)
+        self.garden_art = None
+        self.quarry_art = None
 
     def advance_stage(self):
         previous = self.room
@@ -133,6 +137,8 @@ class Application:
             print(f'{self.save_error} {exc}', file=sys.stderr)
 
     def enter_play(self):
+        if self.room.garden or self.room.quarry:
+            self.room.preload_reference_paths()
         self.view.load(self.room)
         self.unit = self.view.sprite_height * (1 if self.room.data.get('layoutRevision') else self.view.reference_scale)
         self.scene = 'play'
@@ -284,6 +290,10 @@ class Application:
         return self.view.point(x, y, z)
 
     def draw_actor(self, actor):
+        if self.room.garden or self.room.quarry:
+            x, y = self.point(actor.x, actor.y)
+            if not (-65 <= x <= self.width + 65 and -120 <= y <= self.height + 60):
+                return
         attacking = actor.attack_elapsed >= 0
         ingesting = actor.kind == 'hero' and self.room.ingest_elapsed >= 0
         state = 'ingest' if ingesting else 'attack' if attacking else 'walk' if actor.moving else 'idle'
@@ -480,9 +490,10 @@ class Application:
         clip, pivot = frame['pico2dClip'], frame['pivotPixelsTopLeft']
         width, height = clip['width'], clip['height']
         scale = gate['width'] * self.view.tile_width / (width * .82)
+        sway = 1 + .025 * math.sin(self.room.elapsed*3.3) if (self.room.garden or self.room.quarry) and burn_time < 0 else 1
         self.vine_image.clip_draw(clip['left'], clip['bottom'], width, height,
-                                  x, y + (pivot['y'] - height / 2) * scale,
-                                  width * scale, height * scale)
+                                  x, y + (pivot['y'] - height / 2) * scale * sway,
+                                  width * scale, height * scale * sway)
         player = self.room.player
         can_burn = not self.room.forge or self.room.inventory['fire']
         if self.room.fire_barriers and can_burn and burn_time < 0 and math.hypot(
@@ -527,8 +538,11 @@ class Application:
                                    round(115 * (1 - age / .8)), filled=True)
 
     def draw_earth_terrain(self, terrain):
-        if terrain.kind == 'floor' and self.room.acquisition and self.room.turret_room:
+        if terrain.kind == 'floor' and (self.room.quarry or self.room.acquisition and self.room.turret_room):
             self.acquisition_art.bridge(terrain.bounds, 'earth', terrain.remaining / self.room.earth_seconds)
+            return
+        if self.room.quarry and terrain.kind == 'wall':
+            self.quarry_art.wall(terrain)
             return
         left, top, right, bottom = terrain.bounds
         x0, y1 = self.point(left, top)
@@ -730,6 +744,12 @@ class Application:
             self.p.draw_line(left, y, right, y, 164, 126, 88)
 
     def draw_exit(self):
+        if self.room.garden:
+            self.garden_art.exit()
+            return
+        if self.room.quarry:
+            self.garden_art.exit(self.room.quarry.exit_time/self.room.quarry.exit_seconds)
+            return
         if self.room.reference_art:
             self.draw_reference_exit()
             return
@@ -804,9 +824,18 @@ class Application:
                 self.draw_earth_terrain(terrain)
         if self.room.turret_room:
             self.draw_turret_switch()
-        if self.room.puzzle:
+        if self.room.puzzle and not self.room.quarry:
             self.draw_plate()
-        if self.room.sluice:
+        if self.room.quarry:
+            if self.quarry_art is None:
+                self.quarry_art = QuarryArt(self, self.room.map_path.parent)
+            if self.garden_art is None:
+                self.garden_art = GardenArt(self, STAGES[7].parent)
+        if self.room.garden:
+            if self.garden_art is None:
+                self.garden_art = GardenArt(self, self.room.map_path.parent)
+            self.garden_art.wires()
+        elif self.room.sluice:
             for key, active, instruction in (('wheel', self.room.sluice_wheel, 'G · 손잡이'),
                                               ('pump', self.room.sluice_pump, '번개 Space · 펌프')):
                 x, y = self.point(*self.room.sluice[key])
@@ -837,11 +866,15 @@ class Application:
                 layers.append(((rect[3] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
             for rect in self.room.reference_art.get('foregroundWallPixels', []):
                 layers.append(((rect[1] - origin_y) / unit, self.view.draw_reference_cover, (rect,)))
-        if not self.room.sluice_open:
+        if self.room.garden:
+            layers.extend(self.garden_art.layers())
+        elif not self.room.sluice_open:
             layers.append((self.room.sluice['gate'][3], self.draw_stone_gate, (self.room.sluice, False)))
         if self.room.puzzle:
             layers.append((self.room.block[1], self.draw_puzzle_block, ()))
-            if not self.room.acquisition and (not self.room.stone_gate_open
+            if self.room.quarry:
+                layers.extend(self.quarry_art.layers())
+            elif not self.room.acquisition and (not self.room.stone_gate_open
                     or self.room.data.get('requiredBridge') and not self.room.bridge_crossed):
                 layers.append((self.room.puzzle['gate'][3], self.draw_stone_gate,
                                (self.room.puzzle, self.room.plate_pressed and
@@ -865,6 +898,8 @@ class Application:
         layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
         for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
             draw_item(*args)
+        if self.room.quarry:
+            self.quarry_art.hints()
         if self.room.lightning_time:
             self.draw_lightning()
         for effect in self.room.feedback:
@@ -904,6 +939,7 @@ class Application:
         self.conductor_images.clear()
         self.connect_image = self.flame_image = None
         self.vine_image = self.block_image = self.gate_image = None
+        self.garden_art = self.quarry_art = None
         self.title_image = None
 
 

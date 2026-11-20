@@ -215,6 +215,10 @@ def restore(record, room):
     if candidate.sluice:
         candidate.sluice_wheel = boolean(state['sluice_wheel'])
         candidate.sluice_pump = boolean(state['sluice_pump'])
+        if candidate.garden:
+            candidate.garden_wheel_time = number(state.get('garden_wheel_time', 0), 0, .5)
+            candidate.garden_gate_time = number(state.get('garden_gate_time', 0), 0, candidate.garden_gate_seconds)
+            candidate.garden_exit_time = number(state.get('garden_exit_time', 0), 0, candidate.garden_exit_seconds)
     if candidate.fire_barriers:
         extinguished = state['extinguished']
         if (not isinstance(extinguished, list)
@@ -459,6 +463,10 @@ class SaveStore:
                 record['state']['acquisition']['powerElapsed'] = room.acquisition_power_elapsed
         if room.sluice:
             record['state'].update(sluice_wheel=room.sluice_wheel, sluice_pump=room.sluice_pump)
+            if room.garden:
+                record['state'].update(garden_wheel_time=room.garden_wheel_time,
+                                       garden_gate_time=room.garden_gate_time,
+                                       garden_exit_time=room.garden_exit_time)
         if room.fire_barriers:
             record['state']['extinguished'] = sorted(room.extinguished)
         if room.power_puzzle:

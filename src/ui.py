@@ -20,6 +20,7 @@ class GameUI:
         path = system_font if system_font.is_file() else bundled
         self.fonts = {n: p.load_font(str(path), n) for n in (10, 11, 12, 13, 14, 15, 16, 18, 20, 24, 26)}
         self.metrics = {}
+        self.minimap_cache = None
         self.hp_trail = 100
         self.last_time = 0
 
@@ -59,11 +60,15 @@ class GameUI:
         if not radius:
             p.draw_rectangle(x, y, x+width-1, y+height-1, *color, filled=True)
             return
-        # 반투명 도형을 중첩하지 않아 모서리가 얼룩지지 않도록 한 줄씩 채운다.
-        for row in range(height):
-            dy = radius-row-.5 if row < radius else row-(height-radius)+.5 if row >= height-radius else 0
-            inset = math.ceil(radius-math.sqrt(max(0, radius*radius-dy*dy))) if dy else 0
+        # 가운데는 한 번에 채우고, 반투명 모서리와 겹치지 않게 그린다.
+        if height > 2*radius:
+            p.draw_rectangle(x, y+radius, x+width-1, y+height-radius-1, *color, filled=True)
+        for row in range(radius):
+            dy = radius-row-.5
+            inset = math.ceil(radius-math.sqrt(radius*radius-dy*dy))
             p.draw_line(x+inset, y+row, x+width-1-inset, y+row, *color)
+            other = y+height-1-row
+            p.draw_line(x+inset, other, x+width-1-inset, other, *color)
 
     def panel(self, x, y, width, height, accent=False, radius=9):
         self.rounded(x, y-4, width, height, radius, (8, 9, 8, 125))
@@ -115,18 +120,26 @@ class GameUI:
         x, y = width - 33 - map_w, top - 91 - map_h
         self.panel(x - 8, y - 25, map_w + 16, map_h + 33)
         self.p.draw_rectangle(x, y, x + map_w, y + map_h, 18, 23, 23, filled=True)
-        shades = {
-            tile_ids['wall']: (75, 76, 74),
-            tile_ids['spikes']: (157, 93, 96),
-        }
-        for row, tiles in enumerate(room.data['tiles']):
-            for col, tile in enumerate(tiles):
-                if tile == tile_ids['pit']:
-                    continue
-                left = round(x + col * scale)
-                bottom = round(y + map_h - (row + 1) * scale)
-                self.p.draw_rectangle(left, bottom, left + scale - 1, bottom + scale - 1,
-                                      *shades.get(tile, (122, 116, 128)), filled=True)
+        # 지형은 그대로이므로 SDL용 사각형 배열을 재사용한다. 표식만 매 프레임 갱신한다.
+        key = room.map_path, width, top, self.p.pico2d.canvas_height
+        if self.minimap_cache is None or self.minimap_cache[0] != key:
+            shades = {tile_ids['wall']: (75, 76, 74), tile_ids['spikes']: (157, 93, 96)}
+            groups = {}
+            for row, tiles in enumerate(room.data['tiles']):
+                for col, tile in enumerate(tiles):
+                    if tile == tile_ids['pit']:
+                        continue
+                    left = round(x + col * scale)
+                    bottom = round(y + map_h - (row + 1) * scale)
+                    screen_top = int(key[3] - bottom - scale)
+                    color = shades.get(tile, (122, 116, 128))
+                    groups.setdefault(color, []).append(self.p.SDL_Rect(left, screen_top, int(scale), int(scale)))
+            batches = [(color, (self.p.SDL_Rect * len(rects))(*rects)) for color, rects in groups.items()]
+            self.minimap_cache = key, batches
+        renderer = self.p.pico2d.renderer
+        for color, batch in self.minimap_cache[1]:
+            self.p.SDL_SetRenderDrawColor(renderer, *color, 255)
+            self.p.SDL_RenderFillRects(renderer, batch, len(batch))
         exit_point = room.data['plannedExit']
         self.diamond(x + exit_point['x'] * scale, y + map_h - exit_point['y'] * scale,
                      3, (168, 207, 155) if room.exit_open else (214, 176, 104))

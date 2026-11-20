@@ -8,6 +8,7 @@ import random
 from .combat import CombatTuning, Projectile, Feedback
 from .elements import ELEMENTS, BEATS, Source
 from .boss import update_boss
+from .quarry import Quarry, contains
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_PATH = ROOT / 'assets/maps/room-01/room-01.json'
@@ -65,6 +66,8 @@ class Room:
     wind_push_speed = 8
     wind_enemy_push_seconds = .6
     gate_open_seconds = .3
+    garden_gate_seconds = .72
+    garden_exit_seconds = .4
     earth_seconds = 4
     relay_flash_seconds = .36
 
@@ -166,6 +169,13 @@ class Room:
         self.sluice = self.data.get('sluice')
         self.sluice_wheel = False
         self.sluice_pump = False
+        self.garden = self.sluice.get('garden') if self.sluice else None
+        self.quarry = Quarry(self.data['quarry'], self.reference_art) if 'quarry' in self.data else None
+        self.garden_cells = self.index_garden_cells() if self.garden else None
+        self.reference_path_cache = None
+        self.garden_gate_time = 0.0
+        self.garden_wheel_time = 0.0
+        self.garden_exit_time = 0.0
         self.power_puzzle = self.data.get('powerPuzzle')
         self.power_targets = [random.randint(1, 3) for _ in range(3)] if self.power_puzzle else []
         self.power_levels = [0] * len(self.power_targets)
@@ -337,7 +347,10 @@ class Room:
                 self.earth_terrain.append(EarthTerrain('floor', tuple(bridge), self.earth_seconds))
                 return self.consume_earth(x, y, '흙 바닥')
 
-        half_x, half_y = (.33, .9) if dx else (.9, .33)
+        slot = self.quarry.wall_slot(player.x, player.y) if self.quarry else None
+        if slot is not None:
+            x, y = slot
+        half_x, half_y = (.33, .9) if dx or slot is not None else (.9, .33)
         bounds = x - half_x, y - half_y, x + half_x, y + half_y
         if not self.line_clear(player.x, player.y, x, y):
             return False
@@ -456,8 +469,12 @@ class Room:
                 break
 
     @property
-    def sluice_open(self):
+    def sluice_ready(self):
         return not self.sluice or (self.sluice_wheel and self.sluice_pump and self.extinguished == {0})
+
+    @property
+    def sluice_open(self):
+        return self.sluice_ready and (not self.garden or self.garden_gate_time >= self.garden_gate_seconds)
 
     @property
     def branches_open(self):
@@ -921,7 +938,55 @@ class Room:
         left, top, right, bottom = self.windmill['base']
         return left - radius <= x < right + radius and top - radius <= y < bottom + radius
 
+    def index_garden_cells(self):
+        # The garden has rectangular fixtures and integer-aligned stone platforms.
+        cells = {(x, y): [] for l, t, r, b in self.reference_art['walkable']
+                 for x in range(l, r) for y in range(t, b)}
+        vine = self.vine_gate
+        vine_rect = (vine['x'], vine['y'], vine['x'] + vine['width'], vine['y'] + vine['height'])
+        fixtures = [(bounds, 'cover') for bounds in self.reference_art['cover']]
+        fixtures.append((vine_rect, 'vine'))
+        fixtures.extend((bounds, 'gate') for bounds in (self.sluice['gate'], *self.sluice['returnGates']))
+        fixtures.extend((bounds, i) for i, bounds in enumerate(self.fire_barriers))
+        for bounds, kind in fixtures:
+            left, top, right, bottom = bounds
+            for x in range(math.floor(left), math.ceil(right)):
+                for y in range(math.floor(top), math.ceil(bottom)):
+                    if (x, y) in cells:
+                        cells[x, y].append((bounds, kind))
+        return cells
+
+    def garden_tile(self, x, y, ignore_earth):
+        fixtures = self.garden_cells.get((math.floor(x), math.floor(y)))
+        if fixtures is None:
+            return 4
+        for (left, top, right, bottom), kind in fixtures:
+            if left <= x < right and top <= y < bottom:
+                if (kind == 'cover' or kind == 'vine' and not self.vine_open
+                        or kind == 'gate' and not self.sluice_open
+                        or isinstance(kind, int) and kind not in self.extinguished):
+                    return 3
+        if not ignore_earth:
+            for terrain in self.earth_terrain:
+                if terrain.contains(x, y):
+                    return 3 if terrain.kind == 'wall' else 0
+        return 0
+
     def tile(self, x, y, *, ignore_block=False, ignore_earth=False, airborne=False):
+        if self.garden_cells is not None:
+            return self.garden_tile(x, y, ignore_earth)
+        if self.quarry:
+            if (not self.stone_gate_open or not self.bridge_crossed) and any(
+                    contains(bounds, x, y) for bounds in self.quarry.gates):
+                return 3
+            if not ignore_earth:
+                for terrain in self.earth_terrain:
+                    if terrain.contains(x, y):
+                        return 3 if terrain.kind == 'wall' else 0
+            if self.vine_contains(x, y) or (not ignore_block and abs(x-self.block[0]) < .49
+                                           and abs(y-self.block[1]) < .49):
+                return 3
+            return self.quarry.ground(x, y, airborne)
         if self.intersects_windmill_base(x, y):
             return 3
         if self.acquisition and not self.learned_room_element:
@@ -931,8 +996,8 @@ class Room:
         if self.fire_barriers and self.burning_barrier(x, y) is not None:
             return 3
         if not self.sluice_open:
-            left, top, right, bottom = self.sluice['gate']
-            if left <= x < right and top <= y < bottom:
+            gates = (self.sluice['gate'], *self.sluice.get('returnGates', ()))
+            if any(left <= x < right and top <= y < bottom for left, top, right, bottom in gates):
                 return 3
         if not self.power_gate_open:
             x0, y0, x1, y1 = self.power_puzzle['gate']
@@ -980,6 +1045,8 @@ class Room:
         return 4
 
     def fits(self, x, y, safe=False, *, ignore_earth=False):
+        if self.quarry and self.quarry.touches_beam(x, y, self.radius, () if ignore_earth else self.earth_terrain):
+            return False
         if self.reference_art and self.reference_art.get('walledBoundary') and self.tile(x, y, ignore_earth=ignore_earth) == 4:
             return False
         for dx in (-self.radius, self.radius):
@@ -1045,11 +1112,17 @@ class Room:
                      if self.fits(p[0] / 2, p[1] / 2, safe=True)), None)
         if goal is None:
             return {}
-        key = (goal, self.sluice_open, self.vine_open, self.stone_gate_open, self.power_gate_open, self.block, self.turrets_stopped,
-               tuple(s.solid for s in self.sources), tuple(t.bounds for t in self.earth_terrain),
-               frozenset(self.extinguished))
+        topology = self.quarry.obstacles(self) if self.quarry else self.garden_obstacles() if self.garden else (
+            self.sluice_open, self.vine_open, self.stone_gate_open, self.power_gate_open, self.block,
+            self.turrets_stopped, tuple(s.solid for s in self.sources),
+            tuple((t.kind, t.bounds) for t in self.earth_terrain), frozenset(self.extinguished))
+        key = goal, topology
         if self.navigation_cache and self.navigation_cache[0] == key:
             return self.navigation_cache[1]
+        if self.garden or self.quarry:
+            distances = self.cached_reference_distances(goal, *self.reference_links(topology))
+            self.navigation_cache = key, distances
+            return distances
         distances, queue = {goal: 0}, deque([goal])
         while queue:
             x, y = queue.popleft()
@@ -1058,6 +1131,70 @@ class Room:
                     distances[nx, ny] = distances[x, y] + 1
                     queue.append((nx, ny))
         self.navigation_cache = key, distances
+        return distances
+
+    def garden_obstacles(self):
+        active = [t.bounds for t in self.earth_terrain]
+        active.extend(bounds for i, bounds in enumerate(self.fire_barriers) if i not in self.extinguished)
+        if not self.sluice_open:
+            active.extend((self.sluice['gate'], *self.sluice['returnGates']))
+        if not self.vine_open:
+            vine = self.vine_gate
+            active.append((vine['x'], vine['y'], vine['x'] + vine['width'], vine['y'] + vine['height']))
+        return frozenset(map(tuple, active))
+
+    def reference_links(self, obstacles):
+        if self.reference_path_cache is None:
+            self.reference_path_cache = obstacles, {}, {}
+        previous, links, samples = self.reference_path_cache
+        for left, top, right, bottom in previous ^ obstacles:
+            # A change can touch a sampled position or an edge leaving its neighbor.
+            for cache, scale, margin in ((samples, 8, self.radius), (links, 2, self.radius + .5)):
+                for x in range(math.floor((left-margin)*scale), math.ceil((right+margin)*scale)+1):
+                    for y in range(math.floor((top-margin)*scale), math.ceil((bottom+margin)*scale)+1):
+                        cache.pop((x, y), None)
+        self.reference_path_cache = obstacles, links, samples
+        return links, samples
+
+    def preload_reference_paths(self):
+        # Closed gates split the room into regions. Warm each region before the first frame.
+        if self.garden:
+            obstacles = self.garden_obstacles()
+            left, _, right, bottom = self.sluice['gate']
+            anchors = (((left+right)/2, bottom+.5), self.sluice['wheel'], self.sluice['pump'])
+        else:
+            obstacles = self.quarry.obstacles(self)
+            anchors = self.quarry.config['navigationAnchors']
+        links, samples = self.reference_links(obstacles)
+        exit_point = self.data['plannedExit']
+        for x, y in ((self.player.x, self.player.y), *anchors, (exit_point['x'], exit_point['y'])):
+            goal = next((p for p in self.reference_anchors(x, y)
+                         if self.fits(p[0]/2, p[1]/2, safe=True)), None)
+            if goal is not None and goal not in links:
+                self.cached_reference_distances(goal, links, samples)
+
+    def cached_reference_distances(self, goal, links, safe_samples):
+        distances, queue = {goal: 0}, deque([goal])
+        while queue:
+            cell = queue.popleft()
+            if cell not in links:
+                # Each lattice edge is half a tile long. Sample at the same spacing as reference_link.
+                x, y = cell
+                adjacent = []
+                for nx, ny in self.neighbors(x, y):
+                    for step in range(1, 5):
+                        sample = (4*x + (nx-x)*step, 4*y + (ny-y)*step)
+                        if sample not in safe_samples:
+                            safe_samples[sample] = self.fits(sample[0]/8, sample[1]/8, safe=True)
+                        if not safe_samples[sample]:
+                            break
+                    else:
+                        adjacent.append((nx, ny))
+                links[cell] = adjacent
+            for neighbor in links[cell]:
+                if neighbor not in distances:
+                    distances[neighbor] = distances[cell] + 1
+                    queue.append(neighbor)
         return distances
 
     def reference_target(self, enemy, distances):
@@ -1156,10 +1293,21 @@ class Room:
         if self.conductor_vine and self.conductor_vine_time >= 0:
             self.conductor_vine_time = min(self.conductor_vine_time + dt, self.conductor_vine['burnDuration'])
         self.elapsed += dt
+        if self.garden:
+            if self.sluice_wheel:
+                self.garden_wheel_time = min(.5, self.garden_wheel_time + dt)
+            if self.sluice_ready:
+                self.garden_gate_time = min(self.garden_gate_seconds, self.garden_gate_time + dt)
+            if self.exit_open:
+                self.garden_exit_time = min(self.garden_exit_seconds, self.garden_exit_time + dt)
         self.update_power_circuit(dt)
         for terrain in self.earth_terrain:
             terrain.remaining -= dt
         self.earth_terrain[:] = [terrain for terrain in self.earth_terrain if terrain.remaining > 0]
+        if self.quarry and self.quarry.touches_beam(self.player.x, self.player.y, self.radius, self.earth_terrain):
+            self.player.x, self.player.y, self.player.facing = self.safe
+            self.player.knockback_left = 0
+            self.feedback.append(Feedback(self.player.x, self.player.y, '레이저 복구', False))
         self.power_flash = max(0, self.power_flash - dt)
         self.acquisition_relay_flash = max(0, self.acquisition_relay_flash - dt)
         for index, time_left in enumerate(self.power_hits):
@@ -1310,6 +1458,10 @@ class Room:
         self.update_projectiles(dt)
         self.update_acquisition()
         exit_pos = self.data['plannedExit']
-        if self.exit_open and not self.outcome and math.hypot(player.x-exit_pos['x'], player.y-exit_pos['y']) < .7:
+        exit_ready = self.exit_open and (not self.garden or self.garden_exit_time >= self.garden_exit_seconds)
+        if self.quarry and exit_ready:
+            self.quarry.exit_time = min(self.quarry.exit_seconds, self.quarry.exit_time + dt)
+            exit_ready = self.quarry.exit_time >= self.quarry.exit_seconds
+        if exit_ready and not self.outcome and math.hypot(player.x-exit_pos['x'], player.y-exit_pos['y']) < .7:
             self.outcome = 'clear'
             self.projectiles.clear()

@@ -1,0 +1,20 @@
+{
+  "image": "garden-objects.png",
+  "frameSize": [
+    128,
+    96
+  ],
+  "frames": 12,
+  "fps": 9,
+  "rows": {
+    "pool": 0,
+    "fountain": 1,
+    "planter": 2,
+    "wheel": 3,
+    "wheel-active": 4,
+    "pump": 5,
+    "pump-active": 6,
+    "lamp": 7,
+    "lamp-active": 8
+  }
+}

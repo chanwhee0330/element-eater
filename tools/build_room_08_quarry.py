@@ -2,16 +2,16 @@
 import json
 import math
 from pathlib import Path
-import random
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageDraw
+
+from dungeon_terrain import DungeonTerrain
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'assets'
 OUT = ASSETS / 'maps/room-08'
 UNIT, ORIGIN = 34, (108, 64)
-RES = Image.Resampling.LANCZOS
 FLOOR = [
     (16,22,20,25), (8,19,28,23), (15,16,21,20), (14,15,22,17),
     (4,7,11,17), (7,5,20,8), (15,7,20,11), (8,9,18,12), (15,11,18,15),
@@ -46,53 +46,15 @@ def box(bounds):
 
 
 def terrain():
-    rng = random.Random(808)
-    im = Image.new('RGBA', (1440, 940), '#181a24')
-    mist = Image.new('RGBA', im.size)
-    md = ImageDraw.Draw(mist)
-    for x,y,w,h,color in [(275,445,234,290,(110,71,64,121)),(740,320,400,244,(127,73,51,102)),
-                          (1099,474,213,270,(71,60,91,130)),(700,726,355,212,(111,68,51,129))]:
-        md.ellipse((x-w,y-h,x+w,y+h),fill=color)
-    im.alpha_composite(mist.filter(ImageFilter.GaussianBlur(60)))
-    d = ImageDraw.Draw(im)
-    atlas = Image.open(ASSETS/'maps/isometric/masonry-atlas.png').convert('L')
-    half = atlas.width//2
-    floor = atlas.crop((0,0,half,half)).resize((UNIT,UNIT),RES)
-    colors = (('#40352f','#b09779'),('#3e3737','#b49c83'),('#363240','#9f96a4'))
-    tiles = [[ImageEnhance.Brightness(ImageOps.colorize(floor.rotate(90*i),*palette)).enhance(factor)
-              for i,factor in enumerate((.90,.97,1.02,.95,1.07,1.00))] for palette in colors]
-    brick = ImageOps.colorize(atlas.crop((half,0,half*2,half)),'#241f2a','#745e59')
-    cap = ImageOps.colorize(atlas.crop((0,half,half,half*2)),'#554344','#beaa91')
-    face, rim, rear = brick.resize((UNIT,29),RES), cap.resize((UNIT,7),RES), brick.resize((UNIT,19),RES)
-    cells = {(x,y) for l,t,r,b in FLOOR for x in range(l,r) for y in range(t,b)}
-    for x,y in sorted(cells,key=lambda c:c[::-1]):
-        if (x,y+1) not in cells:
-            im.paste(face,point(x,y+1))
-    decor = Image.open(ASSETS/'maps/room-01/source/decor-atlas-v1.png').convert('RGBA')
-    rubble = decor.crop((half,0,2*half,half))
-    rubble = rubble.crop(rubble.getbbox())
-    for x,y in sorted(cells):
-        region = 0 if x<15 else 2 if x>=24 and y<18 else 1
-        im.paste(rng.choice(tiles[region]),point(x,y))
-    for x,y in sorted(cells):
-        xx,yy = point(x,y)
-        if (x,y-1) not in cells and (y!=1 or x not in (25,26)):
-            im.paste(rear,(xx,yy-16))
-            im.paste(rim,(xx,yy-19))
-        if (x,y+1) not in cells and y!=24:
-            im.paste(rim,(xx,yy+UNIT-2))
-        if not (15<=y<17 and x in (10,14)):
-            for delta,edge in ((-1,xx),(1,xx+UNIT-4)):
-                if (x+delta,y) not in cells:
-                    d.rectangle((edge,yy,edge+3,yy+UNIT-1),fill='#8a7569')
-        if rng.random()<(.48 if (x,y-1) not in cells else .07):
-            size = rng.randrange(12,24)
-            im.alpha_composite(rubble.rotate(rng.randrange(360)).resize((size,size),RES),(xx+4,yy+5))
+    banks = {(x, y) for x in (11, 14) for y in (15, 16)}
+    terrain = DungeonTerrain(UNIT, ORIGIN, FLOOR, 808, (24,16,20), (1,24,28), open_banks=banks)
+    terrain.rug(17.35, 19, 18.65, 25)
+    terrain.rug(25.35, 3, 26.65, 7)
+    terrain.rims()
+    im, d = terrain.image, terrain.draw
     for bounds in COVER:
         l,t,r,b = box(bounds)
-        im.paste(brick.resize((r-l,b-t+9),RES),(l,t))
-        im.paste(cap.resize((r-l,b-t),RES),(l,t))
-        d.line((l+2,t+2,r-2,t+2),fill='#c5ac8f',width=2)
+        terrain.ledge(l, t, r-l, b-t)
     wire = [point(*xy) for xy in ((16.5,13.5),(16.5,14.13),(17.8,14.13),(17.8,15.45),(22.5,15.45))]
     d.line(wire,fill='#2f292d',width=6)
     d.line(wire,fill='#a48058',width=2)
@@ -102,10 +64,7 @@ def terrain():
     markers = [(x-.33,y-.9,x+.33,y+.9) for x,y in (slot['position'] for slot in WALL_SLOTS)]
     for bounds in [*markers,(30.08,9.66,30.91,10.57)]:
         d.rounded_rectangle(box(bounds),4,fill='#4c4548',outline='#bf9f72',width=2)
-    dx,dy = point(26,1.25)
-    d.rounded_rectangle((dx-50,dy-45,dx+50,dy+59),35,fill='#42343d',outline='#bba08a',width=4)
-    d.rounded_rectangle((dx-36,dy-33,dx+36,dy+48),26,fill='#201e2a',outline='#927b6e',width=2)
-    d.rectangle((dx-43,dy+45,dx+43,dy+53),fill='#705d56',outline='#b29b80',width=2)
+    terrain.door((956, 78, 1028, 154), (924, 1060))
     im.convert('RGB').save(OUT/'quarry-terrain.png',optimize=True)
 
 

@@ -1,10 +1,11 @@
 """증기 정원의 석재 지형과 상태별 오브젝트 시트를 만든다 (Pillow)."""
 import json
 import math
-import random
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageOps
+from PIL import Image, ImageDraw
+
+from dungeon_terrain import DungeonTerrain
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +32,6 @@ LIGHTS = [(16.22, 11.52), (19.78, 11.52), (16.25, 23.1), (19.75, 23.1), (16.24, 
 WIRES = [[WHEEL, (12.6, 8.45), (12.6, 9.66), (16.22, 9.66), LIGHTS[0]],
          [PUMP, (23.4, 8.45), (23.4, 9.66), (19.78, 9.66), LIGHTS[1]],
          [(18, 11.52), (18, 2.35)]]
-RES = Image.Resampling.LANCZOS
 
 
 def point(x, y):
@@ -47,35 +47,11 @@ def inside(x, y, bounds):
 
 
 def terrain():
-    rng = random.Random(70731)
-    atlas = Image.open(ROOT / 'assets/maps/isometric/masonry-atlas.png').convert('L')
-    s = atlas.width // 2
-    floor = atlas.crop((0, 0, s, s)).resize((UNIT, UNIT), RES)
-    brick = ImageOps.colorize(atlas.crop((s, 0, 2*s, s)), '#1d2730', '#737b73')
-    trim = ImageOps.colorize(atlas.crop((0, s, s, 2*s)), '#454748', '#c9c3a4').resize((UNIT, 7), RES)
-    face, rear = brick.resize((UNIT, 26), RES), brick.resize((UNIT, 18), RES)
-    palettes = [('#29392f', '#a3a586'), ('#213740', '#92a7a7'), ('#263638', '#aeac92'), ('#282d39', '#979386')]
-    variations = [[ImageEnhance.Brightness(ImageOps.colorize(floor.rotate(90*i), *colors)).enhance(.92 + .034*i)
-                   for i in range(5)] for colors in palettes]
-    im = Image.new('RGB', (1440, 940), '#131e27')
-    d = ImageDraw.Draw(im)
-    cells = {(x, y) for l, t, r, b in FLOOR for x in range(l, r) for y in range(t, b)}
-    for x, y in sorted(cells, key=lambda cell: cell[::-1]):
-        if (x, y+1) not in cells:
-            im.paste(face, point(x, y+1))
-    for x, y in sorted(cells):
-        region = 0 if x < 12 else 1 if x >= 24 else 3 if y < 11 else 2
-        im.paste(rng.choice(variations[region]), point(x, y))
-    for x, y in sorted(cells):
-        px, py = point(x, y)
-        if (x, y-1) not in cells and not (y == 1 and 17 <= x < 19):
-            im.paste(rear, (px, py-14))
-            im.paste(trim, (px, py-16))
-        if (x, y+1) not in cells and y != 23:
-            im.paste(trim, (px, py+UNIT-2))
-        for delta, edge in ((-1, px), (1, px+UNIT-4)):
-            if (x+delta, y) not in cells:
-                d.rectangle((edge, py, edge+3, py+UNIT-1), fill='#777a6c')
+    terrain = DungeonTerrain(UNIT, ORIGIN, FLOOR, 70731, (23,16,20), (1,16,20))
+    terrain.rug(17.35, 4, 18.65, 10)
+    terrain.rug(17.35, 21, 18.65, 24)
+    terrain.rims()
+    im, d = terrain.image, terrain.draw
     for wire in WIRES:
         for width, color in ((7, '#282d31'), (3, '#8a7955'), (1, '#aa9270')):
             d.line([point(*p) for p in wire], fill=color, width=width, joint='curve')
@@ -83,10 +59,7 @@ def terrain():
     d.rectangle((l,t,r,b), fill='#393c3e', outline='#8b8172', width=2)
     for x in range(l+6,r-4,10):
         d.line((x,t+4,x,b-4), fill='#262a2e', width=3)
-    x, y = point(18, 1.35)
-    d.rounded_rectangle((x-48,y-49,x+48,y+52), 35, fill='#3a4248', outline='#a9a48b', width=4)
-    d.rounded_rectangle((x-34,y-35,x+34,y+47), 26, fill='#19262c', outline='#b7aa89', width=2)
-    d.rectangle((x-39,y+42,x+39,y+50), fill='#6e786e', outline='#a9a68d', width=2)
+    terrain.door((686, 94, 754, 177), (652, 788))
     im.save(MAP / 'garden-terrain.png', optimize=True)
 
 
@@ -97,8 +70,8 @@ def sheet_frame(kind, i, active):
     if kind in ('pool', 'fountain'):
         ellipse = kind == 'fountain'
         shape = d.ellipse if ellipse else lambda bounds, **kw: d.rounded_rectangle(bounds, 12, **kw)
-        shape((1, 6, 126, 93), fill='#272f30')
-        shape((1, 2, 126, 87), fill='#78877b', outline='#c0bea0', width=3)
+        shape((1, 6, 126, 93), fill='#282338')
+        shape((1, 2, 126, 87), fill='#57516d', outline='#8e8095', width=3)
         shape((7, 8, 120, 81), fill='#225f69', outline='#153a45', width=3)
         for line in range(8):
             if ellipse:
@@ -118,8 +91,8 @@ def sheet_frame(kind, i, active):
                 d.line((64,42,64+(j-2)*4,h,x,29), fill='#80d4dc', width=2)
                 d.point((x,33+i%4), fill='#c7f2e7')
     elif kind == 'planter':
-        d.rounded_rectangle((1, 6, 126, 94), 10, fill='#323f3b')
-        d.rounded_rectangle((1, 1, 126, 86), 10, fill='#797d6b', outline='#a8aa8b', width=3)
+        d.rounded_rectangle((1, 6, 126, 94), 10, fill='#302739')
+        d.rounded_rectangle((1, 1, 126, 86), 10, fill='#5e5269', outline='#8c7c8c', width=3)
         d.rounded_rectangle((8, 9, 119, 80), 6, fill='#263b31')
         for j in range(12):
             x, y = 17+19*(j%6), 27+32*(j//6)
@@ -130,35 +103,6 @@ def sheet_frame(kind, i, active):
             if j % 3 != 1:
                 d.ellipse((x+dx-4,y-8,x+dx+3,y-2), fill=('#d492aa','#e5bb83')[j%2])
                 d.point((x+dx,y-5),fill='#ffdc9e')
-    elif kind in ('wheel', 'pump'):
-        purple, brass = '#51495d', '#b59865'
-        d.ellipse((15,56,115,93),fill='#26232f')
-        d.rounded_rectangle((18,18,110,84),11,fill=purple,outline=brass,width=4)
-        d.rounded_rectangle((25,59,103,78),5,fill='#373443',outline='#907450',width=2)
-        for x in (30,98):
-            d.ellipse((x-4,64,x+4,72),fill='#ccad74')
-        if kind == 'wheel':
-            d.ellipse((43,18,85,60),fill='#383541',outline=brass,width=4)
-            angle = (-1.1 + 1.92*i/11) if active else -1.1 + .08*math.sin(phase)
-            x,y = 64+round(28*math.sin(angle)),39-round(28*math.cos(angle))
-            d.line((64,39,x,y),fill='#e2bf80',width=6)
-            d.ellipse((x-6,y-5,x+6,y+5),fill='#bb8255',outline='#f2d899')
-        else:
-            for x in (34,94):
-                d.line((x,47,x,17),fill=brass,width=7)
-                d.ellipse((x-7,9,x+7,23),fill='#d7b77b',outline='#f5d89a')
-            d.ellipse((44,24,84,64),fill='#233542',outline='#ad9779',width=4)
-            if active:
-                for j in range(4):
-                    a = phase + j*math.pi/2
-                    d.line((64,44,64+round(16*math.cos(a)),44+round(16*math.sin(a))),fill='#8cdeeb',width=3)
-                d.line((34,16,48+i%5,10,66,16,81,11+i%6,94,16),fill='#e8c4ff',width=2)
-        pulse = round(12 * math.sin(phase))
-        if active:
-            color = (233+pulse, 187+pulse, 112)
-        else:
-            color = (143+pulse, 104+pulse, 82)
-        d.ellipse((59,65,69,75),fill=color,outline=brass)
     else:
         d.ellipse((42,64,86,90), fill='#283a36')
         d.rounded_rectangle((49,45,79,80),5,fill='#62604c',outline='#ad9b73',width=3)
@@ -171,13 +115,19 @@ def sheet_frame(kind, i, active):
 def sprites():
     kinds = ('pool', 'fountain', 'planter', 'wheel', 'pump', 'lamp')
     sheet = Image.new('RGBA', (12*128, 9*96))
+    # PixelFX에서 만든 장치 행을 유지하고 정원 배경 행만 다시 그린다.
+    with Image.open(MAP / 'garden-objects.png') as existing:
+        hardware = existing.convert('RGBA')
     clips = {}
     row = 0
     for kind in kinds:
         for active in ((False, True) if kind in ('wheel', 'pump', 'lamp') else (False,)):
             clips[kind + ('-active' if active else '')] = row
             for i in range(12):
-                sheet.alpha_composite(sheet_frame(kind, i, active), (i*128, row*96))
+                x, y = i*128, row*96
+                frame = (hardware.crop((x,y,x+128,y+96)) if kind in ('wheel', 'pump')
+                         else sheet_frame(kind, i, active))
+                sheet.alpha_composite(frame, (x,y))
             row += 1
     sheet.save(MAP / 'garden-objects.png', optimize=True)
     (MAP/'garden-objects.json').write_text(json.dumps({'image': 'garden-objects.png', 'frameSize': [128,96],

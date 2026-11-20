@@ -226,6 +226,11 @@ def restore(record, room):
                 or len(set(extinguished)) != len(extinguished)):
             raise ValueError('불길 진화 상태 불일치')
         candidate.extinguished = set(extinguished)
+    if candidate.trial:
+        returns = state['trial_returns']
+        if returns not in ([], [0], [0, 1]) or (returns and not candidate.vine_open):
+            raise ValueError('삼중 성문 귀환문 상태 불일치')
+        candidate.trial_returns = set(returns)
     if candidate.power_puzzle:
         power = state['power_puzzle']
         targets, levels = power['targets'], power['levels']
@@ -240,6 +245,9 @@ def restore(record, room):
         candidate.power_gate_time = number(power['gate_time'], 0,
                                      candidate.gate_open_seconds if candidate.power_connected else 0)
         candidate.power_targets, candidate.power_levels = targets, levels
+        if candidate.trial and (targets != candidate.power_puzzle['targets']
+                                or candidate.power_connected and not candidate.branches_open):
+            raise ValueError('삼중 성문 회로 상태 불일치')
     if candidate.puzzle:
         puzzle = state['stone_puzzle']
         candidate.plate_pressed = boolean(puzzle['pressed'])
@@ -473,6 +481,8 @@ class SaveStore:
             record['state']['power_puzzle'] = {
                 'targets': room.power_targets, 'levels': room.power_levels,
                 'connected': room.power_connected, 'gate_time': room.power_gate_time}
+        if room.trial:
+            record['state']['trial_returns'] = sorted(room.trial_returns)
         if room.conductor_vine:
             record['state']['conductor_vine_time'] = room.conductor_vine_time
         if room.boss:

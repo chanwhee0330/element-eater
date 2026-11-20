@@ -7,6 +7,9 @@ class QuarryArt:
     def __init__(self, app, folder):
         self.app = app
         self.meta = json.loads((folder/'quarry-laser.json').read_text(encoding='utf-8'))
+        self.passage_gate = app.p.load_image(str(folder/'passage-gate.png'))
+        self.exit_grille = app.p.load_image(str(folder/'exit-grille.png'))
+        self.reset_lever = app.p.load_image(str(folder/'reset-lever.png'))
         self.sheet = app.p.load_image(str(folder/self.meta['image']))
         path = folder.parents[1]/'effects/earth/earth-wall-v1.png'
         self.earth_wall = app.p.load_image(str(path))
@@ -67,23 +70,8 @@ class QuarryArt:
             self.earth_wall.clip_draw(115,177,488,341,sx,sy+lift*.44,width+3,height)
 
     def gate(self, bounds):
-        left, top, right, bottom = bounds
-        vertical = bottom-top > right-left
-        along = (top,bottom) if vertical else (left,right)
-        perp = (left+right)/2 if vertical else (top+bottom)/2
-        image = self.app.gate_image
         opening = self.room.gate_time/self.room.gate_open_seconds if self.room.bridge_crossed else 0
-        half = image.w//2
-        visible = round(half*(1-opening))
-        if visible <= 0:
-            return
-        unit = self.app.view.tile_width
-        height = (right-left if vertical else bottom-top)*unit
-        length = (along[1]-along[0])*visible/image.w
-        for offset, center in ((0,along[0]+length/2),(image.w-visible,along[1]-length/2)):
-            x, y = self.app.point(perp,center) if vertical else self.app.point(center,perp)
-            image.clip_composite_draw(offset,0,visible,image.h,math.pi/2 if vertical else 0,'',
-                                      x,y,length*unit,height)
+        self.app.garden_art.slide_gate(self.passage_gate, bounds, opening)
 
     def plate(self):
         app = self.app
@@ -98,11 +86,10 @@ class QuarryArt:
     def lever(self):
         app = self.app
         reset = self.room.puzzle['reset']
-        app.acquisition_art.draw_counterweight_prop('lever', reset)
         x, y = app.point(*reset)
-        pulse = round(22*math.sin(self.room.elapsed*6))
+        unit = app.view.tile_width
+        self.reset_lever.draw(x, y, 2.0*unit, 1.55*unit)
         app.ui.begin()
-        app.p.draw_circle(x+7,y-3,2,208+pulse,154+pulse,91,filled=True)
         if not self.room.plate_pressed and math.hypot(self.room.player.x-reset[0], self.room.player.y-reset[1]) <= .9:
             app.ui.text('G · 돌 복귀', x, y+35, 13)
 

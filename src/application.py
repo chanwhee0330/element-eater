@@ -137,7 +137,7 @@ class Application:
             print(f'{self.save_error} {exc}', file=sys.stderr)
 
     def enter_play(self):
-        if self.room.garden or self.room.quarry:
+        if self.room.garden or self.room.quarry or self.room.trial:
             self.room.preload_reference_paths()
         self.view.load(self.room)
         self.unit = self.view.sprite_height * (1 if self.room.data.get('layoutRevision') else self.view.reference_scale)
@@ -541,7 +541,7 @@ class Application:
         if terrain.kind == 'floor' and (self.room.quarry or self.room.acquisition and self.room.turret_room):
             self.acquisition_art.bridge(terrain.bounds, 'earth', terrain.remaining / self.room.earth_seconds)
             return
-        if self.room.quarry and terrain.kind == 'wall':
+        if (self.room.quarry or self.room.trial) and terrain.kind == 'wall':
             self.quarry_art.wall(terrain)
             return
         left, top, right, bottom = terrain.bounds
@@ -609,17 +609,74 @@ class Application:
         x, y = puzzle['switch']
         sx, sy = self.point(x, y)
         color = (255, 193, 82) if self.room.power_connected else (133, 88, 52)
-        for cx, cy in puzzle['conductors']:
-            px, py = self.point(cx, cy)
-            self.p.draw_line(px, py, px, sy, *color)
-            self.p.draw_line(px, sy, sx, sy, *color)
+        if not self.room.trial:
+            for cx, cy in puzzle['conductors']:
+                px, py = self.point(cx, cy)
+                self.p.draw_line(px, py, px, sy, *color)
+                self.p.draw_line(px, sy, sx, sy, *color)
         gx, gy, gr, gb = puzzle['gate']
         end_x, end_y = self.point((gx + gr) / 2, gb)
         self.p.draw_line(sx, sy, end_x, end_y, *color)
         scale = self.view.reference_scale
         self.connect_image.draw(sx, sy, 47 * scale, 47 * scale)
-        if not self.room.power_connected:
+        if not self.room.power_connected and (not self.room.trial or self.room.branches_open):
             self.ui.key_label('G', '연결', sx, sy - 34 * scale, 26, size=13)
+
+    def draw_trial_floor(self):
+        room = self.room
+        trial = room.trial
+        self.ui.begin()
+        left, top, right, bottom = trial['basin']
+        x0, y1 = self.point(left, top)
+        x1, y0 = self.point(right, bottom)
+        self.p.draw_rectangle(x0, y0, x1, y1, 71, 60, 72, filled=True)
+        color = (56, 110, 122) if not room.stone_gate_open else (91, 76, 82)
+        self.p.draw_rectangle(x0+3, y0+3, x1-3, y1-3, *color, filled=True)
+        if not room.stone_gate_open:
+            for i in range(1, 7):
+                y = y0+(y1-y0)*i/7
+                length = 5 + 4 * math.sin(room.elapsed*3+i)
+                self.p.draw_line(x0+8, y, x0+8+length, y, 123, 170, 170)
+        for column, index in enumerate((2, 0, 1)):
+            x, y = self.point(19.5 + (column-1)*1.55, 9.2)
+            self.ui.text(f'{trial["runes"][index]} {"●" * room.power_targets[index]}', x, y, 14)
+        if room.trial_returns == {0} and not any(
+                t.kind == 'wall' and t.contains(*trial['wallSlot']) for t in room.earth_terrain):
+            x, y = self.point(*trial['wallSlot'])
+            self.p.draw_rectangle(x-23, y-6, x+23, y+6, 160, 121, 89)
+            if math.dist((room.player.x, room.player.y), trial['wallSlot']) < 3:
+                self.ui.key_label('R', '흙벽으로 레이저 차단', x, y-29, 22, 13)
+
+    def draw_trial_switch(self, index):
+        room = self.room
+        point = room.trial['switches'][index]
+        self.acquisition_art.draw_counterweight_prop('lever', point)
+        if index not in room.trial_returns and math.dist((room.player.x, room.player.y), point) <= .9:
+            x, y = self.point(*point)
+            self.ui.begin()
+            self.ui.text('G · 정비문 개방' if index == 0 else 'G · 귀환문 개방', x, y+34, 13)
+
+    def trial_layers(self):
+        room = self.room
+        trial = room.trial
+        if self.garden_art is None:
+            self.garden_art = GardenArt(self, STAGES[7].parent)
+        if self.quarry_art is None:
+            self.quarry_art = QuarryArt(self, STAGES[8].parent)
+        gates = [gate for i, gate in enumerate(trial['returns']) if i not in room.trial_returns]
+        if 0 not in room.trial_returns:
+            gates.append(trial['serviceGate'])
+        if not room.stone_gate_open:
+            gates.append(room.puzzle['gate'])
+        for gate in gates:
+            yield gate[3], self.garden_art.slide_gate, (self.garden_art.passage_gate, gate, 0)
+        for i, (_, y) in enumerate(trial['switches']):
+            yield y, self.draw_trial_switch, (i,)
+        if room.active_lasers:
+            for start, stop, y, receiver in room.active_lasers.beams(room.earth_terrain):
+                yield y-.3, self.quarry_art.draw_beam, (start, stop, y, receiver)
+                if stop != receiver:
+                    yield y+.45, self.quarry_art.sprite, ('impact', stop, y, 44, start < receiver)
 
     def draw_conductor(self, index):
         x, y = self.point(*self.room.power_puzzle['conductors'][index])
@@ -643,8 +700,10 @@ class Application:
             side = -1 if tick % 2 else 1
             self.draw_electric_arc(px, py, px + side * length, py + length, 2 * scale,
                                    225 if hit or self.room.power_connected else 155, tick)
-        self.ui.text(f'{chr(65 + index)} {level}/{target}', x, y - 22 * scale, 14)
-        if self.room.power_flash:
+        rune = self.room.trial['runes'][index] if self.room.trial else None
+        self.ui.text(f'{rune}  {level}' if rune else f'{chr(65 + index)} {level}/{target}',
+                     x, y - 22 * scale, 14)
+        if self.room.power_flash and (not self.room.trial or index in self.room.trial_wrong):
             radius = round((14 + 45 * self.room.power_flash) * scale)
             self.p.draw_circle(x, y + 30 * scale, radius, 255, 232, 143)
 
@@ -691,7 +750,10 @@ class Application:
         scale = self.view.reference_scale
         reset = self.room.puzzle.get('reset')
         if reset:
-            if self.room.stage >= 9 or self.room.data.get('requiredBridge'):
+            if self.room.trial:
+                self.acquisition_art.draw_counterweight_prop('socket', self.room.puzzle['plate'])
+                self.acquisition_art.draw_counterweight_prop('lever', reset)
+            elif self.room.stage >= 9 or self.room.data.get('requiredBridge'):
                 self.connect_image.draw(x, y, 38 * scale, 38 * scale)
                 rx, ry = self.point(*reset)
                 self.connect_image.draw(rx, ry, 24 * scale, 24 * scale)
@@ -744,11 +806,15 @@ class Application:
             self.p.draw_line(left, y, right, y, 164, 126, 88)
 
     def draw_exit(self):
+        if self.room.trial:
+            self.garden_art.exit(float(self.room.exit_open))
+            return
         if self.room.garden:
             self.garden_art.exit()
             return
         if self.room.quarry:
-            self.garden_art.exit(self.room.quarry.exit_time/self.room.quarry.exit_seconds)
+            self.garden_art.exit(self.room.quarry.exit_time/self.room.quarry.exit_seconds,
+                                 self.quarry_art.exit_grille)
             return
         if self.room.reference_art:
             self.draw_reference_exit()
@@ -843,6 +909,8 @@ class Application:
                 self.ui.text('작동 완료' if active else instruction, x, y+26, 13)
         if self.room.power_puzzle:
             self.draw_power_floor()
+        if self.room.trial:
+            self.draw_trial_floor()
         exit_point = self.room.data['plannedExit']
         layers = [(depth, self.view.draw_wall, (wall,)) for depth, wall in self.view.walls]
         if self.room.reservoir:
@@ -874,7 +942,7 @@ class Application:
             layers.append((self.room.block[1], self.draw_puzzle_block, ()))
             if self.room.quarry:
                 layers.extend(self.quarry_art.layers())
-            elif not self.room.acquisition and (not self.room.stone_gate_open
+            elif not self.room.trial and not self.room.acquisition and (not self.room.stone_gate_open
                     or self.room.data.get('requiredBridge') and not self.room.bridge_crossed):
                 layers.append((self.room.puzzle['gate'][3], self.draw_stone_gate,
                                (self.room.puzzle, self.room.plate_pressed and
@@ -884,6 +952,8 @@ class Application:
             layers.extend((y, self.draw_conductor, (i,)) for i, (_, y) in enumerate(puzzle['conductors']))
             if not self.room.power_gate_open:
                 layers.append((puzzle['gate'][3], self.draw_stone_gate, (puzzle, self.room.power_connected)))
+        if self.room.trial:
+            layers.extend(self.trial_layers())
         if not self.room.vine_open:
             gate = self.room.vine_gate
             layers.append((gate['y'] + gate['height'], self.draw_vine, (gate, self.room.vine_time)))

@@ -8,7 +8,7 @@ import random
 from .combat import CombatTuning, Projectile, Feedback
 from .elements import ELEMENTS, BEATS, Source
 from .boss import update_boss
-from .quarry import Quarry, contains
+from .quarry import LaserField, Quarry, contains
 
 ROOT = Path(__file__).resolve().parents[1]
 MAP_PATH = ROOT / 'assets/maps/room-01/room-01.json'
@@ -177,7 +177,13 @@ class Room:
         self.garden_wheel_time = 0.0
         self.garden_exit_time = 0.0
         self.power_puzzle = self.data.get('powerPuzzle')
-        self.power_targets = [random.randint(1, 3) for _ in range(3)] if self.power_puzzle else []
+        self.trial = self.data.get('trial')
+        self.trial_cells = self.index_trial_cells() if self.trial else None
+        self.trial_lasers = LaserField(self.trial['lasers']) if self.trial else None
+        self.trial_returns = set()
+        self.trial_wrong = set()
+        self.power_targets = (list(self.power_puzzle['targets']) if self.trial
+                              else [random.randint(1, 3) for _ in range(3)] if self.power_puzzle else [])
         self.power_levels = [0] * len(self.power_targets)
         self.power_connected = False
         self.power_flash = 0
@@ -269,7 +275,9 @@ class Room:
 
         if (self.block is not None and not self.plate_pressed
                 and not (self.puzzle.get('centeredSlide') and self.block_direction)
-                and in_gust(*self.block)):
+                and in_gust(*self.block)
+                and (not self.trial or (abs((self.block[0]-player.x)*dy - (self.block[1]-player.y)*dx) < .48
+                                        and math.dist(self.block, (player.x, player.y)) <= 1.6))):
             self.block_direction = player.facing
         for enemy in self.enemies:
             if enemy.active and enemy.element == 'earth' and not enemy.falling and in_gust(enemy.x, enemy.y):
@@ -348,6 +356,8 @@ class Room:
                 return self.consume_earth(x, y, '흙 바닥')
 
         slot = self.quarry.wall_slot(player.x, player.y) if self.quarry else None
+        if self.trial_returns == {0} and dy == -1 and 31.4 < player.x < 34.3 and 17.2 < player.y < 19:
+            slot = self.trial['wallSlot']
         if slot is not None:
             x, y = slot
         half_x, half_y = (.33, .9) if dx or slot is not None else (.9, .33)
@@ -447,7 +457,8 @@ class Room:
                 look_ahead = math.floor(forward - .5) + 1.5 - forward
             travel = min(step, look_ahead)
             nx, ny = bx + dx * look_ahead, by + dy * look_ahead
-            if any(self.tile(nx + sx, ny + sy, ignore_block=True) >= 3
+            if (self.trial and not contains(self.puzzle['yard'], nx, ny)) or any(
+                   self.tile(nx + sx, ny + sy, ignore_block=True) >= 3
                    for sx in (-.49, .49) for sy in (-.49, .49)):
                 self.block_direction = None
                 break
@@ -464,7 +475,7 @@ class Room:
                 self.block = px, py
                 self.plate_pressed = True
                 self.block_direction = None
-                label = {4: '석교 개방', 5: '정비실 개방'}.get(self.stage, '석문 개방')
+                label = {4: '석교 개방', 5: '정비실 개방', 9: '서쪽 수로 배수'}.get(self.stage, '석문 개방')
                 self.feedback.append(Feedback(px, py - .5, label, True, .8, .8))
                 break
 
@@ -478,6 +489,8 @@ class Room:
 
     @property
     def branches_open(self):
+        if self.trial:
+            return len(self.trial_returns) == 2
         return not self.data.get('requiresBranches') or (
             self.stone_gate_open and len(self.extinguished) == len(self.fire_barriers)
             and self.conductor_vine_time >= self.conductor_vine['burnDuration'])
@@ -498,9 +511,26 @@ class Room:
             return
         if self.power_levels == self.power_targets:
             self.power_connected = True
+        elif self.trial:
+            self.trial_wrong = {i for i, (level, target) in enumerate(zip(self.power_levels, self.power_targets))
+                                if level != target}
+            self.power_flash = .8
         else:
             self.power_levels[:] = [0, 0, 0]
             self.power_flash = .35
+
+    def interact_trial(self):
+        if not self.trial or not self.vine_open:
+            return
+        for i, point in enumerate(self.trial['switches']):
+            if i not in self.trial_returns and (i == 0 or 0 in self.trial_returns):
+                if math.dist((self.player.x, self.player.y), point) <= .9:
+                    self.trial_returns.add(i)
+                    self.feedback.append(Feedback(*point, '정비문 개방' if i == 0 else '귀환문 개방', True))
+
+    @property
+    def active_lasers(self):
+        return self.trial_lasers if self.trial_returns == {0} else self.quarry
 
     @property
     def boss_exposed(self):
@@ -830,6 +860,7 @@ class Room:
                 shot.y += shot.dy * distance/parts
                 shot.remaining -= distance/parts
                 if (self.vine_contains(shot.x, shot.y) and self.vine_time < 0
+                        and (not self.trial or 0 in self.extinguished)
                         and shot.owner == 'hero' and shot.element == 'fire'):
                     self.vine_time = 0
                 if (self.conductor_vine_contains(shot.x, shot.y) and self.conductor_vine_time < 0
@@ -839,8 +870,10 @@ class Room:
                 if self.fire_barriers and shot.owner == 'hero' and shot.element == 'water':
                     barrier = self.burning_barrier(shot.x, shot.y)
                     if barrier is not None:
-                        if (not self.data.get('orderedFireBarriers')
-                                or all(index in self.extinguished for index in range(barrier))):
+                        if ((not self.trial or (self.stone_gate_open and contains(
+                                self.trial['basin'], self.player.x, self.player.y)))
+                                and (not self.data.get('orderedFireBarriers')
+                                or all(index in self.extinguished for index in range(barrier)))):
                             self.extinguished.add(barrier)
                             self.steam[barrier] = self.elapsed
                         shot.active = False
@@ -871,6 +904,8 @@ class Room:
                         if math.hypot(x - shot.x, y - shot.y) <= .5:
                             if (not self.power_connected and not self.power_flash
                                     and not self.conductor_vine_contains(x, y)
+                                    and (not self.trial or index == 1
+                                         or (0 if index == 0 else 1) in self.trial_returns)
                                     and (not self.data.get('requiresBranches') or index != 2 or self.stone_gate_open)):
                                 self.power_levels[index] = (self.power_levels[index] + 1) % 4
                                 self.power_hits[index] = .25
@@ -972,7 +1007,23 @@ class Room:
                     return 3 if terrain.kind == 'wall' else 0
         return 0
 
+    def index_trial_cells(self):
+        cells = {(x, y): [] for left, top, right, bottom in self.reference_art['walkable']
+                 for x in range(left, right) for y in range(top, bottom)}
+        for left, top, right, bottom in self.reference_art['cover']:
+            for x in range(math.floor(left), math.ceil(right)):
+                for y in range(math.floor(top), math.ceil(bottom)):
+                    if (x, y) in cells:
+                        cells[x, y].append((left, top, right, bottom))
+        return cells
+
     def tile(self, x, y, *, ignore_block=False, ignore_earth=False, airborne=False):
+        if self.trial:
+            if any(i not in self.trial_returns and contains(gate, x, y)
+                   for i, gate in enumerate(self.trial['returns'])):
+                return 3
+            if 0 not in self.trial_returns and contains(self.trial['serviceGate'], x, y):
+                return 3
         if self.garden_cells is not None:
             return self.garden_tile(x, y, ignore_earth)
         if self.quarry:
@@ -1022,6 +1073,9 @@ class Room:
             left, top, right, bottom = self.boss['shortcut']
             if left <= x < right and top <= y < bottom:
                 return 0
+        if self.trial_cells is not None:
+            cover = self.trial_cells.get((math.floor(x), math.floor(y)))
+            return 4 if cover is None else 3 if any(contains(bounds, x, y) for bounds in cover) else 0
         if self.reference_art:
             for x0, y0, x1, y1 in self.reference_art['cover']:
                 if x0 <= x < x1 and y0 <= y < y1:
@@ -1045,7 +1099,8 @@ class Room:
         return 4
 
     def fits(self, x, y, safe=False, *, ignore_earth=False):
-        if self.quarry and self.quarry.touches_beam(x, y, self.radius, () if ignore_earth else self.earth_terrain):
+        lasers = self.active_lasers
+        if lasers and lasers.touches_beam(x, y, self.radius, () if ignore_earth else self.earth_terrain):
             return False
         if self.reference_art and self.reference_art.get('walledBoundary') and self.tile(x, y, ignore_earth=ignore_earth) == 4:
             return False
@@ -1112,14 +1167,20 @@ class Room:
                      if self.fits(p[0] / 2, p[1] / 2, safe=True)), None)
         if goal is None:
             return {}
-        topology = self.quarry.obstacles(self) if self.quarry else self.garden_obstacles() if self.garden else (
-            self.sluice_open, self.vine_open, self.stone_gate_open, self.power_gate_open, self.block,
-            self.turrets_stopped, tuple(s.solid for s in self.sources),
-            tuple((t.kind, t.bounds) for t in self.earth_terrain), frozenset(self.extinguished))
+        if self.quarry:
+            topology = self.quarry.obstacles(self)
+        elif self.garden:
+            topology = self.garden_obstacles()
+        elif self.trial:
+            topology = self.trial_obstacles()
+        else:
+            topology = (self.sluice_open, self.vine_open, self.stone_gate_open, self.power_gate_open, self.block,
+                        self.turrets_stopped, tuple(s.solid for s in self.sources),
+                        tuple((t.kind, t.bounds) for t in self.earth_terrain), frozenset(self.extinguished))
         key = goal, topology
         if self.navigation_cache and self.navigation_cache[0] == key:
             return self.navigation_cache[1]
-        if self.garden or self.quarry:
+        if self.garden or self.quarry or self.trial:
             distances = self.cached_reference_distances(goal, *self.reference_links(topology))
             self.navigation_cache = key, distances
             return distances
@@ -1143,6 +1204,21 @@ class Room:
             active.append((vine['x'], vine['y'], vine['x'] + vine['width'], vine['y'] + vine['height']))
         return frozenset(map(tuple, active))
 
+    def trial_obstacles(self):
+        active = list(self.garden_obstacles())
+        active.extend(gate for i, gate in enumerate(self.trial['returns']) if i not in self.trial_returns)
+        if 0 not in self.trial_returns:
+            active.append(self.trial['serviceGate'])
+        if not self.stone_gate_open:
+            active.append(self.puzzle['gate'])
+        if not self.power_gate_open:
+            active.append(self.power_puzzle['gate'])
+        if self.active_lasers:
+            active.extend(self.active_lasers.obstacle_bounds(self.earth_terrain))
+        x, y = self.block
+        active.append((x-.49, y-.49, x+.49, y+.49))
+        return frozenset(map(tuple, active))
+
     def reference_links(self, obstacles):
         if self.reference_path_cache is None:
             self.reference_path_cache = obstacles, {}, {}
@@ -1162,6 +1238,9 @@ class Room:
             obstacles = self.garden_obstacles()
             left, _, right, bottom = self.sluice['gate']
             anchors = (((left+right)/2, bottom+.5), self.sluice['wheel'], self.sluice['pump'])
+        elif self.trial:
+            obstacles = self.trial_obstacles()
+            anchors = self.trial['switches']
         else:
             obstacles = self.quarry.obstacles(self)
             anchors = self.quarry.config['navigationAnchors']
@@ -1304,7 +1383,8 @@ class Room:
         for terrain in self.earth_terrain:
             terrain.remaining -= dt
         self.earth_terrain[:] = [terrain for terrain in self.earth_terrain if terrain.remaining > 0]
-        if self.quarry and self.quarry.touches_beam(self.player.x, self.player.y, self.radius, self.earth_terrain):
+        lasers = self.active_lasers
+        if lasers and lasers.touches_beam(self.player.x, self.player.y, self.radius, self.earth_terrain):
             self.player.x, self.player.y, self.player.facing = self.safe
             self.player.knockback_left = 0
             self.feedback.append(Feedback(self.player.x, self.player.y, '레이저 복구', False))
@@ -1353,6 +1433,7 @@ class Room:
             self.select_element(1)
         if 'connect' in keys:
             self.stop_turrets()
+            self.interact_trial()
             self.connect_power()
             self.turn_sluice_wheel()
             self.reset_stone_block()

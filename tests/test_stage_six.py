@@ -172,19 +172,22 @@ class StageSixTests(unittest.TestCase):
             room.update(set(), .05)
         self.assertTrue(room.start_ingest())
 
-    def test_three_conductor_puzzle_still_resets_wrong_levels_in_room_nine(self):
+    def test_room_nine_keeps_levels_and_marks_only_wrong_conductors(self):
         room = Room(stage=9)
-        room.conductor_vine_time = room.conductor_vine['burnDuration']
+        room.vine_time = room.vine_gate['burnDuration']
+        room.trial_returns = {0, 1}
         room.extinguished = set(range(len(room.fire_barriers)))
         room.plate_pressed = True
         room.gate_time = room.gate_open_seconds
         room.player.x, room.player.y = room.power_puzzle['switch']
         targets = room.power_targets[:]
+        room.power_levels[:] = [targets[0], 0, targets[2]]
         room.update({'connect'}, .05)
         self.assertGreater(room.power_flash, 0)
-        self.assertEqual(room.power_levels, [0, 0, 0])
+        self.assertEqual(room.power_levels, [targets[0], 0, targets[2]])
+        self.assertEqual(room.trial_wrong, {1})
         self.assertEqual(room.power_targets, targets)
-        for _ in range(8):
+        for _ in range(17):
             room.update(set(), .05)
         room.power_levels[:] = targets
         room.update({'connect'}, .05)

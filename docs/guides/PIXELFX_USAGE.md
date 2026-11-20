@@ -82,6 +82,8 @@ GIF와 MP4 파일을 만들려면 FFmpeg가 추가로 필요합니다. 이 PC에
 
 ## pico2d에 가져오는 방식
 
+7·8번 방 장치의 픽셀 원본은 `assets/prompts/room-hardware-pixelfx.js`에 있습니다. PixelFX 체크아웃과 Node가 있는 환경에서 `python tools/build_room_hardware.py ../pixelfx`를 실행하면 장치별 PNG·JSON을 렌더링하고 검사한 뒤, 7번 방 정원 아틀라스의 레버·펌프 행과 두 방의 문·복귀 레버 이미지를 갱신합니다. PixelFX의 중간 출력은 체크아웃의 `records/element-eater/`에 생성됩니다.
+
 최종 선택한 효과는 프로젝트의 `assets/effects/<원소 또는 분류>/<효과 이름>/` 아래에 PNG와 JSON을 함께 둡니다. 현재 설치 시험은 pixelfx 본체 안에서만 했으며 게임에 효과를 연결한 상태는 아닙니다.
 
 - JSON `frames`의 영역과 `duration`을 읽어 애니메이션을 재생합니다.

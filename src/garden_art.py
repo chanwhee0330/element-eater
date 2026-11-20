@@ -7,6 +7,8 @@ class GardenArt:
     def __init__(self, app, folder):
         self.app = app
         meta = json.loads((folder / 'garden-objects.json').read_text(encoding='utf-8'))
+        self.passage_gate = app.p.load_image(str(folder / 'passage-gate.png'))
+        self.exit_grille = app.p.load_image(str(folder / 'exit-grille.png'))
         self.sheet = app.p.load_image(str(folder / meta['image']))
         self.rows = meta['rows']
         self.fps = meta['fps']
@@ -70,66 +72,60 @@ class GardenArt:
                         app.p.draw_circle(sx, sy, 2, 255, 202, 101, filled=True)
                 distance += length
 
-    def gate(self, bounds, side=False):
-        app = self.app
-        room = self.room
+    def slide_gate(self, image, bounds, opening):
         left, top, right, bottom = bounds
-        progress = room.garden_gate_time / room.garden_gate_seconds
-        progress = progress * progress * (3 - 2*progress)
-        if side:
-            app.ui.begin()
-            segments = ((top, top + (bottom-top)/2 * (1-progress)),
-                        (bottom - (bottom-top)/2 * (1-progress), bottom))
-            for start, end in segments:
-                if end - start < .03:
-                    continue
-                x0, y1 = app.point(left, start)
-                x1, y0 = app.point(right, end)
-                app.p.draw_rectangle(x0, y0, x1, y1, 46, 40, 47, filled=True)
-                for i in range(math.ceil((end-start)/.27)):
-                    _, y = app.point(left, start+i*.27)
-                    app.p.draw_line(x0, y, x1, y, 172, 140, 94)
-            for y in (top, bottom):
-                x, sy = app.point((left+right)/2, y)
-                app.p.draw_circle(x, sy, 4, 154, 131, 95, filled=True)
-        else:
-            image = app.gate_image
-            visible = round(image.h * (1-progress))
-            if visible:
-                x, y = app.point((left+right)/2, top + (bottom-top)*visible/image.h/2)
-                unit = app.view.tile_width
-                image.clip_draw(0, 0, image.w, visible, x, y,
-                                (right-left)*unit, (bottom-top)*unit*visible/image.h)
-            app.ui.begin()
-            x0, y = app.point(left, top)
-            x1, _ = app.point(right, top)
-            app.p.draw_line(x0, y, x1, y, 172, 144, 111)
-        # Gold pulses make the locked doors legible even before either device is used.
-        if not room.sluice_ready:
-            x, y = app.point((left+right)/2, (top+bottom)/2)
-            glow = round(18*math.sin(room.elapsed*4))
-            app.p.draw_circle(x, y, 4, 222+glow, 151+glow, 80, filled=True)
+        vertical = bottom-top > right-left
+        start, end = (top, bottom) if vertical else (left, right)
+        axis = (left+right)/2 if vertical else (top+bottom)/2
+        depth = right-left if vertical else bottom-top
+        visible = round(image.w/2 * (1-opening))
+        if visible <= 0:
+            return
+        unit = self.app.view.tile_width
+        span = (end-start)*visible/image.w
+        for offset, center in ((0, start+span/2), (image.w-visible, end-span/2)):
+            x, y = self.app.point(axis, center) if vertical else self.app.point(center, axis)
+            angle = -math.pi/2 if vertical else 0
+            image.clip_composite_draw(offset, 0, visible, image.h, angle, '',
+                                      x, y, span*unit, depth*unit)
 
-    def exit(self, opening=None):
+    def gate(self, bounds):
+        left, top, right, bottom = bounds
+        progress = self.room.garden_gate_time / self.room.garden_gate_seconds
+        opening = progress * progress * (3 - 2*progress)
+        image = self.passage_gate
+        if bottom-top > right-left:
+            self.slide_gate(image, bounds, opening)
+            return
+        visible = round(image.h * (1-opening))
+        if visible > 0:
+            depth = (bottom-top)*visible/image.h
+            x, y = self.app.point((left+right)/2, top+depth/2)
+            unit = self.app.view.tile_width
+            image.clip_draw(0, 0, image.w, visible, x, y, (right-left)*unit, depth*unit)
+
+    def exit(self, opening=None, image=None):
         app, room = self.app, self.room
         x0, y0, x1, y1 = room.reference_art['doorPixels']
         center = (x0+x1)/2
-        app.ui.begin()
         if opening is None:
             opening = room.garden_exit_time / room.garden_exit_seconds
-        if opening < 1:
-            for offset in range(-24, 25, 8):
-                top = y0 + 28 - math.sqrt(28**2 - offset**2)
-                x, sy = app.view.reference_point(center+offset, top)
-                _, end = app.view.reference_point(center+offset, y1-(y1-top)*opening)
-                app.p.draw_line(x, sy, x, end, 175, 142, 99)
+        if image is None:
+            image = self.exit_grille
+        visible = round(image.h * (1-opening))
+        if visible > 0:
+            height = (y1-y0)*visible/image.h
+            x, y = app.view.reference_point(center, y0+height/2)
+            scale = app.view.reference_scale
+            image.clip_draw(0, 0, image.w, visible, x, y, (x1-x0)*scale, height*scale)
         else:
             entry = room.data['plannedExit']
             app.view.draw_exit_marker(entry['x'], entry['y'], True)
-        x, y = app.view.reference_point(center, y0+27)
+        app.ui.begin()
+        x, y = app.view.reference_point(center, y0+9)
         glow = round(22*math.sin(room.elapsed*4))
         color = (144+glow, 228+glow, 175) if room.exit_open else (204+glow, 166+glow, 100)
-        app.ui.diamond(x, y, 7, color)
+        app.ui.diamond(x, y, 4, color)
 
     def layers(self):
         room = self.room
@@ -144,4 +140,4 @@ class GardenArt:
             yield room.sluice[key][1], self.mechanism, (key,)
         yield room.sluice['gate'][3], self.gate, (room.sluice['gate'],)
         for bounds in room.sluice['returnGates']:
-            yield bounds[3], self.gate, (bounds, True)
+            yield bounds[3], self.gate, (bounds,)

@@ -7,7 +7,7 @@ import math
 import random
 from .combat import CombatTuning, Projectile, Feedback
 from .elements import ELEMENTS, BEATS, Source
-from .boss import update_boss
+from .boss import FALL_SECONDS, GUARDIAN_SHOT_LIFT, Guardian
 from .quarry import LaserField, Quarry, contains
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,11 +70,12 @@ class Room:
     garden_exit_seconds = .4
     earth_seconds = 4
     relay_flash_seconds = .36
+    trial_wheel_reveal_seconds = .54
 
     def __init__(self, path=MAP_PATH, *, stage=None):
-        self.map_path = STAGES[stage] if stage is not None else Path(path)
+        self.map_path = STAGES[10 if stage == 0 else stage] if stage is not None else Path(path)
         self.data = json.loads(self.map_path.read_text(encoding='utf-8'))
-        self.stage = int(self.data['id'].split('-')[-1])
+        self.stage = 0 if stage == 0 else int(self.data['id'].split('-')[-1])
         self.tuning = CombatTuning()
         self.reference_art = self.data.get('referenceArt')
         self.rear_edges = set()
@@ -132,6 +133,8 @@ class Room:
     def reset(self):
         spawn = self.data['playerSpawn']
         self.player = Actor(spawn['x'], spawn['y'], spawn['facing'])
+        if self.stage == 0:
+            self.player.y = 16.8
         self.player.hp = self.player.max_hp = self.tuning.player_hp
         self.enemies = [Actor(e['x'], e['y'], e['facing'], e['behaviorType'],
                               ('근접 ' if e['behaviorType'] == 'melee' else '원거리 ') + e['id'].split('-')[-1])
@@ -181,6 +184,8 @@ class Room:
         self.trial_cells = self.index_trial_cells() if self.trial else None
         self.trial_lasers = LaserField(self.trial['lasers']) if self.trial else None
         self.trial_returns = set()
+        self.trial_switch_times = [None, None]
+        self.trial_wheel_time = 0.0
         self.trial_wrong = set()
         self.power_targets = (list(self.power_puzzle['targets']) if self.trial
                               else [random.randint(1, 3) for _ in range(3)] if self.power_puzzle else [])
@@ -194,14 +199,12 @@ class Room:
         self.gate_time = 0
         self.power_gate_time = 0
         self.boss = self.data.get('boss')
-        self.boss_switches = set()
-        self.boss_time = 0
-        self.boss_next_attack = 1
-        self.boss_warning = None
-        self.boss_burn_until = 0
-        self.boss_burn_tick = 0
+        self.guardian = Guardian(self.boss, self.data['earthBridge']) if self.boss else None
         if self.boss:
-            self.enemies[0].hp = self.enemies[0].max_hp = self.boss['hp']
+            guardian = self.enemies[0]
+            guardian.hp = guardian.max_hp = self.boss['hp']
+            guardian.name = '오원 수호자'
+            guardian.active = False
         self.navigation_cache = None
         self.earth_terrain = []
         self.bridge_crossed = False
@@ -223,15 +226,88 @@ class Room:
         self.elapsed = 0
         self.projectiles = []
         self.feedback = []
+        self.sound_events = []
+        self.element_switch_started = None
         self.lightning_charged = False
         self.lightning_attack = False
         self.lightning_path = ()
         self.lightning_time = 0
         self.outcome = None
+        self.debug_cleared = False
+
+    def debug_clear(self):
+        self.debug_cleared = True
+        if self.guardian:
+            if self.guardian.ritual < len(ELEMENTS):
+                for element in ELEMENTS:
+                    if self.inventory[element]:
+                        self.guardian.placed.add(element)
+                        self.inventory[element] = 0
+                self.restore_selected_element(self.selected)
+            self.guardian.debug_prepare(self)
+            self.projectiles.clear()
+            return
+        for enemy in self.enemies:
+            enemy.falling = 0
+            enemy.invulnerable = 0
+            if enemy.active:
+                self.damage(enemy, enemy.hp)
+            enemy.hp = 0
+            enemy.burn_ticks = 0
+            enemy.wind_sliding = False
+            enemy.knockback_left = 0
+        self.projectiles.clear()
+        self.earth_terrain[:] = [terrain for terrain in self.earth_terrain if terrain.kind == 'floor']
+        self.spike_contact = False
+
+        for source in self.sources:
+            if source.solid:
+                source.hp, source.phase = 0, 'orb'
+        if self.acquisition:
+            source = self.sources[-1]
+            if source.phase not in ('orb', 'consumed'):
+                source.phase, source.age = 'orb', 0
+            self.update_power_circuit(0)
+        self.extinguished.update(range(len(self.fire_barriers)))
+        self.steam.clear()
+        if self.vine_gate:
+            self.vine_time = self.vine_gate['burnDuration']
+        if self.conductor_vine:
+            self.conductor_vine_time = self.conductor_vine['burnDuration']
+        if self.puzzle:
+            self.block = tuple(self.puzzle['plate'])
+            self.block_direction = None
+            self.plate_pressed = True
+            self.gate_time = self.gate_open_seconds
+        if self.turret_room:
+            if floor := self.turret_bridge_floor:
+                self.earth_terrain.remove(floor)
+            self.turrets_stopped = True
+        if self.sluice:
+            self.sluice_wheel = self.sluice_pump = True
+            self.garden_wheel_time = .5
+            self.garden_gate_time = self.garden_gate_seconds
+            self.garden_exit_time = self.garden_exit_seconds
+        if self.quarry:
+            self.bridge_crossed = True
+            self.bridge_entry_side = None
+            self.quarry.exit_time = self.quarry.exit_seconds
+            self.earth_terrain[:] = [terrain for terrain in self.earth_terrain
+                                     if terrain.bounds != tuple(self.earth_bridge)]
+        if self.trial:
+            self.trial_returns.update((0, 1))
+            self.trial_switch_times[:] = [None, None]
+            self.trial_wheel_time = self.trial_wheel_reveal_seconds
+        if self.power_puzzle:
+            self.power_levels[:] = self.power_targets
+            self.power_connected = True
+            self.power_gate_time = self.gate_open_seconds
+            self.power_flash = 0
 
     def select_element(self, step):
         if self.lightning_attack:
             return
+        previous = self.selected
         held = [e for e in ELEMENTS if self.inventory[e] > 0]
         if not held:
             self.selected = 'neutral'
@@ -241,6 +317,18 @@ class Room:
             self.selected = held[(held.index(self.selected)+step) % len(held)]
         if self.selected != 'lightning':
             self.lightning_charged = False
+        if step and self.selected != previous:
+            self.element_switch_started = self.elapsed
+            if self.selected in ELEMENTS:
+                self.sound_events.append(f'switch-{self.selected}')
+
+    def restore_selected_element(self, preferred):
+        selected = preferred if self.inventory.get(preferred) else next(
+            (element for element in ELEMENTS if self.inventory[element]), 'neutral')
+        if selected != self.selected:
+            self.player.attack_elapsed = -1
+            self.lightning_attack = self.lightning_charged = False
+            self.selected = selected
 
     def heal(self):
         if self.selected != 'water' or self.inventory['water'] < 1 or self.player.hp >= self.player.max_hp or self.player.falling or self.ingest_elapsed >= 0:
@@ -306,25 +394,27 @@ class Room:
         path = [(x, y)]
         for _ in range(self.tuning.lightning_max_targets):
             nearest = None
+            nearest_point = None
             nearest_distance = first_range if len(path) == 1 else jump_range
             for enemy in candidates:
-                vx, vy = enemy.x - x, enemy.y - y
-                if len(path) == 1:
-                    forward = vx * dx + vy * dy
-                    if forward <= 0 or abs(vx * dy - vy * dx) > forward:
+                points = self.guardian.target_points(enemy) if self.guardian else ((enemy.x,enemy.y),)
+                for px,py in points:
+                    vx,vy = px-x,py-y
+                    if len(path) == 1:
+                        forward = vx * dx + vy * dy
+                        if forward <= 0 or abs(vx * dy - vy * dx) > forward:
+                            continue
+                    distance = math.hypot(vx,vy)
+                    if distance > nearest_distance or (nearest is not None and distance == nearest_distance):
                         continue
-                distance = math.hypot(vx, vy)
-                if distance > nearest_distance or (nearest is not None and distance == nearest_distance):
-                    continue
-                if self.line_clear(x, y, enemy.x, enemy.y, include_rim=True):
-                    if self.boss and enemy.element != 'water':
-                        continue
-                    nearest, nearest_distance = enemy, distance
+                    if self.line_clear(x,y,px,py,include_rim=True):
+                        nearest,nearest_distance = enemy,distance
+                        nearest_point = px,py
             if nearest is None:
                 break
             candidates.remove(nearest)
-            self.damage(nearest, self.tuning.lightning_damage)
-            x, y = nearest.x, nearest.y
+            self.damage(nearest, self.tuning.lightning_damage, attack_element='lightning')
+            x,y = nearest_point
             path.append((x, y))
         if len(path) == 1:
             return False
@@ -339,7 +429,7 @@ class Room:
         dx, dy = self.direction(player.facing)
         x, y = player.x + dx * 1.65, player.y + dy * 1.65
         bridge = self.earth_bridge
-        if bridge and not self.turrets_stopped:
+        if bridge and not self.guardian and not self.turrets_stopped and not (self.quarry and self.debug_cleared):
             left, top, right, bottom = bridge
             if self.turret_room or self.data.get('bridgeAxis') == 'x':
                 on_bank = (top <= player.y < bottom
@@ -356,7 +446,8 @@ class Room:
                 return self.consume_earth(x, y, '흙 바닥')
 
         slot = self.quarry.wall_slot(player.x, player.y) if self.quarry else None
-        if self.trial_returns == {0} and dy == -1 and 31.4 < player.x < 34.3 and 17.2 < player.y < 19:
+        if (self.trial_returns == {0} and self.trial_laser_locked and dy == -1
+                and 31.4 < player.x < 34.3 and 17.2 < player.y < 19):
             slot = self.trial['wallSlot']
         if slot is not None:
             x, y = slot
@@ -490,7 +581,7 @@ class Room:
     @property
     def branches_open(self):
         if self.trial:
-            return len(self.trial_returns) == 2
+            return self.trial_flow(1) == 1
         return not self.data.get('requiresBranches') or (
             self.stone_gate_open and len(self.extinguished) == len(self.fire_barriers)
             and self.conductor_vine_time >= self.conductor_vine['burnDuration'])
@@ -519,31 +610,71 @@ class Room:
             self.power_levels[:] = [0, 0, 0]
             self.power_flash = .35
 
+    def trial_flow(self, index):
+        if index not in self.trial_returns:
+            return 0.0
+        started = self.trial_switch_times[index]
+        if started is None:
+            # 이어하기는 이미 당긴 레버의 흐름이 도착한 상태로 재개한다.
+            return 1.0
+        duration = (1.8, 1.35)[index]
+        return min(1.0, (self.elapsed - started) / duration)
+
+    @property
+    def trial_laser_locked(self):
+        return self.trial_flow(0) == 1
+
+    @property
+    def trial_wheel_open(self):
+        return self.trial_wheel_time >= self.trial_wheel_reveal_seconds
+
+    def trial_wheel_obstacles(self):
+        left, top, right, bottom = self.trial['wheelGate']
+        if not self.trial_wheel_open:
+            return ((left, top, right, bottom),)
+        gap_left, gap_right = self.trial['wheelOpening']
+        return ((left, top, gap_left, bottom), (gap_right, top, right, bottom))
+
+    def trial_sweep_bounds(self):
+        if not self.trial or self.trial_laser_locked:
+            return ()
+        amplitude, _ = self.trial['laserSweep']
+        margin = amplitude + self.trial_lasers.beam_half_height
+        return tuple((min(start, end), y-margin, max(start, end), y+margin)
+                     for start, end, y in self.trial_lasers.lasers)
+
+    def in_trial_sweep(self, x, y):
+        r = self.radius
+        return any(left-r < x < right+r and top-r < y < bottom+r
+                   for left, top, right, bottom in self.trial_sweep_bounds())
+
+    def conductor_powered(self, index):
+        if not self.trial or index == 1:
+            return True
+        return self.branches_open if index == 0 else 1 in self.trial_returns
+
     def interact_trial(self):
         if not self.trial or not self.vine_open:
             return
         for i, point in enumerate(self.trial['switches']):
-            if i not in self.trial_returns and (i == 0 or 0 in self.trial_returns):
+            if i not in self.trial_returns and (i == 0 or self.trial_laser_locked):
                 if math.dist((self.player.x, self.player.y), point) <= .9:
                     self.trial_returns.add(i)
-                    self.feedback.append(Feedback(*point, '정비문 개방' if i == 0 else '귀환문 개방', True))
+                    self.trial_switch_times[i] = self.elapsed
+                    message = '물이 동쪽 물레로 흐른다' if i == 0 else '전력이 서쪽 단자로 흐른다'
+                    self.feedback.append(Feedback(*point, message, True))
 
     @property
     def active_lasers(self):
-        return self.trial_lasers if self.trial_returns == {0} else self.quarry
+        if self.debug_cleared:
+            return None
+        if self.trial:
+            return self.trial_lasers if 1 not in self.trial_returns else None
+        return self.quarry
 
     @property
     def boss_exposed(self):
-        return self.power_connected and len(self.boss_switches) == len(self.boss['switches'])
-
-    def activate_boss_switch(self):
-        if not self.boss or self.ingest_elapsed >= 0:
-            return
-        unlocked = (self.vine_open, 0 in self.extinguished, True)
-        for i, (x, y) in enumerate(self.boss['switches']):
-            if unlocked[i] and i not in self.boss_switches and math.hypot(self.player.x-x, self.player.y-y) <= .9:
-                self.boss_switches.add(i)
-                self.feedback.append(Feedback(x, y-.5, '차단 장치 작동', True))
+        return self.guardian is not None and self.guardian.vulnerable
 
     def reset_stone_block(self):
         reset = self.puzzle and self.puzzle.get('reset')
@@ -611,6 +742,8 @@ class Room:
             self.ingest_elapsed, self.ingest_source = -1, None
             self.ingest_consumed = False
             self.player.animation_time = 0
+            if self.debug_cleared and source.id == 'first-orb':
+                self.update_power_circuit(0)
 
     def update_acquisition(self, interact=False):
         trial = self.acquisition
@@ -645,7 +778,13 @@ class Room:
         source.age = 0
 
     def update_power_circuit(self, dt):
-        if not self.power_circuit or self.acquisition_power_elapsed < 0 or self.acquisition_power:
+        if not self.power_circuit or self.acquisition_power:
+            return
+        if self.debug_cleared and self.learned_room_element:
+            self.acquisition_relay = self.acquisition_power = True
+            self.acquisition_power_elapsed = self.power_circuit['openAt']
+            return
+        if self.acquisition_power_elapsed < 0:
             return
         circuit = self.power_circuit
         next_stop = circuit['doorAt'] if self.remaining_enemies else circuit['openAt']
@@ -665,13 +804,15 @@ class Room:
 
     @property
     def permanent_bridge(self):
+        if self.quarry and self.debug_cleared:
+            return self.earth_bridge
         if self.acquisition and (self.turrets_stopped if self.turret_room else self.plate_pressed
                                  and self.gate_time >= self.gate_open_seconds):
             return self.acquisition.get('bridge')
         return None
 
     def hazard_state(self, hazard):
-        if hazard['kind'] == 'shock' and self.sources[-1].phase != 'sealed':
+        if self.debug_cleared or (hazard['kind'] == 'shock' and self.sources[-1].phase != 'sealed'):
             return 'idle', 0
         phase = (self.elapsed + hazard.get('offset', 0)) % 3.2
         if phase < 1.25:
@@ -712,8 +853,8 @@ class Room:
 
     @property
     def exit_open(self):
-        if self.boss:
-            return self.boss_exposed and self.remaining_enemies == 0
+        if self.guardian:
+            return self.guardian.gate_progress >= 1
         return (self.remaining_enemies == 0 and self.vine_open and self.stone_gate_open
                 and len(self.extinguished) == len(self.fire_barriers)
                 and self.power_gate_open and self.sluice_open and self.branches_open
@@ -721,6 +862,44 @@ class Room:
                      and (not self.acquisition.get('finalSwitch') or self.acquisition_power))
                 and (not self.data.get('requiredBridge') or self.bridge_crossed)
                 and (not self.turret_room or self.turrets_stopped))
+
+    @property
+    def final_reward(self):
+        if (self.guardian and self.guardian.fall >= FALL_SECONDS
+                and self.guardian.reward_scene_elapsed is None
+                and not self.guardian.reward_tasted and not self.outcome):
+            guardian = self.enemies[0]
+            return guardian.x, guardian.y
+        return None
+
+    @property
+    def can_claim_final_reward(self):
+        point = self.final_reward
+        player = self.player
+        return (point is not None and player.active and not player.falling
+                and math.dist((player.x, player.y), point) < 1)
+
+    def use_final_reward(self, keys):
+        if not self.can_claim_final_reward:
+            return
+        guardian = self.guardian
+        if guardian.reward_loaded:
+            if 'ingest' in keys:
+                guardian.reward_scene_elapsed = 0.0
+                self.player.attack_elapsed = -1
+                self.player.moving = False
+
+    def insert_final_orb(self, element):
+        if not self.can_claim_final_reward or not self.inventory.get(element):
+            return False
+        guardian = self.guardian
+        if element in guardian.reward_orbs:
+            return False
+        guardian.reward_orbs.add(element)
+        self.inventory[element] = 0
+        self.restore_selected_element(self.selected)
+        guardian.reward_loaded = len(guardian.reward_orbs) == len(ELEMENTS)
+        return True
 
     @property
     def vine_open(self):
@@ -782,12 +961,12 @@ class Room:
             actor.attack_cooldown = self.tuning.melee_interval if actor.kind == 'melee' else self.tuning.ranged_interval
         return True
 
-    def damage(self, actor, amount, direction=(0, 0)):
+    def damage(self, actor, amount, direction=(0, 0), *, attack_element=None):
         if not actor.active or actor.falling or actor.invulnerable > 0:
             return False
-        if self.boss and actor is self.enemies[0]:
+        guardian = self.guardian if self.guardian and actor is self.enemies[0] else None
+        if guardian:
             if not self.boss_exposed:
-                self.feedback.append(Feedback(actor.x, actor.y-1, '보호막', False))
                 return False
             if any(direction):
                 actor.knockback = direction
@@ -798,9 +977,12 @@ class Room:
         self.feedback.append(Feedback(actor.x, actor.y-1, str(amount), actor.kind != 'hero'))
         if actor.kind == 'hero':
             actor.invulnerable = self.tuning.invulnerability
+            self.sound_events.append('player-hit')
         elif any(direction) and not actor.wind_sliding:
             actor.knockback = direction
             actor.knockback_left = self.tuning.knockback_seconds
+        if actor.kind != 'hero' and BEATS.get(attack_element) == actor.element:
+            self.sound_events.append('weakness')
         if actor.hp == 0:
             actor.active = False
             actor.attack_elapsed = -1
@@ -808,6 +990,8 @@ class Room:
             if actor.kind == 'hero':
                 self.outcome = 'dead'
                 self.projectiles.clear()
+        if guardian:
+            guardian.damaged(self, actor)
         return True
 
     def attack_tick(self, actor, dt):
@@ -830,11 +1014,15 @@ class Room:
                     self.lightning_charged = True
                 elemental = hero and actor.attack_element != 'neutral'
                 # 루트에서부터 진행시켜 바로 앞의 벽·적도 건너뛰지 않게 한다.
-                self.projectiles.append(Projectile(actor.x, actor.y, dx, dy, 'hero' if hero else 'enemy',
-                    self.tuning.elemental_speed if elemental else self.tuning.neutral_speed if hero else self.tuning.enemy_shot_speed,
-                    self.tuning.elemental_range if elemental else self.tuning.neutral_range if hero else self.tuning.enemy_shot_range,
-                    self.tuning.elemental_damage if elemental else self.tuning.neutral_damage if hero else self.tuning.enemy_damage,
-                    element=actor.attack_element))
+                if hero and self.guardian and self.guardian.reward_tasted:
+                    self.projectiles.append(Projectile(actor.x, actor.y, dx, dy, 'hero', 6, 4.5,
+                                                       self.tuning.elemental_damage, element='mixed'))
+                else:
+                    self.projectiles.append(Projectile(actor.x, actor.y, dx, dy, 'hero' if hero else 'enemy',
+                        self.tuning.elemental_speed if elemental else self.tuning.neutral_speed if hero else self.tuning.enemy_shot_speed,
+                        self.tuning.elemental_range if elemental else self.tuning.neutral_range if hero else self.tuning.enemy_shot_range,
+                        self.tuning.elemental_damage if elemental else self.tuning.neutral_damage if hero else self.tuning.enemy_damage,
+                        element=actor.attack_element))
         if actor.attack_elapsed >= self.tuning.attack_duration:
             actor.attack_elapsed = -1
             actor.animation_time = 0
@@ -904,8 +1092,7 @@ class Room:
                         if math.hypot(x - shot.x, y - shot.y) <= .5:
                             if (not self.power_connected and not self.power_flash
                                     and not self.conductor_vine_contains(x, y)
-                                    and (not self.trial or index == 1
-                                         or (0 if index == 0 else 1) in self.trial_returns)
+                                    and self.conductor_powered(index)
                                     and (not self.data.get('requiresBranches') or index != 2 or self.stone_gate_open)):
                                 self.power_levels[index] = (self.power_levels[index] + 1) % 4
                                 self.power_hits[index] = .25
@@ -926,23 +1113,31 @@ class Room:
                 if not shot.active:
                     break
                 for actor in targets:
-                    if actor.active and not actor.falling and math.hypot(actor.x-shot.x, actor.y-shot.y) <= .42:
+                    if not actor.active or actor.falling:
+                        continue
+                    guardian = self.guardian if self.guardian and actor is self.enemies[0] else None
+                    reaches = (guardian.hits(actor,shot.x,shot.y) if guardian
+                               else math.hypot(actor.x-shot.x,actor.y-shot.y) <= .42)
+                    if reaches:
                         neutral_target = shot.owner == 'hero' and actor.element == 'neutral'
                         allowed = shot.owner != 'hero' or shot.element == 'neutral' or BEATS.get(shot.element) == actor.element or neutral_target
                         if allowed:
                             hit = self.damage(actor, self.tuning.neutral_target_damage if neutral_target else shot.damage,
-                                              (shot.dx, shot.dy) if shot.owner == 'hero' and shot.element == 'neutral' else (0, 0))
-                            if hit and self.boss and shot.owner == 'hero' and shot.element == 'fire':
-                                if self.boss_burn_until <= self.boss_time:
-                                    self.boss_burn_tick = self.boss_time + .5
-                                self.boss_burn_until = self.boss_time + 2
-                            elif (hit and actor.active and shot.owner == 'hero' and shot.element == 'fire'
-                                  and actor.element == BEATS['fire']):
+                                              (shot.dx, shot.dy) if shot.owner == 'hero' and shot.element == 'neutral' else (0, 0),
+                                              attack_element=shot.element if shot.owner == 'hero' else None)
+                            if hit and guardian:
+                                self.feedback.append(Feedback(shot.x,shot.y-GUARDIAN_SHOT_LIFT,'',True,.17,.17))
+                            elif not hit and guardian and not self.boss_exposed:
+                                self.sound_events.append('blocked')
+                            if (hit and actor.active and shot.owner == 'hero' and shot.element == 'fire'
+                                    and actor.element == BEATS['fire']
+                                    and (not self.guardian or self.guardian.vulnerable)):
                                 if not actor.burn_ticks:
                                     actor.burn_delay = .6
                                 actor.burn_ticks = 3
                         else:
                             self.feedback.append(Feedback(actor.x, actor.y-1, '차단', False))
+                            self.sound_events.append('blocked')
                         shot.active = False
                         break
                 if not shot.active:
@@ -1022,7 +1217,9 @@ class Room:
             if any(i not in self.trial_returns and contains(gate, x, y)
                    for i, gate in enumerate(self.trial['returns'])):
                 return 3
-            if 0 not in self.trial_returns and contains(self.trial['serviceGate'], x, y):
+            if not self.trial_laser_locked and contains(self.trial['serviceGate'], x, y):
+                return 3
+            if any(contains(bounds, x, y) for bounds in self.trial_wheel_obstacles()):
                 return 3
         if self.garden_cells is not None:
             return self.garden_tile(x, y, ignore_earth)
@@ -1034,9 +1231,11 @@ class Room:
                 for terrain in self.earth_terrain:
                     if terrain.contains(x, y):
                         return 3 if terrain.kind == 'wall' else 0
-            if self.vine_contains(x, y) or (not ignore_block and abs(x-self.block[0]) < .49
+            if self.vine_contains(x, y) or (not self.debug_cleared and not ignore_block and abs(x-self.block[0]) < .49
                                            and abs(y-self.block[1]) < .49):
                 return 3
+            if self.debug_cleared and contains(self.earth_bridge, x, y):
+                return 0
             return self.quarry.ground(x, y, airborne)
         if self.intersects_windmill_base(x, y):
             return 3
@@ -1062,17 +1261,18 @@ class Room:
             x0, y0, x1, y1 = self.puzzle['gate']
             if (not self.stone_gate_open or self.data.get('requiredBridge') and not self.bridge_crossed) and x0 <= x < x1 and y0 <= y < y1:
                 return 3
-            if not ignore_block and abs(x - self.block[0]) < .49 and abs(y - self.block[1]) < .49:
+            if (not self.debug_cleared and not ignore_block
+                    and abs(x - self.block[0]) < .49 and abs(y - self.block[1]) < .49):
                 return 3
         if self.vine_contains(x, y) or self.conductor_vine_contains(x, y):
             return 3
         bridge = self.permanent_bridge
         if bridge and bridge[0] <= x < bridge[2] and bridge[1] <= y < bridge[3]:
             return 0
-        if self.boss and self.power_gate_open:
-            left, top, right, bottom = self.boss['shortcut']
-            if left <= x < right and top <= y < bottom:
-                return 0
+        if self.guardian:
+            obstacle = self.guardian.tile(x, y)
+            if obstacle is not None:
+                return obstacle
         if self.trial_cells is not None:
             cover = self.trial_cells.get((math.floor(x), math.floor(y)))
             return 4 if cover is None else 3 if any(contains(bounds, x, y) for bounds in cover) else 0
@@ -1207,14 +1407,19 @@ class Room:
     def trial_obstacles(self):
         active = list(self.garden_obstacles())
         active.extend(gate for i, gate in enumerate(self.trial['returns']) if i not in self.trial_returns)
-        if 0 not in self.trial_returns:
+        active.extend(self.trial_wheel_obstacles())
+        if not self.trial_laser_locked:
             active.append(self.trial['serviceGate'])
         if not self.stone_gate_open:
             active.append(self.puzzle['gate'])
         if not self.power_gate_open:
             active.append(self.power_puzzle['gate'])
         if self.active_lasers:
-            active.extend(self.active_lasers.obstacle_bounds(self.earth_terrain))
+            if self.trial_laser_locked:
+                active.extend(self.active_lasers.obstacle_bounds(self.earth_terrain))
+            else:
+                # 닫힌 회랑 전체의 빔 범위를 기록해 고정될 때 한 번만 다시 계산한다.
+                active.extend(self.trial_sweep_bounds())
         x, y = self.block
         active.append((x-.49, y-.49, x+.49, y+.49))
         return frozenset(map(tuple, active))
@@ -1366,12 +1571,22 @@ class Room:
     def update(self, keys, dt):
         if not math.isfinite(dt) or dt <= 0 or self.outcome:
             return
+        if self.guardian and self.guardian.collapsing:
+            keys = ()
+        if 'debug-clear' in keys:
+            self.debug_clear()
         dt = min(dt, .05)
         if self.vine_gate and not self.vine_open and self.vine_time >= 0:
             self.vine_time = min(self.vine_time + dt, self.vine_gate['burnDuration'])
         if self.conductor_vine and self.conductor_vine_time >= 0:
             self.conductor_vine_time = min(self.conductor_vine_time + dt, self.conductor_vine['burnDuration'])
         self.elapsed += dt
+        if self.trial_lasers and 1 not in self.trial_returns:
+            amplitude, period = self.trial['laserSweep']
+            self.trial_lasers.row_offset = (amplitude * (1 - self.trial_flow(0))
+                                            * math.sin(math.tau * self.elapsed / period))
+        if self.trial and self.trial_laser_locked:
+            self.trial_wheel_time += dt
         if self.garden:
             if self.sluice_wheel:
                 self.garden_wheel_time = min(.5, self.garden_wheel_time + dt)
@@ -1394,7 +1609,11 @@ class Room:
             self.power_hits[index] = max(0, time_left - dt)
         self.lightning_time = max(0, self.lightning_time - dt)
         if self.plate_pressed:
-            self.gate_time = min(self.gate_open_seconds, self.gate_time + dt)
+            gate_dt = dt
+            if self.trial:
+                # 저장된 gate_time의 개방 기준(.3초)은 유지하고 배수 속도만 늦춘다.
+                gate_dt *= self.gate_open_seconds / self.trial['drainSeconds']
+            self.gate_time = min(self.gate_open_seconds, self.gate_time + gate_dt)
         if self.power_connected:
             self.power_gate_time = min(self.gate_open_seconds, self.power_gate_time + dt)
         player = self.player
@@ -1416,8 +1635,8 @@ class Room:
         for enemy in self.enemies:
             enemy.moving = False
         if player.falling > 0:
-            if self.boss:
-                update_boss(self, dt)
+            if self.guardian:
+                self.guardian.step(self, dt)
             player.falling = max(0, player.falling - dt)
             player.moving = False
             self.spike_contact = False
@@ -1437,18 +1656,21 @@ class Room:
             self.connect_power()
             self.turn_sluice_wheel()
             self.reset_stone_block()
-            self.activate_boss_switch()
             self.update_acquisition(interact=True)
+            if self.guardian:
+                self.guardian.interact_pedestal(self, retrieve=False)
         if 'skill' in keys:
             self.skill()
         self.update_puzzle(dt)
         if 'ingest' in keys:
             self.start_ingest()
+            if self.guardian:
+                self.guardian.interact_pedestal(self, retrieve=True)
         ingesting = self.ingest_elapsed >= 0
         self.ingest_tick(dt)
         dx = int('d' in keys) - int('a' in keys)
         dy = int('s' in keys) - int('w' in keys)
-        if ingesting:
+        if ingesting or (self.guardian and self.guardian.summoning):
             dx = dy = 0
         length = math.hypot(dx, dy) or 1
         was_moving = player.moving
@@ -1459,7 +1681,7 @@ class Room:
             self.track_bridge_crossing(previous_x, previous_y)
         player.animate(dt, was_moving)
         tile = self.tile(player.x, player.y)
-        self.spike_contact = tile == self.data['tileIds']['spikes']
+        self.spike_contact = not self.debug_cleared and tile == self.data['tileIds']['spikes']
         if self.spike_contact:
             self.damage(player, self.tuning.spike_damage)
             if self.outcome:
@@ -1479,7 +1701,8 @@ class Room:
             player.attack_elapsed = -1
             return
         if (tile < 3 and self.fits(player.x, player.y, safe=True)
-                and self.fits(player.x, player.y, safe=True, ignore_earth=True)):
+                and self.fits(player.x, player.y, safe=True, ignore_earth=True)
+                and not self.in_trial_sweep(player.x, player.y)):
             self.safe = player.x, player.y, player.facing
         self.update_turrets(dt)
         self.aggro = self.aggro or self.in_arena()
@@ -1489,8 +1712,8 @@ class Room:
         if 'attack' in keys:
             self.start_attack(player)
         self.attack_tick(player, dt)
-        if self.boss:
-            update_boss(self, dt)
+        if self.guardian:
+            self.guardian.step(self, dt)
         regular_enemies = () if self.boss else self.enemies
         distances = self.distance_field() if any(
             enemy.active and enemy.kind == 'melee' and self.enemy_awake(enemy) for enemy in regular_enemies
@@ -1538,8 +1761,12 @@ class Room:
             enemy.animate(dt, previous_movement[id(enemy)])
         self.update_projectiles(dt)
         self.update_acquisition()
+        if self.guardian:
+            self.use_final_reward(keys)
         exit_pos = self.data['plannedExit']
         exit_ready = self.exit_open and (not self.garden or self.garden_exit_time >= self.garden_exit_seconds)
+        if self.guardian:
+            exit_ready = exit_ready and self.guardian.reward_tasted and player.y < self.guardian.spec['exitGate'][1]
         if self.quarry and exit_ready:
             self.quarry.exit_time = min(self.quarry.exit_seconds, self.quarry.exit_time + dt)
             exit_ready = self.quarry.exit_time >= self.quarry.exit_seconds

@@ -141,7 +141,8 @@ class GameUI:
             self.p.SDL_SetRenderDrawColor(renderer, *color, 255)
             self.p.SDL_RenderFillRects(renderer, batch, len(batch))
         exit_point = room.data['plannedExit']
-        self.diamond(x + exit_point['x'] * scale, y + map_h - exit_point['y'] * scale,
+        exit_x, exit_y = room.final_reward or (exit_point['x'], exit_point['y'])
+        self.diamond(x + exit_x * scale, y + map_h - exit_y * scale,
                      3, (168, 207, 155) if room.exit_open else (214, 176, 104))
         player = room.player
         self.p.draw_circle(x + player.x * scale, y + map_h - player.y * scale, 3, 240, 233, 197, filled=True)
@@ -165,17 +166,20 @@ class GameUI:
         self.panel(cx - 122, top - 56, 244, 56, accent=True)
         name = room.data['name']
         self.text(f'{room.stage:02d} · {name}', cx, top - 27, 20)
-        self.panel(width - 180, top - 62, 160, 62)
-        self.text('남은 적', width - 100, top - 16, 11, self.muted)
-        self.text(f'{room.remaining_enemies} / {len(room.enemies)}', width - 100, top - 39, 18)
-        self.minimap(room, width, top)
+        if not room.guardian:
+            self.panel(width - 180, top - 62, 160, 62)
+            self.text('남은 적', width - 100, top - 16, 11, self.muted)
+            self.text(f'{room.remaining_enemies} / {len(room.enemies)}', width - 100, top - 39, 18)
+        self.minimap(room, width, top+82 if room.guardian else top)
 
         self.panel(20, 16, 204, 67)
         self.portrait_badge(53, 49, 21)
-        self.text(NAMES[room.selected], 88, 59, 16, align='left')
+        mixed = room.guardian and room.guardian.reward_tasted
+        self.text('엘리먼트 마스터' if mixed else NAMES[room.selected], 88, 59, 16, align='left')
         learned = [element for element in ELEMENTS if room.inventory[element]]
         held = len(learned)
-        self.text(f'배운 원소 {held}종' if held else '배운 원소 없음', 88, 36, 11, self.muted, 'left')
+        summary = '다섯 원소 결합' if mixed else f'배운 원소 {held}종' if held else '배운 원소 없음'
+        self.text(summary, 88, 36, 11, self.muted, 'left')
 
         if held:
             slot_width = 60
@@ -196,6 +200,8 @@ class GameUI:
         self.panel(controls_left, 16, 284, 67)
         charged = room.lightning_charged or (room.lightning_attack and not room.player.attack_emitted)
         attack = f'{NAMES[room.selected]} 공격' if room.selected != 'neutral' else '기본 공격'
+        if mixed:
+            attack = '혼합 공격'
         self.key_label('SPACE', '연쇄 번개' if charged else attack, controls_left + 77, 60, 44, 12)
         water = room.selected == 'water'
         skills = {'water': '자가 회복', 'wind': '돌풍', 'earth': '지형 생성', 'lightning': '번개 충전'}
@@ -227,8 +233,13 @@ class GameUI:
             self.text('W / S  선택     Enter  확인     Esc  돌아가기', cx, cy-177, 11, self.muted)
         else:
             self.panel(cx-218, cy-123, 436, 246, accent=True, radius=14)
-            self.text(f'ROOM {stage:02d} COMPLETE' if outcome == 'clear' else 'TRY AGAIN',cx,cy+89,10,self.gold)
-            self.text(f'{stage}번 방 클리어' if outcome == 'clear' else '쓰러졌습니다',cx,cy+48,26)
+            if outcome == 'clear':
+                subtitle, title = ('ELEMENT EATER', '게임 클리어') if stage == 10 else (
+                    f'ROOM {stage:02d} COMPLETE',f'{stage}번 방 클리어')
+            else:
+                subtitle, title = 'TRY AGAIN', '쓰러졌습니다'
+            self.text(subtitle,cx,cy+89,10,self.gold)
+            self.text(title,cx,cy+48,26)
             p.draw_line(cx-118, cy+12, cx+118, cy+12, *self.line)
             self.diamond(cx, cy+12, 3)
             self.rounded(cx-141, cy-66, 282, 44, 7, (106, 91, 58, 90))

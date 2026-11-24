@@ -9,7 +9,8 @@ from copy import deepcopy
 from .room import ROOT, Room, Actor, EarthTerrain, STAGES
 from .combat import Projectile
 from .elements import Source, ELEMENTS
-from .boss import FORMS, FORM_SECONDS
+from .boss import (FALL_SECONDS, FORMS, GATE_SECONDS, GATE_WATCH, MIXED_INGEST_BITE,
+                   MIXED_INGEST_SECONDS, RITUAL, SUMMON_SECONDS)
 
 DEFAULT_SAVE = ROOT / 'saves/continue.json'
 DIRECTIONS = {'up', 'down', 'left', 'right'}
@@ -27,6 +28,112 @@ def boolean(value):
     if type(value) is not bool:
         raise ValueError('유효하지 않은 상태')
     return value
+
+
+def restore_guardian(room, stored, actor):
+    guardian = room.guardian
+    ritual = stored['ritual']
+    if type(ritual) is not int or not 0 <= ritual <= len(RITUAL):
+        raise ValueError('오원 제단 단계 불일치')
+    guardian.ritual = ritual
+    interval = guardian.spec['formSeconds']
+    if 'form' not in stored:
+        # 같은 맵의 코어 방식 저장은 체력, 의식과 진행 중이던 변신을 이어받는다.
+        core = stored['core']
+        if type(core) is not int or not 0 <= core < len(FORMS):
+            raise ValueError('이전 수호자 형태 불일치')
+        changing = number(stored['swap'],-1) >= 0
+        if changing and core == len(FORMS)-1:
+            raise ValueError('이전 수호자 변신 불일치')
+        stored = dict(stored,form=FORMS[core],next_form=FORMS[core+1] if changing else None,
+                      form_left=0 if changing else interval)
+    form,next_form = stored['form'],stored['next_form']
+    if form not in FORMS or (next_form is not None and (next_form not in FORMS or next_form == form)):
+        raise ValueError('수호자 원소 불일치')
+    guardian.form,guardian.next_form = form,next_form
+    guardian.form_left = number(stored['form_left'],0,interval)
+    for key, end in (('summon',SUMMON_SECONDS),('swap',guardian.clip('transform').duration),
+                     ('attack_age',guardian.clip('attack').duration),
+                     ('fall',FALL_SECONDS+GATE_SECONDS+GATE_WATCH+1)):
+        start = 0 if key == 'summon' else -1
+        value = number(stored[key],start,end)
+        if -1 < value < 0:
+            raise ValueError('오원 제단 시간 불일치')
+        setattr(guardian,key,value)
+    spec = guardian.spec
+    guardian.wind_y = number(stored['wind_y'],spec['windPlateY'],spec['windStartY'])
+    guardian.wind_moving = boolean(stored['wind_moving'])
+    guardian.heading = number(stored['heading'],-math.pi,math.pi)
+    guardian.cooldown = number(stored['cooldown'],0,2)
+    target = stored['target']
+    if target is not None:
+        if not isinstance(target,list) or len(target) != 2:
+            raise ValueError('수호자 조준 위치 불일치')
+        guardian.target = (number(target[0],0,room.data['columns']),number(target[1],0,room.data['rows']))
+    if (guardian.wind_moving and guardian.ritual != 2
+            or guardian.ritual >= 3 and guardian.wind_y != spec['windPlateY']
+            or guardian.ritual < 2 and guardian.wind_y != spec['windStartY']
+            or guardian.ritual < len(RITUAL) and guardian.summon
+            or (guardian.target is None) != (guardian.attack_age < 0)
+            or guardian.attack_age >= 0 and not guardian.vulnerable
+            or (guardian.next_form is not None) != (guardian.swap >= 0)
+            or guardian.swap >= 0 and (not guardian.battle or guardian.form_left != 0)
+            or guardian.fall >= 0 and guardian.summon < SUMMON_SECONDS):
+        raise ValueError('수호자 진행 상태 불일치')
+    actor_expected = guardian.battle
+    hp, maximum = actor['hp'],room.enemies[0].max_hp
+    if (actor['active'] != actor_expected
+            or guardian.fall >= 0 and hp != 0
+            or guardian.summon < SUMMON_SECONDS and (guardian.form != 'fire' or hp != maximum)
+            or guardian.battle and not 0 < hp <= maximum):
+        raise ValueError('수호자 체력 불일치')
+    placed = stored.get('placed')
+    if placed is None and ritual < len(RITUAL):
+        # 이전 저장의 장치 작동 진행은 보유 구슬을 유지한 채 새 배치로 재개한다.
+        guardian.ritual = 0
+        guardian.wind_y = spec['windStartY']
+        guardian.wind_moving = False
+    elif placed is not None:
+        if (not isinstance(placed, list) or any(e not in RITUAL for e in placed)
+                or len(set(placed)) != len(placed)
+                or len(placed) > ritual or ritual < len(RITUAL) and len(placed) != ritual
+                or any(room.inventory[e] for e in placed)):
+            raise ValueError('제단 구슬 상태 불일치')
+        guardian.placed = set(placed)
+    guardian.reward_loaded = boolean(stored.get('reward_loaded', False))
+    guardian.reward_tasted = boolean(stored.get('reward_tasted', False))
+    reward_orbs = stored.get('reward_orbs', list(RITUAL) if guardian.reward_loaded else [])
+    if (not isinstance(reward_orbs, list) or any(e not in RITUAL for e in reward_orbs)
+            or len(set(reward_orbs)) != len(reward_orbs)
+            or any(room.inventory[e] or e in guardian.placed for e in reward_orbs)
+            or reward_orbs and guardian.fall < FALL_SECONDS
+            or guardian.reward_loaded != (len(reward_orbs) == len(RITUAL))
+            or guardian.reward_tasted and not guardian.reward_loaded):
+        raise ValueError('혼합 구슬 상태 불일치')
+    guardian.reward_orbs = set(reward_orbs)
+    if (scene_elapsed := stored.get('reward_scene_elapsed')) is not None:
+        scene_elapsed = number(scene_elapsed, 0, MIXED_INGEST_SECONDS)
+        if (not guardian.reward_loaded or scene_elapsed >= MIXED_INGEST_SECONDS
+                or guardian.reward_tasted != (scene_elapsed >= MIXED_INGEST_BITE)):
+            raise ValueError('혼합 구슬 섭취 연출 상태 불일치')
+        guardian.reward_scene_elapsed = scene_elapsed
+    room.enemies[0].element = guardian.element
+
+
+def trial_wheel_resume_position(room, x, y):
+    if not room.trial:
+        return None
+    left, top, right, bottom = room.trial['wheelGate']
+    radius = room.radius
+    trapped = (not room.trial_laser_locked and left <= x < right
+               and room.trial['serviceGate'][3] <= y < bottom)
+    overlaps = any(wall_left-radius < x < wall_right+radius and wall_top-radius < y < wall_bottom+radius
+                   for wall_left, wall_top, wall_right, wall_bottom in room.trial_wheel_obstacles())
+    if not (trapped or overlaps):
+        return None
+    center = sum(room.trial['wheelOpening']) / 2
+    north = not trapped and y < (top+bottom)/2
+    return center, top-radius-.06 if north else bottom+radius+.06
 
 
 def actor_from_data(data, template, room, *, recover_puzzle_layout=False):
@@ -69,6 +176,11 @@ def actor_from_data(data, template, room, *, recover_puzzle_layout=False):
         raise ValueError('생존 상태 불일치')
     if template.kind == 'hero' and not data['active']:
         raise ValueError('사망한 저장은 재개 불가')
+    wheel_position = trial_wheel_resume_position(room, data['x'], data['y'])
+    if wheel_position:
+        # 이전 저장에서는 화로 주변 바닥 전체를 걸을 수 있었다.
+        x, y = wheel_position
+        data.update(x=x, y=y, moving=False, falling=0, knockback_left=0)
     if room.intersects_windmill_base(data['x'], data['y'], room.radius):
         # 받침대 충돌이 없던 저장은 풍차 앞 바닥에서 이어간다.
         x, y = room.acquisition['orb'] if template.kind == 'hero' else (template.x, template.y)
@@ -167,6 +279,9 @@ def restore(record, room):
     if any(type(count) is not int or not 0 <= count <= 1_000_000 for count in inventory.values()):
         raise ValueError('지원하지 않는 보유 원소')
     candidate.inventory = inventory
+    candidate.debug_cleared = boolean(state.get('debug_cleared', False))
+    if candidate.quarry and candidate.debug_cleared:
+        candidate.quarry.exit_time = candidate.quarry.exit_seconds
     if candidate.acquisition:
         progress = state['acquisition']
         candidate.acquisition_relay = boolean(progress['relay'])
@@ -189,24 +304,8 @@ def restore(record, room):
                                                candidate.conductor_vine['burnDuration'])
         if -1 < candidate.conductor_vine_time < 0:
             raise ValueError('전도체 덩굴 상태 불일치')
-    if candidate.boss:
-        boss = state['boss']
-        switches = boss['switches']
-        if not isinstance(switches, list) or any(type(i) is not int or not 0 <= i < 3 for i in switches):
-            raise ValueError('보호막 장치 상태 불일치')
-        candidate.boss_switches = set(switches)
-        candidate.boss_time = number(boss['time'], 0, 1_000_000_000)
-        candidate.boss_next_attack = number(boss['next_attack'], 0, 1_000_000_002)
-        candidate.boss_burn_until = number(boss.get('burn_until', 0), 0, candidate.boss_time + 2)
-        candidate.boss_burn_tick = number(boss.get('burn_tick', 0), 0, candidate.boss_time + .5)
-        warning = boss['warning']
-        if warning is not None:
-            if not isinstance(warning, list) or len(warning) != 3:
-                raise ValueError('보스 공격 예고 불일치')
-            candidate.boss_warning = (number(warning[0], 0, candidate.data['columns']),
-                                      number(warning[1], 0, candidate.data['rows']),
-                                      number(warning[2], candidate.boss_time, candidate.boss_time + 1))
-        candidate.enemies[0].element = FORMS[int(candidate.boss_time / FORM_SECONDS) % len(FORMS)]
+    if candidate.guardian:
+        restore_guardian(candidate,state['boss'],state['enemies'][0])
     if candidate.data.get('requiredBridge'):
         candidate.bridge_crossed = boolean(state['bridge_crossed'])
         candidate.bridge_entry_side = state.get('bridge_entry_side')
@@ -231,6 +330,10 @@ def restore(record, room):
         if returns not in ([], [0], [0, 1]) or (returns and not candidate.vine_open):
             raise ValueError('삼중 성문 귀환문 상태 불일치')
         candidate.trial_returns = set(returns)
+        reveal = candidate.trial_wheel_reveal_seconds
+        candidate.trial_wheel_time = number(
+            state.get('trial_wheel_time', reveal if 1 in returns else 0),
+            0, reveal if 0 in returns else 0)
     if candidate.power_puzzle:
         power = state['power_puzzle']
         targets, levels = power['targets'], power['levels']
@@ -336,6 +439,8 @@ def restore(record, room):
         raise ValueError('안전 위치 불일치')
     number(safe[0],0,candidate.data['columns'])
     number(safe[1],0,candidate.data['rows'])
+    if wheel_position := trial_wheel_resume_position(candidate, *safe[:2]):
+        safe = [*wheel_position, safe[2]]
     if candidate.intersects_windmill_base(*safe[:2], candidate.radius):
         safe = [*candidate.acquisition['orb'], safe[2]]
     if (remap_puzzle and not candidate.fits(*safe[:2], safe=True)
@@ -369,7 +474,8 @@ def restore(record, room):
         for enemy, template in zip(enemies, candidate.enemies):
             if enemy.active and not enemy.falling and candidate.tile(enemy.x, enemy.y) == 4:
                 enemy.x, enemy.y = template.x, template.y
-    if (candidate.puzzle or candidate.earth_terrain) and not candidate.fits(safe[0], safe[1], safe=True):
+    if ((candidate.puzzle or candidate.earth_terrain) and not candidate.fits(safe[0], safe[1], safe=True)
+            or candidate.in_trial_sweep(*safe[:2])):
         safe = list(candidate.safe)
     if not candidate.fits(safe[0],safe[1],safe=True):
         raise ValueError('위험한 복귀 위치')
@@ -457,11 +563,14 @@ class SaveStore:
         record = {'version':3,'stage':room.stage,'room_id':room.data['id'],'state':{
             'player': asdict(room.player), 'enemies': [asdict(e) for e in room.enemies],
             'safe': list(room.safe), 'aggro': room.aggro, 'elapsed': room.elapsed,
-            'spike_contact':room.spike_contact,'projectiles':[asdict(s) for s in room.projectiles],
+            'spike_contact':room.spike_contact,
+            'projectiles':[asdict(s) for s in room.projectiles if s.element != 'mixed'],
             'inventory':dict(room.inventory),'selected':room.selected,'sources':[asdict(s) for s in room.sources],
             'lightning_charged': room.lightning_charged, 'lightning_attack': room.lightning_attack,
             'fire_aggro':room.fire_aggro,'ingest_elapsed':room.ingest_elapsed,'ingest_source':room.ingest_source,
             'ingest_consumed':room.ingest_consumed,'ingest_form':room.ingest_form}}
+        if room.debug_cleared:
+            record['state']['debug_cleared'] = True
         if room.data.get('requiredBridge'):
             record['state']['bridge_crossed'] = room.bridge_crossed
             record['state']['bridge_entry_side'] = room.bridge_entry_side
@@ -483,12 +592,11 @@ class SaveStore:
                 'connected': room.power_connected, 'gate_time': room.power_gate_time}
         if room.trial:
             record['state']['trial_returns'] = sorted(room.trial_returns)
+            record['state']['trial_wheel_time'] = min(room.trial_wheel_time, room.trial_wheel_reveal_seconds)
         if room.conductor_vine:
             record['state']['conductor_vine_time'] = room.conductor_vine_time
-        if room.boss:
-            record['state']['boss'] = {'switches': sorted(room.boss_switches), 'time': room.boss_time,
-                                       'next_attack': room.boss_next_attack, 'warning': room.boss_warning,
-                                       'burn_until': room.boss_burn_until, 'burn_tick': room.boss_burn_tick}
+        if room.guardian:
+            record['state']['boss'] = room.guardian.record()
         if room.puzzle:
             record['state']['stone_puzzle'] = {
                 'block': list(room.block), 'direction': room.block_direction, 'pressed': room.plate_pressed,

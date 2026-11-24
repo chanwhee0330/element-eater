@@ -1,91 +1,396 @@
-"""원소 변환 보스의 공격 예고와 실행."""
+"""오원 제단의 소환, 원소 전환과 공격 시점을 관리한다."""
+import base64
+from bisect import bisect_right
+from functools import lru_cache
+import json
 import math
+from pathlib import Path
+import random
 
-from .combat import Projectile
-from .elements import WEAKNESS
+from .combat import Feedback, Projectile
 
 FORMS = ('fire', 'wind', 'earth', 'lightning', 'water')
-FORM_SECONDS = 8
-WARNING_SECONDS = 1
+RITUAL = ('water', 'fire', 'wind', 'earth', 'lightning')
+COLORS = {'water': (113, 218, 240), 'fire': (255, 137, 82), 'wind': (173, 226, 184),
+          'earth': (218, 177, 126), 'lightning': (212, 162, 255)}
+FIRE_FAN = (-.54, -.27, 0, .27, .54)
+WATER_GAPS = (-.42, .42)
+WATER_RING_DELAY = .29
+EARTH_INTERVAL = .22
+STAGGER = .94
+SUMMON_SECONDS = 1.92
+SUMMON_SHOCK_AT = 1.34
+SUMMON_SHOCK_SECONDS = .48
+MIXED_INGEST_BITE = 2.70
+MIXED_INGEST_SECONDS = 5.6
+FALL_SECONDS = .94
+DEFEAT_SECONDS = 2.85
+SHATTER_AT = .35
+GATE_SECONDS = .70
+GATE_WATCH = .8
+DASH_SECONDS = .32
+GUARDIAN_DRAW_UNIT = 36.8
+GUARDIAN_SHOT_LIFT = .61
+ATLAS_FOLDER = Path(__file__).resolve().parents[1] / 'assets/sprites/boss/animation'
 
 
-def update_boss(room, dt):
-    boss = room.enemies[0]
-    if not boss.active:
-        room.boss_warning = None
-        room.projectiles[:] = [shot for shot in room.projectiles if shot.owner == 'hero']
-        return
-    previous = int(room.boss_time / FORM_SECONDS)
-    room.boss_time += dt
-    phase = int(room.boss_time / FORM_SECONDS)
-    boss.animation_time += dt
-    boss.hit_flash = max(0, boss.hit_flash - dt)
-    if phase != previous:
-        boss.element = FORMS[phase % len(FORMS)]
-        room.boss_burn_until = 0
-        boss.knockback_left = 0
-        room.boss_warning = None
-        room.projectiles[:] = [shot for shot in room.projectiles if shot.owner == 'hero']
-        weakness = WEAKNESS[boss.element]
-        sources = [source for source in room.sources if source.element == weakness]
-        if sources and not room.inventory[weakness] and all(source.phase == 'consumed' for source in sources):
-            min(sources, key=lambda source: math.hypot(room.player.x-source.x,
-                                                       room.player.y-source.y)).age = 3
-    if room.boss_burn_tick <= room.boss_time <= room.boss_burn_until and room.boss_burn_until:
-        room.boss_burn_tick += .5
-        room.damage(boss, 3)
-        if not boss.active:
-            room.boss_warning = None
-            room.projectiles[:] = [shot for shot in room.projectiles if shot.owner == 'hero']
+def inside(bounds, x, y):
+    left, top, right, bottom = bounds
+    return left <= x < right and top <= y < bottom
+
+
+def angle_delta(a, b):
+    return (a - b + math.pi) % math.tau - math.pi
+
+
+class Clip:
+    def __init__(self, spec, meta):
+        self.frames = [spec['frames'][key] for key in meta['frames']]
+        self.ends = []
+        elapsed = 0
+        for frame in self.frames:
+            elapsed += frame['duration']
+            self.ends.append(elapsed / 1000)
+        self.duration = self.ends[-1]
+        self.loop = meta['loop']
+        self.events = {event['name']: (self.ends[event['frame']-1] if event['frame'] else 0)
+                       for event in meta.get('events', ())}
+
+    def frame_index(self, elapsed):
+        age = elapsed % self.duration if self.loop else elapsed
+        return min(len(self.frames)-1,bisect_right(self.ends,age))
+
+    def frame(self, elapsed):
+        return self.frames[self.frame_index(elapsed)]
+
+
+@lru_cache(maxsize=1)
+def guardian_atlases():
+    atlases = {}
+    for element in FORMS:
+        spec = json.loads((ATLAS_FOLDER/f'guardian-{element}-animations.json').read_text(encoding='utf-8'))
+        atlases[element] = ATLAS_FOLDER/spec['image'], {state:Clip(spec, meta) for state,meta in spec['clips'].items()}
+    return atlases
+
+
+@lru_cache(maxsize=1)
+def guardian_hit_masks():
+    spec = json.loads((ATLAS_FOLDER/'guardian-hit-masks.json').read_text(encoding='utf-8'))
+    masks = {form:{state:tuple(base64.b64decode(mask) for mask in frames)
+                   for state,frames in poses.items()} for form,poses in spec['poses'].items()}
+    return spec['cellSize'],spec['frameSize']//spec['cellSize'],masks
+
+
+class Guardian:
+    def __init__(self, spec, bridge):
+        self.spec = spec
+        self.bridge = bridge
+        self.ritual = 0
+        self.placed = set()
+        self.reward_orbs = set()
+        self.reward_loaded = False
+        self.reward_tasted = False
+        self.reward_scene_elapsed = None
+        self.summon = 0.0
+        self.wind_y = spec['windStartY']
+        self.wind_moving = False
+        self.form = 'fire'
+        self.next_form = None
+        self.form_left = spec['formSeconds']
+        self.swap = -1.0
+        self.attack_age = -1.0
+        self.target = None
+        self.heading = 0.0
+        self.cooldown = 1.0
+        self.fall = -1.0
+        self.clips = guardian_atlases()
+
+    @property
+    def summoning(self):
+        return self.ritual == len(RITUAL) and self.summon < SUMMON_SECONDS
+
+    @property
+    def battle(self):
+        return self.ritual == len(RITUAL) and self.summon >= SUMMON_SECONDS and self.fall < 0
+
+    @property
+    def vulnerable(self):
+        return self.battle and self.swap < 0
+
+    @property
+    def gate_progress(self):
+        return max(0, min(1, (self.fall-FALL_SECONDS)/GATE_SECONDS))
+
+    @property
+    def collapsing(self):
+        return 0 <= self.fall < FALL_SECONDS
+
+    @property
+    def element(self):
+        if self.next_form and self.swap >= self.clip('transform').events['elementChange']:
+            return self.next_form
+        return self.form
+
+    def clip(self, state):
+        return self.clips[self.form][1][state]
+
+    def pose(self, actor):
+        if self.attack_age >= 0:
+            return 'attack',self.attack_age
+        return ('walk' if actor.moving else 'idle'),actor.animation_time
+
+    def hits(self, actor, x, y):
+        state,age = self.pose(actor)
+        clip = self.clip(state)
+        index = clip.frame_index(age)
+        pivot = clip.frames[index]['pivotPixelsTopLeft']
+        cell,size,masks = guardian_hit_masks()
+        col = math.floor((pivot['x']+(x-actor.x)*GUARDIAN_DRAW_UNIT)/cell)
+        row = math.floor((pivot['y']+(y-actor.y-GUARDIAN_SHOT_LIFT)*GUARDIAN_DRAW_UNIT)/cell)
+        if not (0 <= col < size and 0 <= row < size):
+            return False
+        bit = row*size+col
+        return bool(masks[self.form][state][index][bit//8] & (1 << (bit%8)))
+
+    def target_points(self, actor):
+        for dx,dy in ((0,0),(-.9,0),(.9,0),(-2,-1.2),(2,-1.2),(0,-2)):
+            x,y = actor.x+dx,actor.y+dy
+            if self.hits(actor,x,y):
+                yield x,y
+
+    def orb_flight(self, element):
+        x, y = self.spec['devices'][RITUAL.index(element)]
+        cx, cy = self.spec['center']
+        distance = math.hypot(x-cx, y-cy)
+        phase = max(0, min(1, (self.summon-SUMMON_SHOCK_AT)/SUMMON_SHOCK_SECONDS))
+        spread = 1.28 * (1-(1-phase)**2) / distance
+        return x + (x-cx)*spread, y + (y-cy)*spread, phase
+
+    def nearby_pedestal(self, player, *, retrieve=False):
+        for index, pedestal in enumerate(self.spec['devices']):
+            element = RITUAL[index]
+            if retrieve and element not in self.placed:
+                continue
+            point = self.orb_flight(element)[:2] if retrieve else pedestal
+            if math.dist((player.x, player.y), point) <= 1.1:
+                return element
+        return None
+
+    def interact_pedestal(self, room, *, retrieve):
+        element = self.nearby_pedestal(room.player, retrieve=retrieve)
+        if element is None:
             return
-    if boss.knockback_left > 0:
-        step = min(dt, boss.knockback_left)
-        dx, dy = boss.knockback
-        move_boss(room, boss, dx * step, dy * step)
-        boss.knockback_left -= step
-    if room.boss_time % FORM_SECONDS < 1:
-        return
-    if room.boss_warning:
-        if room.boss_time >= room.boss_warning[2]:
-            x, y, _ = room.boss_warning
-            room.boss_warning = None
-            room.boss_next_attack = room.boss_time + 1.15
-            attack(room, boss, x, y)
-    elif not room.player.falling and room.boss_time >= room.boss_next_attack and room.boss_time % FORM_SECONDS < 7:
-        room.boss_warning = (room.player.x, room.player.y, room.boss_time + WARNING_SECONDS)
+        if retrieve:
+            if self.ritual == len(RITUAL) and not self.summoning and element in self.placed:
+                self.placed.remove(element)
+                room.inventory[element] = 1
+                room.restore_selected_element(element)
+        elif self.ritual < len(RITUAL) and element not in self.placed and room.inventory[element]:
+            self.placed.add(element)
+            self.ritual = len(self.placed)
+            if self.ritual >= 3:
+                self.wind_y = self.spec['windPlateY']
+            room.inventory[element] = 0
+            room.restore_selected_element(room.selected)
 
+    def tile(self, x, y):
+        gate = self.spec['exitGate']
+        left,right = self.spec['exitOpening']
+        if inside(gate,x,y) and (self.gate_progress < 1 or not left <= x < right):
+            return 3
+        if inside(self.bridge, x, y):
+            return 0
+        return None
 
-def move_boss(room, boss, dx, dy):
-    left, top, right, bottom = room.boss['arena']
-    x = min(right, max(left, boss.x + dx))
-    y = min(bottom, max(top, boss.y + dy))
-    room.move(boss, x - boss.x, y - boss.y, safe=True)
+    def clear_attack(self, room):
+        self.target = None
+        self.attack_age = -1
+        for shot in room.projectiles:
+            if shot.owner == 'enemy':
+                shot.active = False
+        room.projectiles[:] = [shot for shot in room.projectiles if shot.active]
 
+    def damaged(self, room, actor):
+        if actor.hp != 0:
+            return
+        actor.burn_ticks = 0
+        actor.knockback_left = 0
+        self.clear_attack(room)
+        self.fall = 0
 
-def attack(room, boss, x, y):
-    player = room.player
-    if boss.element == 'earth':
-        if math.hypot(player.x - x, player.y - y) < 1.15:
-            room.damage(player, 10)
-        return
-    dx, dy = x - boss.x, y - boss.y
-    angle = math.atan2(dy, dx)
-    if boss.element == 'wind':
-        old_x, old_y = boss.x, boss.y
-        move_boss(room, boss, math.cos(angle) * 6, math.sin(angle) * 6)
-        vx, vy = boss.x - old_x, boss.y - old_y
-        length2 = vx * vx + vy * vy
-        along = ((player.x - old_x) * vx + (player.y - old_y) * vy) / (length2 or 1)
-        along = min(1, max(0, along))
-        if math.hypot(player.x - old_x - along * vx, player.y - old_y - along * vy) < .8:
-            room.damage(player, 10)
-        return
-    offsets, speed = {
-        'fire': ((-.55, -.28, 0, .28, .55), 9),
-        'lightning': ((0,), 15),
-        'water': ((-.95, -.62, -.3, 0, .3, .62, .95), 5),
-    }[boss.element]
-    for offset in offsets:
-        heading = angle + offset
-        room.projectiles.append(Projectile(boss.x, boss.y, math.cos(heading), math.sin(heading),
-                                           'enemy', 10, speed, 24, element=boss.element))
+    def start_transform(self, room, actor):
+        self.next_form = random.choice([form for form in FORMS if form != self.form])
+        self.swap = 0
+        self.clear_attack(room)
+        actor.burn_ticks = 0
+        actor.knockback_left = 0
+
+    def debug_prepare(self, room):
+        if self.fall >= 0:
+            return
+        actor = room.enemies[0]
+        self.ritual = len(RITUAL)
+        self.summon = SUMMON_SECONDS
+        self.wind_y = self.spec['windPlateY']
+        self.wind_moving = False
+        self.swap = -1
+        self.next_form = None
+        self.clear_attack(room)
+        actor.element = self.form
+        actor.active = True
+        actor.hp = 1
+        actor.attack_elapsed = -1
+        actor.burn_ticks = 0
+        actor.knockback_left = 0
+        actor.invulnerable = 0
+        self.form_left = self.spec['formSeconds']
+        self.cooldown = 1
+
+    def advance_reward_scene(self, dt):
+        prior = self.reward_scene_elapsed
+        if prior is None:
+            return False
+        self.reward_scene_elapsed += dt
+        bitten = prior < MIXED_INGEST_BITE <= self.reward_scene_elapsed
+        if bitten:
+            self.reward_tasted = True
+        if self.reward_scene_elapsed >= MIXED_INGEST_SECONDS:
+            self.reward_scene_elapsed = None
+            return True
+        return bitten
+
+    def move(self, room, actor, dx, dy):
+        left,top,right,bottom = self.spec['arena']
+        x = min(right,max(left,actor.x+dx))
+        y = min(bottom,max(top,actor.y+dy))
+        room.move(actor,x-actor.x,y-actor.y,safe=True)
+
+    def push_from_altar(self, room, time):
+        player = room.player
+        cx, cy = self.spec['center']
+        dx, dy = player.x-cx, player.y-cy
+        if math.hypot(dx, dy) < .01:
+            dx, dy = 0, 1
+        distance = math.hypot(dx, dy)
+        facing = player.facing
+        speed = 5.5 * (1 - .68 * (self.summon-SUMMON_SHOCK_AT)/SUMMON_SHOCK_SECONDS)
+        room.move(player, dx/distance * speed*time, dy/distance * speed*time, safe=True)
+        player.facing = facing
+
+    def step(self, room, dt):
+        actor = room.enemies[0]
+        if self.ritual < len(RITUAL):
+            return
+        if self.summoning:
+            previous = self.summon
+            self.summon = min(SUMMON_SECONDS,self.summon+dt)
+            push_time = min(self.summon, SUMMON_SHOCK_AT+SUMMON_SHOCK_SECONDS) - max(previous, SUMMON_SHOCK_AT)
+            if push_time > 0 and not room.player.falling:
+                self.push_from_altar(room, push_time)
+            if not self.summoning:
+                actor.active = True
+            return
+        if self.fall >= 0:
+            if self.collapsing:
+                previous = self.fall
+                # 저장된 파쇄 진행 척도는 유지하고 실제 재생 시간만 늘린다.
+                to_end = (FALL_SECONDS - self.fall) * DEFEAT_SECONDS / FALL_SECONDS
+                if dt >= to_end:
+                    self.fall = FALL_SECONDS + (dt - to_end)
+                else:
+                    self.fall += dt * FALL_SECONDS / DEFEAT_SECONDS
+                if previous < SHATTER_AT <= self.fall:
+                    room.sound_events.append('boss-shatter')
+            else:
+                self.fall = min(FALL_SECONDS+GATE_SECONDS+GATE_WATCH+1,self.fall+dt)
+            return
+        if self.swap >= 0:
+            self.swap += dt
+            actor.element = self.element
+            if self.swap >= self.clip('transform').duration:
+                self.form = self.next_form
+                self.next_form = None
+                self.swap = -1
+                self.form_left = self.spec['formSeconds']
+                self.cooldown = 1
+            return
+        self.form_left = max(0,self.form_left-dt)
+        if self.form_left <= 1e-8:
+            self.form_left = 0
+            self.start_transform(room,actor)
+            return
+        actor.animation_time += dt
+        if actor.knockback_left > 0:
+            span = min(dt,actor.knockback_left)
+            dx,dy = actor.knockback
+            self.move(room,actor,dx*span,dy*span)
+            actor.knockback_left -= span
+        if self.attack_age >= 0:
+            self.update_attack(room, actor, dt)
+            return
+        player = room.player
+        dx,dy = player.x-actor.x,player.y-actor.y
+        distance = math.hypot(dx,dy)
+        if not player.falling and self.cooldown <= 0 and distance < 11:
+            self.target = (player.x, player.y)
+            self.heading = math.atan2(dy,dx)
+            self.attack_age = 0
+        elif distance > 5.5 and not player.falling:
+            self.move(room,actor,dx/distance*1.65*dt,dy/distance*1.65*dt)
+        self.cooldown = max(0,self.cooldown-dt)
+
+    def earth_points(self):
+        x,y = self.target
+        for dx,dy in ((0,0),(1.37,-.83),(-1.28,1.04)):
+            yield max(.3,min(29.7,x+dx)),max(.3,min(23.7,y+dy))
+
+    def shot(self, room, actor, angle, speed, reach, *, offset=0):
+        dx,dy = math.cos(angle),math.sin(angle)
+        room.projectiles.append(Projectile(actor.x+dx*offset,actor.y+dy*offset,dx,dy,
+                                           'enemy',speed,reach,10,element=actor.element))
+
+    def update_attack(self, room, actor, dt):
+        prior = self.attack_age
+        self.attack_age += dt
+        age = self.attack_age
+        clip = self.clip('attack')
+        release = clip.events['release']
+        player = room.player
+        if actor.element == 'earth':
+            for i,(x,y) in enumerate(self.earth_points()):
+                if prior < release+i*EARTH_INTERVAL <= age:
+                    room.feedback.append(Feedback(x,y,'',False,.28,.28))
+                    if math.hypot(player.x-x,player.y-y) <= 1.02:
+                        room.damage(player,10)
+        elif actor.element == 'wind':
+            duration = max(0,min(release+DASH_SECONDS,age)-max(release,prior))
+            if duration:
+                self.move(room,actor,math.cos(self.heading)*6*duration/DASH_SECONDS,
+                          math.sin(self.heading)*6*duration/DASH_SECONDS)
+                if math.hypot(player.x-actor.x,player.y-actor.y) <= .72:
+                    room.damage(player,10)
+        elif actor.element == 'water':
+            for i,gap in enumerate(WATER_GAPS):
+                if prior < release+i*WATER_RING_DELAY <= age:
+                    gap += self.heading
+                    for j in range(18):
+                        angle = gap+j*math.tau/18
+                        if abs(angle_delta(angle,gap)) >= .57:
+                            self.shot(room,actor,angle,4.4,14,offset=.45)
+        elif prior < release <= age:
+            offsets = FIRE_FAN if actor.element == 'fire' else (0,)
+            for offset in offsets:
+                self.shot(room,actor,self.heading+offset,8.7 if actor.element == 'fire' else 14,17)
+        if age >= clip.duration:
+            self.attack_age = -1
+            self.target = None
+            self.cooldown = STAGGER
+
+    def record(self):
+        state = {key:getattr(self,key) for key in ('ritual','summon','wind_y','wind_moving',
+                                                  'form','next_form','form_left','swap',
+                                                  'attack_age','target','heading','cooldown','fall',
+                                                  'reward_loaded','reward_tasted','reward_scene_elapsed')}
+        state['placed'] = sorted(self.placed)
+        state['reward_orbs'] = sorted(self.reward_orbs)
+        return state

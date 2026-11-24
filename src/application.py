@@ -1,4 +1,5 @@
 """pico2d 창·입력·고정 시간 갱신·아틀라스 렌더러."""
+import ctypes
 import importlib
 import json
 import sys
@@ -6,27 +7,35 @@ import time
 import math
 
 from .room import ROOT, Room, STAGES
+from .boss import GUARDIAN_SHOT_LIFT
 from .elements import ELEMENTS, NAMES
-from .boss import FORMS, FORM_SECONDS
+from .element_master_aura import draw_master_aura
 from .isometric import IsometricRoom
 from .ui import GameUI
 from .savegame import DEFAULT_SAVE, SaveStore, restore
 from .title import draw_title, hit_test
 from .acquisition_art import AcquisitionArt, LIGHTNING_ORB_HEIGHT
 from .garden_art import GardenArt
+from .guardian_art import ENDING_RETURN_DELAY, PROLOGUE_SECONDS, GuardianArt
+from .learning_scene import ElementCutscene, MixedElementCutscene, TransformationEffects, smoothstep
 from .quarry_art import QuarryArt
+from .orb_mixer import OrbMixer
 
 
 class Application:
     width, height = 1000, 900
     unit = IsometricRoom.sprite_height
     fixed_dt = 1 / 120
+    stage_fade_out_seconds = .62
+    stage_fade_in_seconds = 1.1
     menu = ('계속하기', '현재 방 재시작', '타이틀로 돌아가기', '게임 종료')
 
     def __init__(self, p, save_path=DEFAULT_SAVE):
         self.p = p
         self.room = Room()
         self.scene = 'title'
+        self.stage_fade_out = None
+        self.stage_fade_in = None
         self.practice = False
         self.save_store = SaveStore(save_path)
         self.continue_record = self.save_store.load()
@@ -43,7 +52,8 @@ class Application:
         self.accumulator = 0
         self.images, self.metadata = {}, {}
         self.keymap = {p.SDLK_w:'w',p.SDLK_a:'a',p.SDLK_s:'s',p.SDLK_d:'d',p.SDLK_SPACE:'attack',
-                       p.SDLK_g:'connect',p.SDLK_f:'ingest',p.SDLK_r:'skill',p.SDLK_q:'previous',p.SDLK_e:'next'}
+                       p.SDLK_g:'connect',p.SDLK_f:'ingest',p.SDLK_r:'skill',p.SDLK_q:'previous',p.SDLK_e:'next',
+                       p.SDLK_p:'debug-clear'}
         self.view = IsometricRoom(p, self.width, self.height)
         self.view.load(self.room)
         self.title_image = p.load_image(str(ROOT / 'assets/ui/title/v1/title-screen-v1.png'))
@@ -92,8 +102,31 @@ class Application:
         self.ui = GameUI(p, self.images['hero', 'idle'], orb_icons)
         self.font = self.ui.fonts[18]
         self.acquisition_art = AcquisitionArt(self)
+        self.transformation_effects = TransformationEffects(p, ROOT / 'assets/effects/acquisition')
+        self.cutscene_background = p.SDL_CreateTexture(p.pico2d.renderer, p.SDL_PIXELFORMAT_RGBA8888,
+                                                        p.SDL_TEXTUREACCESS_TARGET, self.width, self.height)
+        if not self.cutscene_background:
+            raise RuntimeError('원소 습득 컷씬 화면을 만들 수 없습니다.')
+        self.ingest_cutscene = None
+        self.ending_elapsed = 0
+        self.orb_mixer = None
+        self.prologue_read_elapsed = None
         self.garden_art = None
+        self.guardian_art = None
         self.quarry_art = None
+        self.trial_waterwheel = None
+        self.trial_conductor_sheet = None
+        self.trial_cutscene = None
+        self.sounds = {}
+        if p.pico2d.audio_on:
+            sound_folder = ROOT / 'assets/audio/gameplay'
+            for cue in (*(f'switch-{element}' for element in ELEMENTS), 'weakness', 'blocked', 'player-hit'):
+                try:
+                    self.sounds[cue] = p.load_wav(str(sound_folder / f'{cue}.wav'))
+                except OSError:
+                    continue
+            if 'weakness' in self.sounds:
+                self.sounds['boss-shatter'] = self.sounds['weakness']
 
     def advance_stage(self):
         previous = self.room
@@ -106,7 +139,22 @@ class Application:
         self.room.selected = previous.selected
         self.room.lightning_charged = previous.lightning_charged and self.room.selected == 'lightning'
         self.enter_play()
+        self.stage_fade_in = 0.0
         self.save_progress()
+
+    @property
+    def fading_stage(self):
+        return self.stage_fade_out is not None or self.stage_fade_in is not None
+
+    def step_stage_fade(self, dt):
+        if self.stage_fade_out is not None:
+            self.stage_fade_out += dt
+            if self.stage_fade_out >= self.stage_fade_out_seconds:
+                self.advance_stage()
+        else:
+            self.stage_fade_in += dt
+            if self.stage_fade_in >= self.stage_fade_in_seconds:
+                self.stage_fade_in = None
 
     def pause(self, value):
         was_paused = self.paused
@@ -121,11 +169,11 @@ class Application:
             self.save_progress()
 
     def save_progress(self):
-        if self.practice:
+        if self.practice or self.room.stage == 0:
             self.save_elapsed = 0
             return
         try:
-            if self.room.outcome == 'clear':
+            if self.room.outcome == 'clear' and self.room.stage + 1 not in STAGES:
                 self.save_store.clear()
                 self.continue_record = None
             elif not self.room.outcome:
@@ -137,17 +185,40 @@ class Application:
             print(f'{self.save_error} {exc}', file=sys.stderr)
 
     def enter_play(self):
+        if self.practice and self.room.stage == 10 and self.room.guardian.fall < 0:
+            self.room.enemies[0].hp = 1
         if self.room.garden or self.room.quarry or self.room.trial:
             self.room.preload_reference_paths()
         self.view.load(self.room)
+        if self.room.guardian:
+            if self.guardian_art is None:
+                self.guardian_art = GuardianArt(self)
+        else:
+            self.guardian_art = None
         self.unit = self.view.sprite_height * (1 if self.room.data.get('layoutRevision') else self.view.reference_scale)
         self.scene = 'play'
+        self.stage_fade_out = None
+        self.stage_fade_in = 0.0 if self.room.stage == 1 and self.room.elapsed == 0 else None
+        self.ending_elapsed = 0
+        self.orb_mixer = None
+        self.prologue_read_elapsed = None
         self.finished_save = False
         self.pause(False)
         self.menu_index = 0
         self.save_elapsed = 0
         self.ui.last_time = self.room.elapsed
         self.ui.hp_trail = self.room.player.hp
+        self.trial_cutscene = None
+        if self.room.guardian and self.room.guardian.reward_scene_elapsed is not None:
+            self.ingest_cutscene = MixedElementCutscene(self.room, self.sounds)
+        else:
+            self.ingest_cutscene = ElementCutscene(self.room) if self.room.ingest_elapsed >= 0 else None
+        if self.room.trial:
+            if self.room.plate_pressed and not self.room.stone_gate_open:
+                self.start_trial_drain_cutscene()
+            elif 0 in self.room.trial_returns and not self.room.trial_wheel_open:
+                remaining = self.room.trial_wheel_reveal_seconds - self.room.trial_wheel_time
+                self.trial_cutscene = ('wheel', self.room.elapsed + remaining + .75)
 
     def new_game(self, stage=1, *, practice=False):
         self.practice = practice
@@ -174,7 +245,9 @@ class Application:
         self.title_index = 1
 
     def finish(self):
-        if self.scene == 'play':
+        if self.scene == 'play' and self.stage_fade_out is not None:
+            self.advance_stage()
+        elif self.scene == 'play':
             self.save_progress()
         self.running = False
 
@@ -182,7 +255,7 @@ class Application:
         if index == 0 and self.continue_record is not None:
             self.continue_game()
         elif index == 1:
-            self.new_game()
+            self.new_game(0)
         elif index == 2:
             self.finish()
 
@@ -195,7 +268,9 @@ class Application:
                 if event.type == p.SDL_MOUSEBUTTONDOWN and event.button == p.SDL_BUTTON_LEFT:
                     self.activate_title(index)
         elif event.type == p.SDL_KEYDOWN:
-            if event.key in self.stage_keys:
+            if event.key == p.SDLK_BACKQUOTE:
+                self.new_game(0, practice=True)
+            elif event.key in self.stage_keys:
                 self.new_game(self.stage_keys[event.key], practice=True)
             elif event.key in (p.SDLK_LEFT, p.SDLK_a, p.SDLK_RIGHT, p.SDLK_d, p.SDLK_TAB):
                 direction = -1 if event.key in (p.SDLK_LEFT, p.SDLK_a) else 1
@@ -220,6 +295,10 @@ class Application:
         else:
             self.finish()
 
+    @property
+    def ending(self):
+        return self.room.guardian is not None and self.room.outcome == 'clear'
+
     def handle(self, events):
         p = self.p
         for event in events:
@@ -227,10 +306,18 @@ class Application:
                 self.finish()
             elif self.scene == 'title':
                 self.handle_title(event)
+            elif self.fading_stage:
+                continue
+            elif self.orb_mixer:
+                self.orb_mixer.handle(event)
             elif event.type == p.SDL_KEYUP:
                 self.keys.discard(self.keymap.get(event.key))
             elif event.type == p.SDL_KEYDOWN:
-                if event.key == p.SDLK_ESCAPE:
+                if self.ending:
+                    if (self.ending_elapsed >= ENDING_RETURN_DELAY
+                            and event.key in (p.SDLK_RETURN, p.SDLK_ESCAPE)):
+                        self.return_to_title()
+                elif event.key == p.SDLK_ESCAPE:
                     self.pause(not self.paused)
                 elif self.room.outcome and not self.paused:
                     if event.key == p.SDLK_RETURN:
@@ -244,39 +331,112 @@ class Application:
                         self.activate_menu()
                 elif event.key in self.keymap:
                     action = self.keymap[event.key]
-                    if action in ('connect','ingest','skill','previous','next'):
-                        if not getattr(event, 'repeat', False):
+                    if action in ('connect','ingest','skill','previous','next','debug-clear'):
+                        if not self.ingest_cutscene and not getattr(event, 'repeat', False):
                             self.actions.add(action)
                     else:
                         self.keys.add(action)
-                    if event.key == p.SDLK_SPACE:
+                    if event.key == p.SDLK_SPACE and not self.ingest_cutscene:
                         self.attack_queued = True
 
+    def step_ingest_cutscene(self):
+        room = self.room
+        if self.ingest_cutscene is None and not room.outcome:
+            if room.guardian and room.guardian.reward_scene_elapsed is not None:
+                self.ingest_cutscene = MixedElementCutscene(room, self.sounds)
+                self.keys.clear()
+                self.save_progress()
+            elif room.ingest_elapsed >= 0 or ('ingest' in self.actions and room.start_ingest()):
+                self.ingest_cutscene = ElementCutscene(room)
+        cutscene = self.ingest_cutscene
+        if cutscene is None:
+            return False
+        if cutscene.advance(room, self.fixed_dt):
+            self.save_progress()
+        if cutscene.finished:
+            self.ingest_cutscene = None
+        return True
+
+    @property
+    def near_prologue_tablet(self):
+        player = self.room.player
+        return math.dist((player.x, player.y), self.room.guardian.spec['center']) <= 1.35
+
+    def step_prologue(self, dt):
+        room, player = self.room, self.room.player
+        room.elapsed += dt
+        was_moving = player.moving
+        if self.prologue_read_elapsed is None:
+            dx = int('d' in self.keys) - int('a' in self.keys)
+            dy = int('s' in self.keys) - int('w' in self.keys)
+            step = room.data['preview']['playerSpeed'] * dt / (math.hypot(dx, dy) or 1)
+            room.move(player, dx * step, dy * step, safe=True)
+            self.view.follow(player.x, player.y)
+            if 'ingest' in self.actions and self.near_prologue_tablet:
+                player.moving = False
+                self.prologue_read_elapsed = 0
+        else:
+            self.prologue_read_elapsed += dt
+            if self.prologue_read_elapsed >= PROLOGUE_SECONDS:
+                self.advance_stage()
+                return
+        player.animate(dt, was_moving)
+        self.actions.clear()
+        self.attack_queued = False
+
     def step(self, dt, *, focused=None):
-        if self.scene == 'title':
+        if self.scene == 'title' or not 0 < dt < float('inf'):
+            return
+        if self.ending:
+            self.ending_elapsed += min(dt, .05)
             return
         # 포커스 상실/최소화 시 정지한다. pico2d가 버리는 창 이벤트에 의존하지 않는다.
         if focused is None:
             focused = bool(self.p.SDL_GetWindowFlags(self.p.pico2d.window) & self.p.SDL_WINDOW_INPUT_FOCUS)
+        if self.fading_stage:
+            if focused:
+                self.step_stage_fade(min(dt, .05))
+            return
         if not focused:
+            self.orb_mixer = None
             self.pause(True)
         if self.paused:
             return
-        if not 0 < dt < float('inf'):
+        if self.orb_mixer:
+            self.orb_mixer.elapsed += min(dt, .05)
             return
+        if self.room.stage == 0:
+            self.step_prologue(min(dt, .05))
+            return
+        if ('connect' in self.actions and self.room.can_claim_final_reward
+                and not self.room.guardian.reward_loaded):
+            self.pause(False)
+            self.orb_mixer = OrbMixer(self)
+            return
+        plate_was_pressed = self.room.plate_pressed
+        was_water_running = self.room.trial_flow(0) >= .8 if self.room.trial else False
         self.accumulator += min(dt, .25)
         while self.accumulator >= self.fixed_dt:
-            was_learned = self.room.learned_room_element
-            self.room.update(self.keys | self.actions | ({'attack'} if self.attack_queued else set()),
-                             self.fixed_dt)
+            if not self.step_ingest_cutscene():
+                self.room.update(self.keys | self.actions | ({'attack'} if self.attack_queued else set()),
+                                 self.fixed_dt)
+                for cue in dict.fromkeys(self.room.sound_events):
+                    sound = self.sounds.get(cue)
+                    if sound is not None:
+                        sound.play()
+                self.room.sound_events.clear()
             self.attack_queued = False
             self.actions.clear()
             self.accumulator -= self.fixed_dt
             if self.room.outcome == 'clear' and self.room.stage + 1 in STAGES:
-                self.advance_stage()
+                self.pause(False)
+                self.stage_fade_out = 0.0
                 return
-            if not was_learned and self.room.learned_room_element:
-                self.save_progress()
+        if self.room.trial and not self.room.debug_cleared:
+            if self.room.plate_pressed and not plate_was_pressed:
+                self.start_trial_drain_cutscene()
+            elif not was_water_running and self.room.trial_flow(0) >= .8:
+                self.trial_cutscene = ('wheel', self.room.elapsed + 1.65)
         player = self.room.player
         self.view.follow(*(self.room.safe[:2] if player.falling else (player.x, player.y)))
         self.save_elapsed += min(dt, .25)
@@ -288,6 +448,27 @@ class Application:
 
     def point(self, x, y, z=0):
         return self.view.point(x, y, z)
+
+    def draw_actor_frame(self, key, facing, index, x, foot, scale, alpha=1, tint=None, *, angle=0):
+        frame = self.metadata[key]['frames'][f'{facing}_{index}']
+        clip, pivot = frame['pico2dClip'], frame['pivotPixelsTopLeft']
+        width, height = clip['width'], clip['height']
+        image = self.images[key]
+        image.opacify(alpha)
+        if tint:
+            self.p.SDL_SetTextureColorMod(image.texture, *tint)
+        dx, dy = (width / 2 - pivot['x']) * scale, (pivot['y'] - height / 2) * scale
+        if angle:
+            image.clip_composite_draw(clip['left'], clip['bottom'], width, height, angle, '',
+                                      x + math.cos(angle)*dx - math.sin(angle)*dy,
+                                      foot + math.sin(angle)*dx + math.cos(angle)*dy,
+                                      width * scale, height * scale)
+        else:
+            image.clip_draw(clip['left'], clip['bottom'], width, height, x + dx, foot + dy,
+                            width * scale, height * scale)
+        image.opacify(1)
+        if tint:
+            self.p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
 
     def draw_actor(self, actor):
         if self.room.garden or self.room.quarry:
@@ -303,46 +484,48 @@ class Application:
             if attacking and self.room.lightning_attack:
                 element = actor.attack_element
         key = (actor.kind,state) if element == 'neutral' else (actor.kind,state,element)
-        meta, image = self.metadata[key], self.images[key]
+        meta = self.metadata[key]
         fps = meta.get('fps', 12 if attacking else 4 if state == 'idle' else 10)
         index = min(7,int(self.room.ingest_elapsed*12)) if ingesting else min(7, int(actor.attack_elapsed * 12)) if attacking else int(actor.animation_time * fps) % meta['layout']['columns']
-        frame = meta['frames'][f'{actor.attack_facing if attacking else actor.facing}_{index}']
-        clip, pivot = frame['pico2dClip'], frame['pivotPixelsTopLeft']
-        width, height = meta['frameSize']['width'], meta['frameSize']['height']
         factor = 1
         if actor.falling > 0:
             factor = max(.08, actor.falling / self.room.data['preview']['fallSeconds'])
         scale = self.unit / self.room.data['heroReferenceHeight'] * factor
-        is_boss = self.room.boss and actor is self.room.enemies[0]
-        if is_boss:
-            scale *= 2.1
         root_x, root_y = self.point(actor.x, actor.y, -38 * (1 - factor))
         if not actor.falling:
             self.view.draw_shadow(actor.x, actor.y)
-        # JSON은 왼쪽 위 원점, pico2d는 왼쪽 아래. 발밑 루트로부터 칸 중심 계산.
-        center_x = root_x + (width / 2 - pivot['x']) * scale
-        center_y = root_y + (pivot['y'] - height / 2) * scale
+        switch_started = self.room.element_switch_started
+        if actor.kind == 'hero' and switch_started is not None and not (ingesting or actor.falling):
+            self.transformation_effects.draw_switch(element, root_x, root_y,
+                                                    self.room.elapsed - switch_started,
+                                                    self.unit / self.view.sprite_height)
         alpha = factor
         if actor.kind == 'hero' and actor.invulnerable > 0 and int(self.room.elapsed * 18) % 2:
             alpha *= .4
-        image.opacify(alpha)
-        if actor.hit_flash > 0:
-            self.p.SDL_SetTextureColorMod(image.texture, 255, 135, 135)
-        image.clip_draw(clip['left'], clip['bottom'], clip['width'], clip['height'],
-                        center_x, center_y, width * scale, height * scale)
-        image.opacify(1)
-        self.p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
+        tint = (255, 135, 135) if actor.hit_flash > 0 else None
+        collapse = min(1, max(0, ((self.prologue_read_elapsed or 0) - 5.26) / .5))
+        mastered = actor.kind == 'hero' and self.room.guardian and self.room.guardian.reward_tasted
+        if mastered:
+            draw_master_aura(self, root_x, root_y, self.unit, self.room.elapsed, front=False)
+        self.draw_actor_frame(key, actor.attack_facing if attacking else actor.facing, index,
+                              root_x, root_y, scale, alpha, tint, angle=-1.43 * collapse**2)
+        if mastered:
+            draw_master_aura(self, root_x, root_y, self.unit, self.room.elapsed, front=True)
 
         if actor.kind == 'hero':
             self.draw_lightning_charge(actor, root_x, root_y)
-        elif not actor.falling and not is_boss:
+        elif not actor.falling and not self.ingest_cutscene:
             self.ui.enemy_health(actor, root_x, root_y, offset=62 * self.view.reference_scale)
 
     def draw_shot(self, shot):
         p = self.p
+        if shot.element == 'mixed':
+            self.guardian_art.mixed_projectile(shot)
+            return
         image, meta = self.shot_images[shot.element], self.shot_metadata[shot.element]
         frame = meta['frames'][f'right_{int(shot.age * 12) % 8}']['pico2dClip']
-        x, y = self.point(shot.x, shot.y, 21)
+        lift = self.view.tile_height*GUARDIAN_SHOT_LIFT if self.room.guardian else 21
+        x,y = self.point(shot.x,shot.y,lift)
         dx, dy = self.view.project(shot.dx, shot.dy)
         if shot.element == 'neutral':
             tint = (195, 235, 188) if shot.owner == 'hero' else (255, 125, 80)
@@ -350,6 +533,13 @@ class Application:
         image.clip_composite_draw(frame['left'], frame['bottom'], frame['width'], frame['height'],
                                   math.atan2(-dy, dx), '', x, y, 46, 46)
         p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
+
+    def orb_lift(self, source):
+        height = LIGHTNING_ORB_HEIGHT if self.room.capacitor and source.id == 'first-orb' else self.unit * .55
+        lift = height + self.unit * .04 * math.sin(source.age * 3)
+        if source.id == 'first-orb' and not (self.room.reservoir or self.room.forge or self.room.windmill or self.room.capacitor):
+            lift += self.unit * .92 * (1 - min(1, source.age / .48)) ** 2
+        return lift
 
     def draw_source(self, source):
         if source.phase in ('sealed', 'consumed'):
@@ -378,10 +568,7 @@ class Application:
         x, y = self.point(source.x, source.y)
         self.view.draw_shadow(source.x, source.y)
         if source.phase == 'orb':
-            height = LIGHTNING_ORB_HEIGHT if self.room.capacitor and source.id == 'first-orb' else self.unit * .55
-            y += height + self.unit * .04 * math.sin(source.age * 3)
-            if source.id == 'first-orb' and not (self.room.reservoir or self.room.forge or self.room.windmill or self.room.capacitor):
-                y += self.unit * .92 * (1 - min(1, source.age / .48)) ** 2
+            y += self.orb_lift(source)
             size = self.unit
             if self.room.ingest_source == source.id and not self.room.ingest_consumed:
                 t = min(1,self.room.ingest_elapsed/self.room.tuning.ingest_event)
@@ -431,52 +618,6 @@ class Application:
         self.ui.begin()
         self.ui.panel(x - 88, y - 17, 176, 34, accent=True)
         self.ui.key_label(key, label, x, y, key_width, 13)
-
-    def draw_boss_status(self):
-        room = self.room
-        boss = room.enemies[0]
-        if not boss.active:
-            return
-        self.ui.begin()
-        for i, (x, y) in enumerate(room.boss['switches']):
-            sx, sy = self.point(x, y)
-            self.connect_image.draw(sx, sy, 38, 38)
-            if i in room.boss_switches:
-                self.p.draw_circle(sx, sy, 16, 164, 232, 129)
-            elif math.hypot(room.player.x-x, room.player.y-y) <= .9:
-                self.ui.key_label('G', '보호막 장치', sx, sy + 24, 24, size=13)
-        if not room.boss_exposed:
-            x, y = self.point(boss.x, boss.y)
-            self.p.draw_circle(x, y + 32, 53, 225, 188, 124)
-        if room.boss_warning:
-            tx, ty, _ = room.boss_warning
-            x, y = self.point(tx, ty)
-            bx, by = self.point(boss.x, boss.y)
-            if boss.element == 'earth':
-                self.p.draw_circle(x, y, round(self.unit * 1.15), 255, 152, 87)
-            else:
-                offsets = {
-                    'fire': (-.55, 0, .55), 'wind': (0,), 'lightning': (0,), 'water': (-.95, 0, .95),
-                }[boss.element]
-                angle = math.atan2(ty-boss.y, tx-boss.x)
-                length = 6 if boss.element == 'wind' else 24
-                for offset in offsets:
-                    ex, ey = self.point(boss.x + math.cos(angle+offset)*length,
-                                        boss.y + math.sin(angle+offset)*length)
-                    self.p.draw_line(bx, by, ex, ey, 246, 124, 88)
-        width, y = 310, self.height - 125
-        x = (self.width - width) // 2
-        self.ui.rounded(x, y, width, 36, 6, (31, 25, 39, 240))
-        self.ui.rounded(x+8, y+5, (width-16)*boss.hp/boss.max_hp, 6, 3, (218, 124, 95, 255))
-        phase = int(room.boss_time / FORM_SECONDS)
-        if room.boss_time % FORM_SECONDS >= FORM_SECONDS - 1.5:
-            upcoming = FORMS[(phase + 1) % len(FORMS)]
-            label = f'다음 {NAMES[upcoming]} · 약점 {NAMES[FORMS[phase % len(FORMS)]]}'
-        elif room.boss_exposed:
-            label = f'{NAMES[boss.element]} · 약점 {NAMES[FORMS[(phase-1) % len(FORMS)]]}'
-        else:
-            label = f'보호막 장치 {len(room.boss_switches) + int(room.power_connected)} / 4'
-        self.ui.text(label, self.width//2, y+22, 14)
 
     def draw_vine(self, gate, burn_time):
         frame = self.vine_frames[0]
@@ -620,32 +761,126 @@ class Application:
         scale = self.view.reference_scale
         self.connect_image.draw(sx, sy, 47 * scale, 47 * scale)
         if not self.room.power_connected and (not self.room.trial or self.room.branches_open):
-            self.ui.key_label('G', '연결', sx, sy - 34 * scale, 26, size=13)
+            key_x, key_y = (sx+56*scale, sy) if self.room.trial else (sx, sy-34*scale)
+            self.ui.key_label('G', '연결', key_x, key_y, 26, size=13)
 
     def draw_trial_floor(self):
         room = self.room
         trial = room.trial
         self.ui.begin()
-        left, top, right, bottom = trial['basin']
-        x0, y1 = self.point(left, top)
-        x1, y0 = self.point(right, bottom)
-        self.p.draw_rectangle(x0, y0, x1, y1, 71, 60, 72, filled=True)
-        color = (56, 110, 122) if not room.stone_gate_open else (91, 76, 82)
-        self.p.draw_rectangle(x0+3, y0+3, x1-3, y1-3, *color, filled=True)
-        if not room.stone_gate_open:
-            for i in range(1, 7):
-                y = y0+(y1-y0)*i/7
-                length = 5 + 4 * math.sin(room.elapsed*3+i)
-                self.p.draw_line(x0+8, y, x0+8+length, y, 123, 170, 170)
-        for column, index in enumerate((2, 0, 1)):
-            x, y = self.point(19.5 + (column-1)*1.55, 9.2)
-            self.ui.text(f'{trial["runes"][index]} {"●" * room.power_targets[index]}', x, y, 14)
-        if room.trial_returns == {0} and not any(
+        drain = room.gate_time / room.gate_open_seconds
+        if 0 < drain < 1:
+            self.draw_trial_flow(trial['drainPath'], min(1, drain / .52),
+                                 None, (53, 156, 156), (164, 235, 218), 4,
+                                 start_progress=max(0, (drain-.3)/.7))
+        self.draw_trial_basin(drain)
+        self.draw_trial_flow(trial['waterPath'], room.trial_flow(0),
+                             (43, 52, 67), (79, 155, 191), (161, 225, 248), 5)
+        self.draw_trial_flow(trial['powerPath'], room.trial_flow(1),
+                             (85, 61, 58), (188, 130, 63), (255, 222, 135), 3)
+        amplitude, _ = trial['laserSweep']
+        for start, receiver, row in trial['lasers']:
+            for edge in (start, receiver):
+                x, low = self.point(edge, row+amplitude)
+                _, high = self.point(edge, row-amplitude)
+                self.p.draw_rectangle(x-3, low, x+3, high, 74, 54, 56, filled=True)
+                self.p.draw_line(x, low, x, high, 151, 110, 93)
+        if room.trial_returns == {0} and room.trial_laser_locked and not any(
                 t.kind == 'wall' and t.contains(*trial['wallSlot']) for t in room.earth_terrain):
             x, y = self.point(*trial['wallSlot'])
             self.p.draw_rectangle(x-23, y-6, x+23, y+6, 160, 121, 89)
             if math.dist((room.player.x, room.player.y), trial['wallSlot']) < 3:
-                self.ui.key_label('R', '흙벽으로 레이저 차단', x, y-29, 22, 13)
+                self.ui.key_label('R', '흙벽으로 레이저 차단', x, y+28, 22, 13)
+
+    def draw_trial_basin(self, drain):
+        left, top, right, bottom = self.room.trial['basin']
+        x0, y1 = self.point(left, top)
+        x1, y0 = self.point(right, bottom)
+        self.p.draw_rectangle(x0, y0, x1, y1, 71, 60, 72, filled=True)
+        self.p.draw_rectangle(x0+3, y0+3, x1-3, y1-3, 91, 76, 82, filled=True)
+        for divider in range(1, 4):
+            y = y0+3+(y1-y0-6)*divider/4
+            self.p.draw_line(x0+3, y, x1-3, y, 73, 61, 71)
+        if drain >= 1:
+            return
+        low = y0+3
+        high = low+(y1-y0-6)*(1-drain)
+        self.p.draw_rectangle(x0+3, low, x1-3, high, 53, 122, 135, filled=True)
+        self.p.draw_line(x0+4, high, x1-4, high, 142, 219, 213)
+        for i in range(1, 7):
+            y = low+(high-low)*i/7
+            wave = 5 + 4 * math.sin(self.room.elapsed*4+i)
+            self.p.draw_line(x0+8, y, x0+8+wave, y, 113, 188, 181)
+
+    def draw_trial_flow(self, path, progress, base, light, highlight, width, *, start_progress=0):
+        links = [(a, b, math.dist(a, b)) for a, b in zip(path, path[1:])]
+        total_length = sum(length for _, _, length in links)
+        flow_start, flow_end = total_length * start_progress, total_length * progress
+        distance = 0.0
+        for start, end, length in links:
+            x0, y0 = self.point(*start)
+            x1, y1 = self.point(*end)
+            visible = (max(x0, x1) >= -12 and min(x0, x1) <= self.width+12
+                       and max(y0, y1) >= -12 and min(y0, y1) <= self.height+12)
+            first = max(0, flow_start - distance)
+            last = min(length, flow_end - distance)
+            if visible:
+                if base is not None:
+                    self.p.draw_rectangle(min(x0, x1)-width, min(y0, y1)-width,
+                                          max(x0, x1)+width, max(y0, y1)+width, *base, filled=True)
+                if last > first:
+                    dx, dy = (x1 - x0) / length, (y1 - y0) / length
+                    sx, sy = x0 + dx * first, y0 + dy * first
+                    ex, ey = x0 + dx * last, y0 + dy * last
+                    spread = width - 1
+                    self.p.draw_rectangle(min(sx, ex)-spread, min(sy, ey)-spread,
+                                          max(sx, ex)+spread, max(sy, ey)+spread, *light, filled=True)
+                    spacing = .7
+                    offset = first + (self.room.elapsed * 9 - distance - first) % spacing
+                    while offset < last:
+                        trail = min(offset+.18, last)
+                        self.p.draw_line(x0+dx*offset, y0+dy*offset, x0+dx*trail, y0+dy*trail, *highlight)
+                        offset += spacing
+                    if progress < 1 and flow_end <= distance + length:
+                        self.p.draw_circle(ex, ey, width+2, *highlight, filled=True)
+            distance += length
+
+    def draw_trial_wheel(self, x, y):
+        room = self.room
+        sx, sy = self.point(x, y)
+        if not (-60 <= sx <= self.width+125 and -110 <= sy <= self.height+24):
+            return
+        if self.trial_waterwheel is None:
+            folder = room.map_path.parent
+            spec = json.loads((folder / 'trial-waterwheel.json').read_text(encoding='utf-8'))
+            self.trial_waterwheel = self.p.load_image(str(folder / spec['image'])), spec
+        image, spec = self.trial_waterwheel
+        width, height = spec['frameSize']
+        pivot_x, pivot_y = spec['pivot']
+        scale = self.view.tile_width / spec['pixelsPerTile']
+        opening_frames = spec['openingFrames']
+        elapsed = room.trial_wheel_time
+        reveal = room.trial_wheel_reveal_seconds
+        frame = 0
+        if room.trial_wheel_open:
+            spin = int((elapsed-reveal) * spec['fps'])
+            frame = 1 + opening_frames + spin % spec['activeFrames']
+        elif elapsed > 0:
+            frame = 1 + int(elapsed / reveal * opening_frames)
+        row, column = divmod(frame, spec['columns'])
+        left, top, right, _ = room.trial['wheelGate']
+        player = room.player
+        behind = room.trial_wheel_open and left < player.x < right and top-2.35 < player.y < top
+        if behind:
+            fade = min(1, (top-player.y)*3, (player.y-top+2.35)*2)
+            image.opacify(1-.55*fade)
+        image.clip_draw(column*width, image.h-(row+1)*height, width, height,
+                        sx+(width/2-pivot_x)*scale, sy+(pivot_y-height/2)*scale,
+                        width*scale, height*scale)
+        if behind:
+            image.opacify(1)
+        if room.trial_wheel_open and math.dist((room.player.x, room.player.y), (x, y)) < 2.5:
+            self.ui.text('레이저 고정', sx+(width/2-pivot_x)*scale, sy-21*scale, 13, (161, 225, 248))
 
     def draw_trial_switch(self, index):
         room = self.room
@@ -654,7 +889,7 @@ class Application:
         if index not in room.trial_returns and math.dist((room.player.x, room.player.y), point) <= .9:
             x, y = self.point(*point)
             self.ui.begin()
-            self.ui.text('G · 정비문 개방' if index == 0 else 'G · 귀환문 개방', x, y+34, 13)
+            self.ui.text('G · 수문 열기' if index == 0 else 'G · 서쪽으로 전력 보내기', x, y+34, 13)
 
     def trial_layers(self):
         room = self.room
@@ -664,31 +899,52 @@ class Application:
         if self.quarry_art is None:
             self.quarry_art = QuarryArt(self, STAGES[8].parent)
         gates = [gate for i, gate in enumerate(trial['returns']) if i not in room.trial_returns]
-        if 0 not in room.trial_returns:
+        if not room.trial_laser_locked:
             gates.append(trial['serviceGate'])
-        if not room.stone_gate_open:
-            gates.append(room.puzzle['gate'])
         for gate in gates:
             yield gate[3], self.garden_art.slide_gate, (self.garden_art.passage_gate, gate, 0)
+        if not room.stone_gate_open:
+            gate = room.puzzle['gate']
+            yield gate[3], self.garden_art.slide_gate, (
+                self.garden_art.passage_gate, gate, room.gate_time / room.gate_open_seconds)
         for i, (_, y) in enumerate(trial['switches']):
             yield y, self.draw_trial_switch, (i,)
+        wheel_x, wheel_y = trial['waterPath'][-1]
+        yield trial['wheelGate'][3], self.draw_trial_wheel, (wheel_x, wheel_y)
         if room.active_lasers:
             for start, stop, y, receiver in room.active_lasers.beams(room.earth_terrain):
                 yield y-.3, self.quarry_art.draw_beam, (start, stop, y, receiver)
                 if stop != receiver:
                     yield y+.45, self.quarry_art.sprite, ('impact', stop, y, 44, start < receiver)
+        else:
+            for start, receiver, y in trial['lasers']:
+                yield y-.3, self.quarry_art.sprite, ('receiver-cut', start, y, 43)
+                yield y-.3, self.quarry_art.sprite, ('receiver-cut', receiver, y, 34)
 
     def draw_conductor(self, index):
-        x, y = self.point(*self.room.power_puzzle['conductors'][index])
+        room = self.room
+        x, y = self.point(*room.power_puzzle['conductors'][index])
         scale = self.view.reference_scale
-        level = self.room.power_levels[index]
-        target = self.room.power_targets[index]
-        self.conductor_images[level].draw(x, y + 18 * scale, 66 * scale, 67 * scale)
-        hit = self.room.power_hits[index]
-        phase = int(self.room.elapsed * 14) + index * 5
-        if level == 0:
+        level = room.power_levels[index]
+        target = room.power_targets[index]
+        if room.trial:
+            if self.trial_conductor_sheet is None:
+                self.trial_conductor_sheet = self.p.load_image(str(room.map_path.with_name('trial-conductors.png')))
+            sheet = self.trial_conductor_sheet
+            width, height = sheet.w//5, sheet.h//len(room.trial['runes'])
+            powered = room.conductor_powered(index)
+            column = level+1 if powered else 0
+            sheet.clip_draw(column*width, sheet.h-(index+1)*height, width, height,
+                            x, y+18*scale, width*scale, height*scale)
+            if not powered:
+                return
+        else:
+            self.conductor_images[level].draw(x, y+18*scale, 66*scale, 67*scale)
+        hit = room.power_hits[index]
+        phase = int(room.elapsed * 14) + index * 5
+        if level == 0 and not room.trial:
             self.ui.begin()
-            brightness = round(90 + 34 * math.sin(self.room.elapsed * 5 + index * 2))
+            brightness = round(90 + 34 * math.sin(room.elapsed * 5 + index * 2))
             self.p.draw_circle(x, y + 25 * scale, max(1, round(2 * scale)),
                                255, 197, 92, brightness, filled=True)
         for terminal, (tx, ty) in enumerate(((-16, 37), (1, 40), (12, 37))):
@@ -699,12 +955,11 @@ class Application:
             length = (4 + tick % 4 + 24 * hit) * scale
             side = -1 if tick % 2 else 1
             self.draw_electric_arc(px, py, px + side * length, py + length, 2 * scale,
-                                   225 if hit or self.room.power_connected else 155, tick)
-        rune = self.room.trial['runes'][index] if self.room.trial else None
-        self.ui.text(f'{rune}  {level}' if rune else f'{chr(65 + index)} {level}/{target}',
-                     x, y - 22 * scale, 14)
-        if self.room.power_flash and (not self.room.trial or index in self.room.trial_wrong):
-            radius = round((14 + 45 * self.room.power_flash) * scale)
+                                   225 if hit or room.power_connected else 155, tick)
+        if not room.trial:
+            self.ui.text(f'{chr(65 + index)} {level}/{target}', x, y-22*scale, 14)
+        if room.power_flash and (not room.trial or index in room.trial_wrong):
+            radius = round((14 + 45 * room.power_flash) * scale)
             self.p.draw_circle(x, y + 30 * scale, radius, 255, 232, 143)
 
     def draw_electric_arc(self, x, y, tx, ty, offset, alpha, phase,
@@ -806,6 +1061,9 @@ class Application:
             self.p.draw_line(left, y, right, y, 164, 126, 88)
 
     def draw_exit(self):
+        if self.room.guardian:
+            self.guardian_art.exit()
+            return
         if self.room.trial:
             self.garden_art.exit(float(self.room.exit_open))
             return
@@ -865,26 +1123,151 @@ class Application:
                     p.draw_line(x - 19, y + height, x + 19, y + height, 157, 125, 94)
             p.draw_rectangle(x - 30, y - 5, x + 30, y, 82, 66, 91, filled=True)
 
+    def start_trial_drain_cutscene(self):
+        room = self.room
+        progress = room.gate_time / room.gate_open_seconds
+        remaining = (1-progress) * room.trial['drainSeconds']
+        self.trial_cutscene = ('drain', room.elapsed + remaining + .65)
+
+    def draw_trial_cutscene(self):
+        room = self.room
+        if not self.trial_cutscene or self.paused or room.outcome or room.debug_cleared:
+            return
+        kind, until = self.trial_cutscene
+        if room.elapsed >= until:
+            return
+        p = self.p
+        viewport = p.SDL_Rect(28, 268, 424, 238)
+        if kind == 'drain':
+            left, top, right, _ = room.trial['basin']
+            _, bend_y = room.trial['drainPath'][1]
+            focus = (left+right)/2+.45, (top+bend_y)/2
+            title, zoom = '서쪽 수로 배수', 1.10
+        else:
+            x, y = room.trial['waterPath'][-1]
+            focus = x-.55, y-1.37
+            title, zoom = '동쪽 물레방아 작동', 1.20
+            viewport.x = self.width-viewport.x-viewport.w
+
+        self.draw_inset(focus, zoom, viewport, title)
+
+    def draw_inset(self, focus, zoom, viewport, title):
+        panel_bottom = self.height-viewport.y-viewport.h-8
+        self.ui.begin()
+        self.ui.panel(viewport.x-8, panel_bottom, viewport.w+16, viewport.h+43, accent=True)
+        self.ui.text(title, viewport.x+viewport.w/2, self.height-viewport.y+17, 16)
+        self.draw_world_from(focus, zoom, viewport)
+
+    def draw_world_from(self, focus, zoom, viewport=None, *, screen_point=None):
+        p = self.p
+        renderer = p.pico2d.renderer
+        clip = None
+        if viewport is not None:
+            old_clip = p.SDL_Rect()
+            if p.SDL_RenderIsClipEnabled(renderer):
+                clip = ctypes.byref(old_clip)
+                p.SDL_RenderGetClipRect(renderer, clip)
+            if p.SDL_RenderSetClipRect(renderer, ctypes.byref(viewport)) < 0:
+                return
+        # 같은 월드를 컷씬 위치에서 한 번 더 그리고 메인 카메라를 복원한다.
+        view = self.view
+        origin = view.origin
+        scale, tile_width, tile_height = view.reference_scale, view.tile_width, view.tile_height
+        try:
+            view.reference_scale = scale*zoom
+            view.tile_width, view.tile_height = tile_width*zoom, tile_height*zoom
+            if screen_point is not None:
+                px, py = view.project(*focus)
+                view.origin = round(screen_point[0]-px), round(self.height-screen_point[1]-py)
+            elif viewport is None:
+                view.follow(*focus)
+            else:
+                px, py = view.project(*focus)
+                view.origin = (
+                    round(viewport.x+viewport.w/2-px), round(viewport.y+viewport.h/2-py))
+            self.draw_world()
+        finally:
+            view.origin = origin
+            view.reference_scale, view.tile_width, view.tile_height = scale, tile_width, tile_height
+            if viewport is not None:
+                p.SDL_RenderSetClipRect(renderer, clip)
+
+    def draw_cutscene_world(self, focus, screen_point, zoom):
+        p = self.p
+        renderer = p.pico2d.renderer
+        target = p.SDL_GetRenderTarget(renderer)
+        # 바닥 캐시와 월드 오브젝트를 같은 비율로 확대한다.
+        if p.SDL_SetRenderTarget(renderer, self.cutscene_background) != 0:
+            raise RuntimeError('원소 습득 컷씬 화면을 열 수 없습니다.')
+        try:
+            p.clear_canvas()
+            self.draw_world_from(focus, 1, screen_point=screen_point)
+        finally:
+            p.SDL_SetRenderTarget(renderer, target)
+        x, y = screen_point
+        destination = p.SDL_Rect(round(x * (1 - zoom)), round((self.height - y) * (1 - zoom)),
+                                 round(self.width * zoom), round(self.height * zoom))
+        p.SDL_RenderCopy(renderer, self.cutscene_background, None, ctypes.byref(destination))
+
     def draw(self, present=True):
         p = self.p
         p.clear_canvas()
         if self.scene == 'title':
             draw_title(self)
-            if present:
-                p.update_canvas()
-            return
-        background = self.acquisition_art.draw_cliff_fog if self.room.stage in (4, 5) else None
+        elif self.room.stage == 0:
+            self.draw_world()
+            self.guardian_art.prologue()
+            if self.paused:
+                self.ui.modal(self.width,self.height,self.paused,self.menu,self.menu_index,None,0)
+        elif self.ending:
+            self.draw_world()
+            self.guardian_art.ending(self.ending_elapsed)
+        elif self.ingest_cutscene:
+            self.ingest_cutscene.draw(self)
+            if self.paused:
+                self.ui.modal(self.width,self.height,self.paused,self.menu,self.menu_index,self.room.outcome,self.room.stage)
+        elif self.room.guardian and self.room.guardian.collapsing:
+            self.guardian_art.defeat_camera()
+            if self.paused:
+                self.ui.modal(self.width,self.height,self.paused,self.menu,self.menu_index,None,self.room.stage)
+        else:
+            guardian = self.room.guardian
+            if guardian and guardian.summoning:
+                self.guardian_art.camera()
+            else:
+                self.draw_world()
+            self.draw_trial_cutscene()
+            if guardian and not self.paused and not self.room.outcome and self.guardian_art.show_exit_inset():
+                viewport = p.SDL_Rect((self.width-424)//2,118,424,238)
+                self.draw_inset((15,2.4),1.05,viewport,'북쪽 성문 개방')
+            self.draw_hud()
+            self.acquisition_art.draw_prompt()
+            if guardian:
+                self.guardian_art.status()
+                self.guardian_art.reward_prompt()
+            if self.paused or (self.room.outcome and self.stage_fade_out is None):
+                self.ui.modal(self.width,self.height,self.paused,self.menu,self.menu_index,self.room.outcome,self.room.stage)
+        if self.orb_mixer:
+            self.orb_mixer.draw()
+        if self.scene == 'play' and self.fading_stage:
+            if self.stage_fade_out is not None:
+                progress = smoothstep(self.stage_fade_out / self.stage_fade_out_seconds)
+            else:
+                progress = 1 - smoothstep(self.stage_fade_in / self.stage_fade_in_seconds)
+            self.ui.begin()
+            p.draw_rectangle(0, 0, self.width-1, self.height-1, 0, 0, 0, round(255 * progress), filled=True)
+        if present:
+            p.update_canvas()
+
+    def draw_world(self):
+        p = self.p
+        background = self.acquisition_art.draw_cliff_fog if self.room.stage in (1, 4, 5) else None
         self.view.draw_ground(background)
         self.acquisition_art.draw()
-        if self.room.boss and self.room.power_gate_open:
-            left, top, right, bottom = self.room.boss['shortcut']
-            x0, y1 = self.point(left, top)
-            x1, y0 = self.point(right, bottom)
-            self.ui.begin()
-            self.ui.rounded(x0, y0, x1-x0, y1-y0, 4, (104, 56, 105, 255))
-            for row in range(round(bottom-top)):
-                _, y = self.point(left, top + row)
-                self.p.draw_line(x0, y, x1, y, 170, 109, 150)
+        if self.room.quarry and self.room.permanent_bridge:
+            self.acquisition_art.bridge(self.room.permanent_bridge, 'stone')
+        if self.room.guardian:
+            self.guardian_art.floor()
         for terrain in self.room.earth_terrain:
             if terrain.kind == 'floor':
                 self.draw_earth_terrain(terrain)
@@ -942,7 +1325,8 @@ class Application:
         elif not self.room.sluice_open:
             layers.append((self.room.sluice['gate'][3], self.draw_stone_gate, (self.room.sluice, False)))
         if self.room.puzzle:
-            layers.append((self.room.block[1], self.draw_puzzle_block, ()))
+            if not self.room.debug_cleared:
+                layers.append((self.room.block[1], self.draw_puzzle_block, ()))
             if self.room.quarry:
                 layers.extend(self.quarry_art.layers())
             elif not self.room.trial and not self.room.acquisition and (not self.room.stone_gate_open
@@ -957,6 +1341,8 @@ class Application:
                 layers.append((puzzle['gate'][3], self.draw_stone_gate, (puzzle, self.room.power_connected)))
         if self.room.trial:
             layers.extend(self.trial_layers())
+        if self.room.guardian:
+            layers.extend(self.guardian_art.layers())
         if not self.room.vine_open:
             gate = self.room.vine_gate
             layers.append((gate['y'] + gate['height'], self.draw_vine, (gate, self.room.vine_time)))
@@ -965,9 +1351,13 @@ class Application:
             layers.append((gate['y'] + gate['height'], self.draw_vine, (gate, self.room.conductor_vine_time)))
         layers.extend((bounds[3], self.draw_fire_barrier, (index,))
                       for index, bounds in enumerate(self.room.fire_barriers))
-        layers.extend((a.y, self.draw_actor, (a,)) for a in (self.room.player, *self.room.enemies)
-                      if a.active)
-        layers.extend((s.y, self.draw_source, (s,)) for s in self.room.sources if s.phase not in ('sealed', 'consumed'))
+        if not self.ingest_cutscene and self.room.player.active:
+            layers.append((self.room.player.y, self.draw_actor, (self.room.player,)))
+        if not self.room.guardian:
+            layers.extend((a.y, self.draw_actor, (a,)) for a in self.room.enemies if a.active)
+        scene_source = self.ingest_cutscene.source if self.ingest_cutscene else None
+        layers.extend((s.y, self.draw_source, (s,)) for s in self.room.sources
+                      if s.phase not in ('sealed', 'consumed') and s is not scene_source)
         layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
         for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
             draw_item(*args)
@@ -986,16 +1376,11 @@ class Application:
         if self.room.spike_contact and int(self.room.elapsed * 8) % 2:
             x, y = self.point(self.room.player.x, self.room.player.y)
             p.draw_circle(x, y + 13, 18, 243, 102, 80)
-        self.draw_hud()
-        self.acquisition_art.draw_prompt()
-        if self.room.boss:
-            self.draw_boss_status()
-        if self.paused or self.room.outcome:
-            self.ui.modal(self.width,self.height,self.paused,self.menu,self.menu_index,self.room.outcome,self.room.stage)
-        if present:
-            p.update_canvas()
 
     def release(self):
+        if self.sounds:
+            self.p.Mix_HaltChannel(-1)
+            self.sounds.clear()
         # SDL 종료 전에 텍스처를 해제한다.
         self.ui.release()
         self.acquisition_art.images.clear()
@@ -1007,13 +1392,16 @@ class Application:
         self.acquisition_art.turret_image = None
         self.acquisition_art.powerstation_props = None
         self.images.clear()
+        self.transformation_effects.sheets.clear()
+        self.p.SDL_DestroyTexture(self.cutscene_background)
         self.view.release()
         self.shot_images.clear()
         self.source_images.clear()
         self.conductor_images.clear()
+        self.trial_conductor_sheet = None
         self.connect_image = self.flame_image = None
         self.vine_image = self.block_image = self.gate_image = None
-        self.garden_art = self.quarry_art = None
+        self.garden_art = self.quarry_art = self.guardian_art = None
         self.title_image = None
 
 

@@ -95,6 +95,8 @@ class QuarryArt:
 
     def hints(self):
         app, room = self.app, self.room
+        if room.debug_cleared:
+            return
         x,y = room.player.x,room.player.y
         left, top, right, bottom = room.earth_bridge
         bank = top-.4 < y < bottom+.4 and (left-1 < x < left or right <= x < right+1)
@@ -116,7 +118,9 @@ class QuarryArt:
         yield room.puzzle['reset'][1],self.lever,()
         for bounds in room.quarry.gates:
             yield bounds[3],self.gate,(bounds,)
-        for segment in room.quarry.beams(room.earth_terrain):
+        if not room.active_lasers:
+            return
+        for segment in room.active_lasers.beams(room.earth_terrain):
             yield segment[2]-.3,self.draw_beam,segment
             start,stop,y,receiver = segment
             if stop!=receiver:

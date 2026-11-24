@@ -24,6 +24,11 @@ LIGHTNING_ORB_HEIGHT = 64
 CHARGE_GLOW = (241, 162, 79)
 CHARGE_CORE = (255, 242, 175)
 CLIFF_FOG_LAYERS = {
+    1: (
+        ('mist-low', 3.5, 15.0, .21, 430, 91, .27),
+        ('mist-high', 16.5, 14.6, .24, 460, 104, .23),
+        ('mist-low', 13.2, 20.7, .17, 565, 124, .21),
+    ),
     4: (
         ('mist-high', 7.5, 9.2, .26, 540, 95, .32),
         ('mist-low', 22, 12.8, .32, 580, 98, .37),
@@ -47,8 +52,7 @@ class AcquisitionArt:
         self.app = app
         self.p = app.p
         self.images = {}
-        for name, path in (('water', 'water/ripples'),
-                           ('fog', 'weather/fog'), ('coil', 'lightning/tesla-coil')):
+        for name, path in (('water', 'water/ripples'), ('coil', 'lightning/tesla-coil')):
             folder = ROOT / 'assets/effects/temple-preview' / path
             atlas = json.loads((folder / (folder.name + '.json')).read_text(encoding='utf-8'))
             self.images[name] = self.p.load_image(str(folder / atlas['meta']['image'])), atlas
@@ -859,10 +863,7 @@ class AcquisitionArt:
         if 'movingHazards' not in room.data:
             return
         self.app.ui.begin()
-        if room.stage == 1:
-            self.effect('fog', 4.6+math.sin(room.elapsed*.7)*.7, 14.5, .62)
-            self.effect('fog', 15.3+math.sin(room.elapsed*.5)*.7, 14.9, .65, offset=8)
-        else:
+        if room.stage != 1:
             (self.water, self.fire, self.wind, self.earth, self.lightning)[room.stage-2]()
         if room.puzzle and room.puzzle.get('centeredSlide'):
             self.draw_counterweight_prop('socket', room.puzzle['plate'])
@@ -877,8 +878,9 @@ class AcquisitionArt:
                 if point:
                     x,y = self.app.point(*point)
                     self.app.connect_image.draw(x, y+5, 46, 46)
-        for hazard in room.data['movingHazards']:
-            self.draw_hazard(hazard)
+        if not room.debug_cleared:
+            for hazard in room.data['movingHazards']:
+                self.draw_hazard(hazard)
 
     def draw_prompt(self):
         room = self.app.room

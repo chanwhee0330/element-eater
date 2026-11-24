@@ -129,8 +129,11 @@ class OrbMixer:
             color = COLORS[element]
             rim = (252, 228, 155) if hovered else color
             app.p.draw_line(cx, cy, px, py, *color, 156 if filled else 54)
+            if filled:
+                ui.orb_socket_glow(px, py, self.socket_radius, color)
             app.p.draw_circle(px, py, self.socket_radius, *rim, 255 if matching or filled else 152, filled=True)
-            app.p.draw_circle(px, py, self.socket_radius-2, 32, 25, 43, filled=True)
+            inner_radius = self.socket_radius - (7 if filled else 2)
+            app.p.draw_circle(px, py, inner_radius, 32, 25, 43, filled=True)
             if not filled or element not in self.receipts or self.elapsed-self.receipts[element][0] >= .14:
                 image = app.source_images[element, 'orb']
                 image.opacify(1 if filled else .36)

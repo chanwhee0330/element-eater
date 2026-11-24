@@ -83,6 +83,10 @@ class GameUI:
             half = radius-abs(dy)
             self.p.draw_line(x-half, y+dy, x+half, y+dy, *color)
 
+    def orb_socket_glow(self, x, y, radius, color):
+        for spread, alpha in ((9, 12), (6, 19), (3, 32)):
+            self.p.draw_circle(x, y, radius+spread, *color, alpha, filled=True)
+
     def keycap(self, text, cx, cy, width=40, disabled=False):
         color = (91, 88, 75) if disabled else (164, 148, 109)
         self.rounded(cx-width/2, cy-12, width, 25, 5, (*color, 170))

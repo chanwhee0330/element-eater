@@ -87,6 +87,7 @@ class Guardian:
         self.bridge = bridge
         self.ritual = 0
         self.placed = set()
+        self.placed_at = {}
         self.reward_orbs = set()
         self.reward_loaded = False
         self.reward_tasted = False
@@ -176,6 +177,10 @@ class Guardian:
                 return element
         return None
 
+    def can_place_orb(self, room, element):
+        return (self.ritual < len(RITUAL) and element not in self.placed
+                and room.selected == element and room.inventory.get(element, 0) > 0)
+
     def interact_pedestal(self, room, *, retrieve):
         element = self.nearby_pedestal(room.player, retrieve=retrieve)
         if element is None:
@@ -185,8 +190,9 @@ class Guardian:
                 self.placed.remove(element)
                 room.inventory[element] = 1
                 room.restore_selected_element(element)
-        elif self.ritual < len(RITUAL) and element not in self.placed and room.inventory[element]:
+        elif self.can_place_orb(room, element):
             self.placed.add(element)
+            self.placed_at[element] = room.elapsed
             self.ritual = len(self.placed)
             if self.ritual >= 3:
                 self.wind_y = self.spec['windPlateY']

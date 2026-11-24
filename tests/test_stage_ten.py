@@ -37,8 +37,14 @@ class GuardianRoomTests(unittest.TestCase):
         room.projectiles.append(Projectile(x,y+.2,0,-1,'hero',8,1,15,element='water'))
         room.update_projectiles(.05)
         self.assertEqual(guardian.ritual, 0)
+        room.player.x, room.player.y = x, y
+        room.restore_selected_element('fire')
+        room.update({'connect'}, 1/120)
+        self.assertEqual(guardian.ritual, 0)
+        self.assertEqual(room.inventory['water'], 1)
         for index in (2, 0, 3, 1, 4):
             room.player.x, room.player.y = guardian.spec['devices'][index]
+            room.restore_selected_element(RITUAL[index])
             room.update({'connect'}, 1/120)
         self.assertEqual(guardian.ritual, 5)
         self.assertFalse(any(room.inventory.values()))

@@ -266,8 +266,6 @@ class Application:
             print(f'{self.save_error} {exc}', file=sys.stderr)
 
     def enter_play(self):
-        if self.practice and self.room.stage == 10 and self.room.guardian.fall < 0:
-            self.room.enemies[0].hp = 1
         if self.room.garden or self.room.quarry or self.room.trial:
             self.room.preload_reference_paths()
         self.view.load(self.room)

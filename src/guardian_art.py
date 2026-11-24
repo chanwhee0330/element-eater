@@ -60,17 +60,32 @@ class GuardianArt:
             self.line(cursor,end,color,alpha)
             cursor=end
 
+    def altar_arc(self, origin, radius, start, stop, color, alpha):
+        spacing = 1 / self.unit
+        for offset in (-5, -4, -3, 3, 4, 5):
+            glow_alpha = alpha * (6 - abs(offset)) * .11
+            self.arc(origin, radius + offset * spacing, start, stop, color, glow_alpha)
+        for offset in range(-2, 3):
+            self.arc(origin, radius + offset * spacing, start, stop, color, alpha)
+
+    def altar_light_tip(self, point, color):
+        x, y = self.app.point(*point)
+        self.app.ui.orb_socket_glow(x, y, 3, color)
+        self.p.draw_circle(x, y, 4, *color, filled=True)
+        self.p.draw_circle(x, y, 2, 255, 244, 219, filled=True)
+
     def floor(self):
         g = self.guardian
         t = self.room.elapsed
         self.app.ui.begin()
         self.app.acquisition_art.bridge(g.bridge, 'stone')
         center = g.spec['center']
+        angles = [math.atan2(y-center[1], x-center[0]) for x, y in g.spec['devices']]
         for i,(point,feed) in enumerate(zip(g.spec['devices'],g.spec['feeds'])):
             color = COLORS[RITUAL[i]]
             if g.ritual < len(RITUAL) or g.summoning:
                 on = RITUAL[i] in g.placed
-                current = not on and bool(self.room.inventory[RITUAL[i]])
+                current = g.can_place_orb(self.room, RITUAL[i])
             else:
                 on, current = RITUAL[i] == g.element and g.fall < 0, False
             if not (on or current):
@@ -81,11 +96,38 @@ class GuardianArt:
             for start,end in zip(diamond,diamond[1:]+diamond[:1]):
                 self.line(start,end,color,alpha)
             if on:
-                self.line(point,feed,color,alpha)
-                a = math.atan2(y-center[1],x-center[0])
-                self.arc(center,4.25,a-.48,a+.48,color,alpha)
-                self.arc(center,3.23,a-.34,a+.34,color,alpha*.62)
-                phase = a-.47 + (.94*(t*1.65+i*.11)% .94)
+                if RITUAL[i] in g.placed and g.summon < SUMMON_SHOCK_AT:
+                    px, py = self.app.point(x, y)
+                    radius = max(10, round(self.unit * .58))
+                    self.app.ui.orb_socket_glow(px, py, radius, color)
+                    self.p.draw_circle(px, py, radius-5, *color, 100, filled=True)
+                    for edge in range(radius-5, radius+1):
+                        self.p.draw_circle(px, py, edge, *color, 235)
+                age = t - g.placed_at.get(RITUAL[i], t - 1)
+                if not (g.ritual < len(RITUAL) or g.summoning):
+                    age = 1
+                a = angles[i]
+                feed_progress = min(1, max(0, age / .18))
+                tip = tuple(start + (end-start)*feed_progress for start, end in zip(point, feed))
+                self.line(point, tip, color, alpha)
+                if feed_progress < 1:
+                    self.altar_light_tip(tip, color)
+                    continue
+                spread = ease((age - .18) / .58)
+                if not spread:
+                    self.altar_light_tip(feed, color)
+                    continue
+                left_span = ((a - angles[i-1]) % math.tau) / 2
+                right_span = ((angles[(i+1) % len(angles)] - a) % math.tau) / 2
+                start, stop = a-left_span*spread, a+right_span*spread
+                self.altar_arc(center, 4.25, start, stop, color, alpha)
+                self.altar_arc(center, 3.23, start, stop, color, alpha*.72)
+                if spread < 1:
+                    for tip_angle in (start, stop):
+                        self.altar_light_tip((center[0]+4.25*math.cos(tip_angle),
+                                              center[1]+4.25*math.sin(tip_angle)), color)
+                    continue
+                phase = start + (stop-start) * ((t*1.65+i*.11) % 1)
                 px,py = center[0]+4.25*math.cos(phase),center[1]+4.25*math.sin(phase)
                 self.p.draw_circle(*self.app.point(px,py),2,*color,filled=True)
         if g.ritual < len(RITUAL) or g.summoning and g.summon < .73:
@@ -470,6 +512,7 @@ class GuardianArt:
     def reward_prompt(self):
         app = self.app
         g = self.guardian
+        disabled = False
         if self.room.can_claim_final_reward:
             if g.reward_loaded:
                 key, label = 'F', '혼합 구슬 먹기'
@@ -481,14 +524,18 @@ class GuardianArt:
             element = g.nearby_pedestal(self.room.player, retrieve=retrieve)
             if not element:
                 return
-            if g.ritual < len(RITUAL) and self.room.inventory[element]:
+            if g.can_place_orb(self.room, element):
                 key, label = 'G', f'{NAMES[element]} 구슬 올리기'
+            elif not retrieve and element not in g.placed:
+                required = '원소 선택 필요' if self.room.inventory[element] else '구슬 필요'
+                key, label = 'G', f'{NAMES[element]} {required}'
+                disabled = True
             elif g.ritual == len(RITUAL) and not g.summoning and element in g.placed:
                 key, label = 'F', f'{NAMES[element]} 구슬 먹기'
             else:
                 return
             point = g.orb_flight(element)[:2] if retrieve else g.spec['devices'][RITUAL.index(element)]
-        self.draw_interaction_prompt(point, key, label)
+        self.draw_interaction_prompt(point, key, label, disabled=disabled)
 
     def draw_interaction_prompt(self, point, key, label, *, disabled=False):
         app = self.app

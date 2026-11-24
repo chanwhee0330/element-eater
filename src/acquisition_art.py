@@ -3,7 +3,7 @@ import json
 import math
 
 from .isometric import Mesh
-from .room import ROOT
+from .room import RESERVOIR_BED, ROOT
 
 
 WINDMILL_HUB_HEIGHT = 94
@@ -158,13 +158,6 @@ class AcquisitionArt:
             self.cable([(left, top+.06), (right, top+.06)])
             self.cable([(left, bottom-.06), (right, bottom-.06)])
 
-    def reservoir_opening(self):
-        room = self.app.room
-        source = room.sources[-1]
-        if source.phase == 'sealed':
-            return 0
-        return min(1, source.age / .36) if source.phase == 'descending' else 1
-
     def reservoir_orb_position(self, source):
         room = self.app.room
         progress = min(1, source.age / room.reservoir['releaseSeconds'])
@@ -174,8 +167,8 @@ class AcquisitionArt:
                               63+(self.app.unit*.55-63)*fall)
 
     def water(self):
-        flooded = self.reservoir_opening() > .65
-        bed = (6.5, 12, 10.6, 17.65)
+        flooded = self.app.room.reservoir_flooded
+        bed = RESERVOIR_BED
         self.stone_floor(bed, (65, 135, 162, 255) if flooded else (129, 120, 126, 255),
                          self.app.view.floor_uv)
         self.cable([(6.5, 17.65), (10.6, 17.65), (10.6, 12)])
@@ -186,7 +179,7 @@ class AcquisitionArt:
     def draw_cistern(self):
         room = self.app.room
         source = room.sources[-1]
-        opening = self.reservoir_opening()
+        opening = room.reservoir_opening
         origin = room.reservoir['origin']
         splash = source.x, source.y
         x,y = self.app.point(*origin)

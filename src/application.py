@@ -7,7 +7,7 @@ import time
 import math
 
 from .room import ROOT, Room, STAGES
-from .boss import GUARDIAN_SHOT_LIFT
+from .boss import GUARDIAN_SHOT_LIFT, SUMMON_SHOCK_AT
 from .elements import ELEMENTS, NAMES
 from .element_master_aura import draw_master_aura
 from .isometric import IsometricRoom
@@ -20,15 +20,22 @@ from .guardian_art import ENDING_RETURN_DELAY, PROLOGUE_SECONDS, GuardianArt
 from .learning_scene import ElementCutscene, MixedElementCutscene, TransformationEffects, smoothstep
 from .quarry_art import QuarryArt
 from .orb_mixer import OrbMixer
+from .animation_audio import CUES, animation_state, collect_animation_sounds, footsteps, mechanism_loops
 
 
 class Application:
     width, height = 1000, 900
     unit = IsometricRoom.sprite_height
     fixed_dt = 1 / 120
+    ambience_channel = 0
+    mechanism_channels = (1, 2)
     stage_fade_out_seconds = .62
     stage_fade_in_seconds = 1.1
     menu = ('계속하기', '현재 방 재시작', '타이틀로 돌아가기', '게임 종료')
+    stage_ambience = {
+        0: 'sanctuary', 1: 'wind', 3: 'hearth', 4: 'wind',
+        5: 'quarry', 6: 'power', 8: 'quarry', 10: 'sanctuary',
+    }
 
     def __init__(self, p, save_path=DEFAULT_SAVE):
         self.p = p
@@ -118,15 +125,89 @@ class Application:
         self.trial_conductor_sheet = None
         self.trial_cutscene = None
         self.sounds = {}
+        self.background_music = None
+        self.background_music_request = None
+        self.ambience = None
+        self.ambience_request = None
+        self.mechanism_sounds = [None] * len(self.mechanism_channels)
         if p.pico2d.audio_on:
+            p.Mix_ReserveChannels(self.mechanism_channels[-1] + 1)
             sound_folder = ROOT / 'assets/audio/gameplay'
-            for cue in (*(f'switch-{element}' for element in ELEMENTS), 'weakness', 'blocked', 'player-hit'):
+            for cue in (*(f'switch-{element}' for element in ELEMENTS), 'weakness', 'blocked',
+                        'player-hit', 'player-attack', 'enemy-hit', *CUES):
                 try:
                     self.sounds[cue] = p.load_wav(str(sound_folder / f'{cue}.wav'))
                 except OSError:
                     continue
+                if cue.startswith('loop-'):
+                    self.sounds[cue].set_volume(9)
+                elif cue in ('footstep', 'prologue-smoke'):
+                    self.sounds[cue].set_volume(64)
             if 'weakness' in self.sounds:
                 self.sounds['boss-shatter'] = self.sounds['weakness']
+            water_footstep = sound_folder / 'footstep-water.wav'
+            if water_footstep.is_file():
+                try:
+                    self.sounds['footstep-water'] = p.load_wav(str(water_footstep))
+                    self.sounds['footstep-water'].set_volume(64)
+                except OSError:
+                    pass
+
+    def set_ambience(self, name):
+        if name == self.ambience_request or not self.p.pico2d.audio_on:
+            return
+        self.ambience_request = name
+        if self.ambience is not None:
+            self.p.Mix_HaltChannel(self.ambience_channel)
+            self.ambience = None
+        if name is None:
+            return
+        try:
+            track = self.p.load_wav(str(ROOT / 'assets/audio/ambience' / f'{name}.wav'))
+        except OSError:
+            return
+        track.set_volume(8)
+        self.p.Mix_PlayChannel(self.ambience_channel, track.wav, -1)
+        self.ambience = track
+
+    def set_background_music(self, name):
+        if name == self.background_music_request or not self.p.pico2d.audio_on:
+            return
+        self.background_music_request = name
+        if self.background_music is not None:
+            self.background_music.stop()
+            self.background_music = None
+        if name is None:
+            return
+        try:
+            track = self.p.load_music(str(ROOT / 'assets/audio/music' / f'{name}.wav'))
+        except OSError:
+            return
+        track.set_volume(12)
+        track.repeat_play()
+        self.background_music = track
+
+    def refresh_background_music(self):
+        guardian = self.room.guardian
+        appeared = guardian is not None and guardian.summon >= SUMMON_SHOCK_AT
+        self.set_background_music('boss' if appeared else 'dungeon')
+
+    def refresh_ambience(self):
+        room = self.room
+        if room.reservoir:
+            water = room.reservoir_opening > .18
+        elif room.garden:
+            water = room.sluice_wheel and room.sluice_pump
+        elif room.trial:
+            water = 0 < room.gate_time < room.gate_open_seconds or room.trial_flow(0) > 0
+        else:
+            self.set_ambience(self.stage_ambience.get(room.stage))
+            return
+        fire = len(room.extinguished) < len(room.fire_barriers)
+        if water:
+            self.set_ambience('water-and-fire' if fire else 'water')
+        else:
+            self.set_ambience('hearth' if fire else None)
 
     def advance_stage(self):
         previous = self.room
@@ -197,6 +278,10 @@ class Application:
             self.guardian_art = None
         self.unit = self.view.sprite_height * (1 if self.room.data.get('layoutRevision') else self.view.reference_scale)
         self.scene = 'play'
+        self.set_prologue_effect_volume(self.room.stage == 0)
+        self.refresh_background_music()
+        self.refresh_ambience()
+        self.set_mechanism_sounds(mechanism_loops(self.room))
         self.stage_fade_out = None
         self.stage_fade_in = 0.0 if self.room.stage == 1 and self.room.elapsed == 0 else None
         self.ending_elapsed = 0
@@ -240,6 +325,10 @@ class Application:
     def return_to_title(self):
         self.save_progress()
         self.scene = 'title'
+        self.set_prologue_effect_volume(False)
+        self.set_background_music(None)
+        self.set_ambience(None)
+        self.set_mechanism_sounds((None, None))
         self.pause(False)
         self.continue_record = self.save_store.load()
         self.title_index = 1
@@ -366,6 +455,7 @@ class Application:
         room, player = self.room, self.room.player
         room.elapsed += dt
         was_moving = player.moving
+        previous_time = player.animation_time
         if self.prologue_read_elapsed is None:
             dx = int('d' in self.keys) - int('a' in self.keys)
             dy = int('s' in self.keys) - int('w' in self.keys)
@@ -375,14 +465,43 @@ class Application:
             if 'ingest' in self.actions and self.near_prologue_tablet:
                 player.moving = False
                 self.prologue_read_elapsed = 0
+                self.play_sound('lever')
         else:
+            previous = self.prologue_read_elapsed
             self.prologue_read_elapsed += dt
+            if previous < 4.25 <= self.prologue_read_elapsed:
+                self.play_sound('prologue-smoke')
             if self.prologue_read_elapsed >= PROLOGUE_SECONDS:
                 self.advance_stage()
                 return
         player.animate(dt, was_moving)
+        if cue := footsteps(player, previous_time, player=True):
+            self.play_sound(cue)
         self.actions.clear()
         self.attack_queued = False
+
+    def set_prologue_effect_volume(self, in_prologue):
+        for cue, sound in self.sounds.items():
+            if cue not in ('footstep', 'footstep-water', 'prologue-smoke') and not cue.startswith('loop-'):
+                sound.set_volume(64 if in_prologue else 128)
+
+    def play_sound(self, cue):
+        sound = self.sounds.get(cue)
+        if sound is None and cue == 'footstep-water':
+            sound = self.sounds.get('footstep')
+        if sound is not None:
+            sound.play()
+
+    def set_mechanism_sounds(self, cues):
+        for index, (channel, cue) in enumerate(zip(self.mechanism_channels, cues)):
+            sound = self.sounds.get(cue)
+            if sound is self.mechanism_sounds[index]:
+                continue
+            if self.mechanism_sounds[index] is not None:
+                self.p.Mix_HaltChannel(channel)
+            if sound is not None:
+                self.p.Mix_PlayChannel(channel, sound.wav, -1)
+            self.mechanism_sounds[index] = sound
 
     def step(self, dt, *, focused=None):
         if self.scene == 'title' or not 0 < dt < float('inf'):
@@ -418,13 +537,16 @@ class Application:
         self.accumulator += min(dt, .25)
         while self.accumulator >= self.fixed_dt:
             if not self.step_ingest_cutscene():
+                previous = animation_state(self.room)
                 self.room.update(self.keys | self.actions | ({'attack'} if self.attack_queued else set()),
                                  self.fixed_dt)
-                for cue in dict.fromkeys(self.room.sound_events):
-                    sound = self.sounds.get(cue)
-                    if sound is not None:
-                        sound.play()
-                self.room.sound_events.clear()
+                collect_animation_sounds(self.room, previous)
+                self.refresh_background_music()
+                self.refresh_ambience()
+                self.set_mechanism_sounds(mechanism_loops(self.room))
+            for cue in dict.fromkeys(self.room.sound_events):
+                self.play_sound(cue)
+            self.room.sound_events.clear()
             self.attack_queued = False
             self.actions.clear()
             self.accumulator -= self.fixed_dt
@@ -1378,6 +1500,9 @@ class Application:
             p.draw_circle(x, y + 13, 18, 243, 102, 80)
 
     def release(self):
+        self.set_background_music(None)
+        self.set_ambience(None)
+        self.set_mechanism_sounds((None, None))
         if self.sounds:
             self.p.Mix_HaltChannel(-1)
             self.sounds.clear()

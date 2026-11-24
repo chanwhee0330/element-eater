@@ -16,6 +16,7 @@ STAGES = {n: ROOT / f'assets/maps/room-{n:02d}/room-{n:02d}.json' for n in range
 
 TILE_WIDTH, TILE_HEIGHT = 48, 30
 RIM_HALF_X, RIM_HALF_Y = 10 / TILE_WIDTH, 10 / TILE_HEIGHT
+RESERVOIR_BED = (6.5, 12, 10.6, 17.65)
 
 
 @dataclass
@@ -335,6 +336,7 @@ class Room:
             return False
         amount = min(self.tuning.heal_amount, self.player.max_hp-self.player.hp)
         self.player.hp += amount
+        self.sound_events.append('heal')
         self.select_element(0)
         self.feedback.append(Feedback(self.player.x, self.player.y-1, f'+{amount}', True))
         return True
@@ -346,6 +348,7 @@ class Room:
             if not self.inventory['lightning'] or self.player.attack_elapsed >= 0 or self.ingest_elapsed >= 0 or self.player.falling:
                 return False
             self.lightning_charged = not self.lightning_charged
+            self.sound_events.append('electric' if self.lightning_charged else 'lever')
             return True
         if self.selected != 'wind':
             return self.heal()
@@ -379,6 +382,7 @@ class Room:
                 enemy.knockback_left = self.wind_enemy_push_seconds
                 enemy.attack_elapsed = -1
         self.select_element(0)
+        self.sound_events.append('gust')
         self.feedback.append(Feedback(player.x + dx, player.y + dy - .35, '돌풍', True, .3, .3))
         return True
 
@@ -418,6 +422,7 @@ class Room:
             path.append((x, y))
         if len(path) == 1:
             return False
+        self.sound_events.append('electric')
         self.lightning_path = tuple(path)
         self.lightning_time = .24
         return True
@@ -474,6 +479,7 @@ class Room:
         return self.consume_earth(x, y, '흙벽')
 
     def consume_earth(self, x, y, label):
+        self.sound_events.append('stone')
         self.select_element(0)
         self.feedback.append(Feedback(x, y - .4, label, True, .55, .55))
         return True
@@ -527,6 +533,7 @@ class Room:
             length = math.hypot(dx, dy)
             self.projectiles.append(Projectile(x, y, dx / length, dy / length, 'enemy',
                                                8, length if targets else 12, 8, element='lightning'))
+            self.sound_events.append('electric')
             self.next_turret = 1 - self.next_turret
             self.turret_timer = .85
 
@@ -731,10 +738,12 @@ class Room:
         self.ingest_elapsed += dt
         source = next(s for s in self.sources if s.id == self.ingest_source)
         if not self.ingest_consumed and self.ingest_elapsed >= self.tuning.ingest_event:
+            self.sound_events.append('ingest')
             source.phase, self.ingest_consumed = 'consumed', True
             if not (self.windmill and source.id == 'first-orb'):
                 source.age = 0
         if self.ingest_elapsed >= self.tuning.ingest_duration:
+            self.sound_events.append(f'switch-{source.element}')
             self.inventory[source.element] += 1
             self.selected = source.element
             if self.selected != 'lightning':
@@ -744,6 +753,22 @@ class Room:
             self.player.animation_time = 0
             if self.debug_cleared and source.id == 'first-orb':
                 self.update_power_circuit(0)
+
+    @property
+    def reservoir_opening(self):
+        if not self.reservoir:
+            return 0
+        source = self.sources[-1]
+        if source.phase == 'sealed':
+            return 0
+        return min(1, source.age / .36) if source.phase == 'descending' else 1
+
+    @property
+    def reservoir_flooded(self):
+        return self.reservoir_opening > .65
+
+    def standing_in_water(self, x, y):
+        return self.reservoir_flooded and contains(RESERVOIR_BED, x, y)
 
     def update_acquisition(self, interact=False):
         trial = self.acquisition
@@ -981,9 +1006,11 @@ class Room:
         elif any(direction) and not actor.wind_sliding:
             actor.knockback = direction
             actor.knockback_left = self.tuning.knockback_seconds
-        if actor.kind != 'hero' and BEATS.get(attack_element) == actor.element:
-            self.sound_events.append('weakness')
+        if actor.kind != 'hero' and amount > 0:
+            cue = 'weakness' if BEATS.get(attack_element) == actor.element else 'enemy-hit'
+            self.sound_events.append(cue)
         if actor.hp == 0:
+            self.sound_events.append('defeat')
             actor.active = False
             actor.attack_elapsed = -1
             self.feedback.append(Feedback(actor.x, actor.y-.5, '', actor.kind != 'hero', .3, .3))
@@ -1000,7 +1027,11 @@ class Room:
         actor.attack_elapsed += dt
         if not actor.attack_emitted and actor.attack_elapsed >= self.tuning.attack_event:
             actor.attack_emitted = True
+            if actor.kind == 'hero':
+                self.sound_events.append('player-attack')
             dx, dy = actor.attack_direction
+            if actor.kind != 'hero':
+                self.sound_events.append('enemy-attack')
             if actor.kind == 'melee':
                 distance = math.hypot(self.player.x-actor.x, self.player.y-actor.y)
                 toward = (self.player.x-actor.x)*dx + (self.player.y-actor.y)*dy
@@ -1071,6 +1102,7 @@ class Room:
                 if (self.tile(shot.x, shot.y, airborne=True) == 3 or hits_rim
                         or not (0 <= shot.x < self.data['columns'] and 0 <= shot.y < self.data['rows'])):
                     shot.active = False
+                    self.sound_events.append('impact')
                     self.feedback.append(Feedback(shot.x, shot.y-.4, '', shot.owner == 'hero', .16, .16))
                     break
                 relay = self.acquisition and self.acquisition.get('relay')
@@ -1104,9 +1136,9 @@ class Room:
                 targets = self.enemies if shot.owner == 'hero' else [self.player]
                 for source in self.sources:
                     if source.solid and math.hypot(source.x-shot.x, source.y-shot.y) <= .53:
-                        if shot.owner == 'hero':
-                            source.hit(shot.element)
-                        elif self.boss:
+                        if shot.owner == 'hero' and source.hit(shot.element):
+                            self.sound_events.append('break' if source.phase == 'breaking' else 'impact')
+                        elif shot.owner != 'hero' and self.boss:
                             continue
                         shot.active = False
                         break
@@ -1602,6 +1634,7 @@ class Room:
         if lasers and lasers.touches_beam(self.player.x, self.player.y, self.radius, self.earth_terrain):
             self.player.x, self.player.y, self.player.facing = self.safe
             self.player.knockback_left = 0
+            self.sound_events.append('electric')
             self.feedback.append(Feedback(self.player.x, self.player.y, '레이저 복구', False))
         self.power_flash = max(0, self.power_flash - dt)
         self.acquisition_relay_flash = max(0, self.acquisition_relay_flash - dt)

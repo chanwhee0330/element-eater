@@ -219,6 +219,7 @@ class Guardian:
         self.fall = 0
 
     def start_transform(self, room, actor):
+        room.sound_events.append('transform')
         self.next_form = random.choice([form for form in FORMS if form != self.form])
         self.swap = 0
         self.clear_attack(room)
@@ -285,6 +286,8 @@ class Guardian:
             previous = self.summon
             self.summon = min(SUMMON_SECONDS,self.summon+dt)
             push_time = min(self.summon, SUMMON_SHOCK_AT+SUMMON_SHOCK_SECONDS) - max(previous, SUMMON_SHOCK_AT)
+            if previous < SUMMON_SHOCK_AT <= self.summon:
+                room.sound_events.append('shockwave')
             if push_time > 0 and not room.player.falling:
                 self.push_from_altar(room, push_time)
             if not self.summoning:
@@ -335,6 +338,7 @@ class Guardian:
             self.target = (player.x, player.y)
             self.heading = math.atan2(dy,dx)
             self.attack_age = 0
+            room.sound_events.append('warning')
         elif distance > 5.5 and not player.falling:
             self.move(room,actor,dx/distance*1.65*dt,dy/distance*1.65*dt)
         self.cooldown = max(0,self.cooldown-dt)
@@ -359,10 +363,13 @@ class Guardian:
         if actor.element == 'earth':
             for i,(x,y) in enumerate(self.earth_points()):
                 if prior < release+i*EARTH_INTERVAL <= age:
+                    room.sound_events.append('stone')
                     room.feedback.append(Feedback(x,y,'',False,.28,.28))
                     if math.hypot(player.x-x,player.y-y) <= 1.02:
                         room.damage(player,10)
         elif actor.element == 'wind':
+            if prior < release <= age:
+                room.sound_events.append('gust')
             duration = max(0,min(release+DASH_SECONDS,age)-max(release,prior))
             if duration:
                 self.move(room,actor,math.cos(self.heading)*6*duration/DASH_SECONDS,
@@ -372,12 +379,14 @@ class Guardian:
         elif actor.element == 'water':
             for i,gap in enumerate(WATER_GAPS):
                 if prior < release+i*WATER_RING_DELAY <= age:
+                    room.sound_events.append('splash')
                     gap += self.heading
                     for j in range(18):
                         angle = gap+j*math.tau/18
                         if abs(angle_delta(angle,gap)) >= .57:
                             self.shot(room,actor,angle,4.4,14,offset=.45)
         elif prior < release <= age:
+            room.sound_events.append('flame' if actor.element == 'fire' else 'electric')
             offsets = FIRE_FAN if actor.element == 'fire' else (0,)
             for offset in offsets:
                 self.shot(room,actor,self.heading+offset,8.7 if actor.element == 'fire' else 14,17)

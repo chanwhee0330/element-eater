@@ -55,6 +55,7 @@ class OrbMixer:
                     self.receipts[self.dragging] = (self.elapsed, self.cursor)
                     if app.room.guardian.reward_loaded:
                         self.activation_started = self.elapsed
+                        app.play_sound('transform')
                     sound = app.sounds.get(f'switch-{self.dragging}')
                     if sound:
                         sound.play()

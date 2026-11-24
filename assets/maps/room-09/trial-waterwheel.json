@@ -1,0 +1,16 @@
+{
+  "image": "trial-waterwheel.png",
+  "frameSize": [
+    184,
+    128
+  ],
+  "pivot": [
+    129,
+    110
+  ],
+  "openingFrames": 8,
+  "activeFrames": 10,
+  "columns": 5,
+  "fps": 15,
+  "pixelsPerTile": 46
+}

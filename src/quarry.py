@@ -13,15 +13,18 @@ class LaserField:
 
     def __init__(self, lasers):
         self.lasers = tuple(map(tuple, lasers))
+        self.row_offset = 0.0
         self.laser_cache = None
 
     def beams(self, terrain):
         # Return (emitter x, visible end x, y, receiver x) from the walls currently standing.
         walls = tuple(t.bounds for t in terrain if t.kind == 'wall')
-        if self.laser_cache is not None and self.laser_cache[0] == walls:
+        key = walls, self.row_offset
+        if self.laser_cache is not None and self.laser_cache[0] == key:
             return self.laser_cache[1]
         beams = []
         for start, receiver, y in self.lasers:
+            y += self.row_offset
             rightward = start < receiver
             stop = receiver
             for left, top, right, bottom in walls:
@@ -32,12 +35,12 @@ class LaserField:
                 elif not rightward and left < start and right > stop:
                     stop = min(start, right)
             beams.append((start, stop, y, receiver))
-        self.laser_cache = walls, tuple(beams)
+        self.laser_cache = key, tuple(beams)
         return self.laser_cache[1]
 
     def touches_beam(self, x, y, radius, terrain):
         reach = radius + self.beam_half_height
-        if not any(abs(y-row) < reach for _, _, row in self.lasers):
+        if not any(abs(y-row-self.row_offset) < reach for _, _, row in self.lasers):
             return False
         return any(abs(y-row) < reach and min(start, stop)-radius < x < max(start, stop)+radius
                    for start, stop, row, _ in self.beams(terrain))

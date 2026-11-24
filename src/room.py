@@ -555,9 +555,18 @@ class Room:
                 look_ahead = math.floor(forward - .5) + 1.5 - forward
             travel = min(step, look_ahead)
             nx, ny = bx + dx * look_ahead, by + dy * look_ahead
-            if (self.trial and not contains(self.puzzle['yard'], nx, ny)) or any(
-                   self.tile(nx + sx, ny + sy, ignore_block=True) >= 3
-                   for sx in (-.49, .49) for sy in (-.49, .49)):
+            samples = max(1, math.ceil(look_ahead / .08))
+            # 다음 칸까지 앞면이 지나가는 범위를 검사해 칸 사이의 얇은 벽도 막는다.
+            blocked = any(
+                self.tile(bx + dx * forward - dy * side, by + dy * forward + dx * side,
+                          ignore_block=True) >= 3
+                for index in range(samples + 1)
+                for forward in (.49 + look_ahead * index / samples,)
+                for side in (-.49, -.32, -.16, 0, .16, .32, .49)
+            )
+            if blocked or (self.trial and not contains(self.puzzle['yard'], nx, ny)) or any(
+                    self.tile(nx + sx, ny + sy, ignore_block=True) >= 3
+                    for sx in (-.49, .49) for sy in (-.49, .49)):
                 self.block_direction = None
                 break
             x, y = bx + dx * travel, by + dy * travel
@@ -1330,20 +1339,26 @@ class Room:
             return self.data['tiles'][y][x]
         return 4
 
-    def fits(self, x, y, safe=False, *, ignore_earth=False):
+    def fits(self, x, y, safe=False, *, ignore_earth=False, ignore_block=False):
         lasers = self.active_lasers
         if lasers and lasers.touches_beam(x, y, self.radius, () if ignore_earth else self.earth_terrain):
             return False
-        if self.reference_art and self.reference_art.get('walledBoundary') and self.tile(x, y, ignore_earth=ignore_earth) == 4:
+        if (self.reference_art and self.reference_art.get('walledBoundary')
+                and self.tile(x, y, ignore_earth=ignore_earth, ignore_block=ignore_block) == 4):
             return False
         for dx in (-self.radius, self.radius):
             for dy in (-self.radius, self.radius):
-                tile = self.tile(x + dx, y + dy, ignore_earth=ignore_earth)
+                tile = self.tile(x + dx, y + dy, ignore_earth=ignore_earth, ignore_block=ignore_block)
                 if tile == 3 or (safe and tile >= 3):
                     return False
         if any(s.solid and math.hypot(x-s.x, y-s.y) < .42+self.radius for s in self.sources):
             return False
         return True
+
+    def counterweight_floor(self, x, y):
+        return (self.tile(x, y, ignore_block=True) < 3
+                and self.fits(x, y, safe=True, ignore_block=True)
+                and not self.blocked_by_wall(x, y, x, y))
 
     def blocked_by_wall(self, x, y, old_x, old_y):
         radius = self.radius

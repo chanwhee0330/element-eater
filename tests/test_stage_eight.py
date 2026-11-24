@@ -43,6 +43,15 @@ class StageEightTests(unittest.TestCase):
         self.assertEqual(room.tile(22.5,16),0)
         self.assertEqual(room.tile(16.5,14.5),0)
 
+    def test_counterweight_stops_at_thin_stone_wall(self):
+        self.face('wind', 9.5, 11.5, 'up')
+        self.tick(1.2, 'skill')
+        self.assertEqual(self.room.block, (9.5, 5.5))
+        self.face('wind', 10.3, 6.2, 'left')
+        self.tick(1.2, 'skill')
+        self.assertEqual(self.room.block, (9.5, 5.5))
+        self.assertIsNone(self.room.block_direction)
+
     def test_transport_gates_and_each_laser(self):
         room = self.room
         self.assertFalse(room.sources)

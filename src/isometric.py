@@ -173,11 +173,15 @@ class IsometricRoom:
 
     def draw_reference_cover(self, rect):
         x0, y0, x1, y1 = rect
-        x, y = self.reference_point((x0 + x1) / 2, (y0 + y1) / 2)
-        image = self.reference_image
+        origin_x, origin_y = self.room.reference_art['originPixels']
+        screen_x, screen_y = self.origin
         scale = self.reference_scale
-        image.clip_draw(x0, image.h - y1, x1 - x0, y1 - y0, x, y,
-                        (x1 - x0) * scale, (y1 - y0) * scale)
+        left, right = (round(screen_x + (x - origin_x) * scale) for x in (x0, x1))
+        top, bottom = (round(screen_y + (y - origin_y) * scale) for y in (y0, y1))
+        source = self.p.SDL_Rect(x0, y0, x1 - x0, y1 - y0)
+        target = self.p.SDL_Rect(left, top, right - left, bottom - top)
+        self.p.SDL_RenderCopy(self.p.pico2d.renderer, self.reference_image.texture,
+                              ctypes.byref(source), ctypes.byref(target))
 
     def draw_wall(self, mesh):
         mesh.draw(self.p, self.atlas, self.origin)
@@ -196,12 +200,19 @@ class IsometricRoom:
                    self.project(right, y + .26), self.project(left, y + .26)),
                   colors=(near, near, far, far))
 
-    def wall_cell(self, x, y, height):
-        mesh = Mesh()
+    def interior_walls(self, tiles, height):
         tile = self.room.data['tileIds']['wall']
-        self.masonry_block(mesh, x, y, x + 1, y + 1, height,
-                           front=self.room.tile(x + .5, y + 1.5) != tile)
-        return mesh
+        for x in range(len(tiles[0])):
+            for top in range(len(tiles)):
+                if tiles[top][x] != tile or (top and tiles[top-1][x] == tile):
+                    continue
+                bottom = top + 1
+                while bottom < len(tiles) and tiles[bottom][x] == tile:
+                    bottom += 1
+                mesh = Mesh()
+                for y in range(top, bottom):
+                    self.masonry_block(mesh, x, y, x + 1, y + 1, height, front=y+1 == bottom)
+                yield bottom, mesh
 
     def masonry_block(self, mesh, left, top, right, bottom, height, *, front=True):
         u0, v0 = self.brick_uv[0]
@@ -226,7 +237,7 @@ class IsometricRoom:
         p.SDL_SetTextureScaleMode(decor_atlas.texture, p.SDL_ScaleModeLinear)
 
         cliff, floor, floor_light, shadows, spikes, rugs, decals, rear, banners = (Mesh() for _ in range(9))
-        walls = []
+        walls = list(self.interior_walls(tiles, 42 if room.stage == 1 else 38))
         randomizer = random.Random(data['seed'])
         for y, row in enumerate(tiles):
             for x, tile in enumerate(row):
@@ -245,8 +256,6 @@ class IsometricRoom:
                 self.floor_quad(floor, x, y, x + 1, y + 1, uv[rotation:] + uv[:rotation], color)
                 self.floor_quad(floor_light, x, y, x + 1, y + 1, None, (197, 157, 127, 41))
                 if tile == ids['wall']:
-                    height = 42 if room.stage == 1 else 38
-                    walls.append((y + 1, self.wall_cell(x, y, height)))
                     if y + 1 < rows and tiles[y + 1][x] in (ids['floor'], ids['mossFloor'], ids['crackedFloor']):
                         self.wall_shadow(shadows, x, x + 1, y + 1)
 
@@ -376,11 +385,11 @@ class IsometricRoom:
                 end_y += 1
             top = y + (half_y if (x, y) in corners else 0)
             bottom = end_y - (half_y if (x, end_y) in corners else 0)
-            yield bottom, self.rim_segment(x - half_x, top, x + half_x, bottom, front=False)
+            yield bottom, self.rim_segment(x - half_x, top, x + half_x, bottom)
         for x, y in sorted(corners):
             yield y + half_y, self.rim_segment(x - half_x, y - half_y, x + half_x, y + half_y)
 
-    def rim_segment(self, x0, y0, x1, y1, *, front=True):
+    def rim_segment(self, x0, y0, x1, y1):
         mesh = Mesh()
         height = 22
         u0, v0 = self.brick_uv[0]
@@ -388,8 +397,7 @@ class IsometricRoom:
         v0 += (v1 - v0) * .6
         u1 = u0 + (u1 - u0) * (x1 - x0)
         uv = ((u0, v0), (u1, v0), (u1, v1), (u0, v1))
-        if front:
-            self.face(mesh, (x0, y1), (x1, y1), height, 0, WALL_FACE, WALL_BASE, uv=uv)
+        self.face(mesh, (x0, y1), (x1, y1), height, 0, WALL_FACE, WALL_BASE, uv=uv)
         self.wall_cap(mesh, x0, y0, x1, y1, height)
         self.face(mesh, (x0, y1), (x1, y1), height, height - 3, WALL_TOP, WALL_FACE, uv=uv)
         return mesh

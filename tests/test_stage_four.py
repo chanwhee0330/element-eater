@@ -276,6 +276,17 @@ class StageFourTests(unittest.TestCase):
         self.assertEqual((room.player.x,room.player.y,room.player.hp), (10.75,14.3,76))
         self.assertTrue(room.vine_open)
 
+    def test_counterweight_stops_before_closed_vines_between_cells(self):
+        room = Room(stage=4)
+        room.inventory['wind'] = 1
+        room.selected = 'wind'
+        room.player.x, room.player.y, room.player.facing = 11.5, 22.5, 'up'
+        self.assertTrue(room.skill())
+        advance(room, 1.2)
+        self.assertFalse(room.vine_open)
+        self.assertEqual(room.block, (11.5, 18.5))
+        self.assertIsNone(room.block_direction)
+
     def test_ledge_stops_a_wrong_push_and_the_block_can_be_reset(self):
         room = Room(stage=4)
         room.inventory['wind'] = 1

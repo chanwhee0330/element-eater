@@ -10,7 +10,7 @@ from .room import ROOT, Room, STAGES
 from .boss import GUARDIAN_SHOT_LIFT, SUMMON_SHOCK_AT
 from .elements import ELEMENTS, NAMES
 from .element_master_aura import draw_master_aura
-from .isometric import IsometricRoom
+from .isometric import IsometricRoom, Mesh
 from .ui import GameUI
 from .savegame import DEFAULT_SAVE, SaveStore, restore
 from .title import draw_title, hit_test
@@ -1153,6 +1153,44 @@ class Application:
         scale = self.view.reference_scale
         self.block_image.draw(x, y + 12 * scale, 57 * scale, 51 * scale)
 
+    def draw_counterweight_floor(self):
+        room = self.room
+        if not room.puzzle or room.plate_pressed or room.player.falling:
+            return
+        player = room.player
+        start, plate = room.puzzle['start'], room.puzzle['plate']
+        left, top, right, bottom = room.puzzle.get('yard', (
+            min(start[0], plate[0])-3, min(start[1], plate[1])-3,
+            max(start[0], plate[0])+3, max(start[1], plate[1])+3,
+        ))
+        if not (left-.5 <= player.x <= right+.5 and top-.5 <= player.y <= bottom+.5):
+            return
+        mesh = Mesh()
+        floor = {}
+        for y in range(math.floor(player.y)-4, math.floor(player.y)+5):
+            for x in range(math.floor(player.x)-4, math.floor(player.x)+5):
+                floor[x, y] = room.counterweight_floor(x+.5, y+.5)
+        for (x, y), clear in floor.items():
+            if not clear or not (left <= x+.5 <= right and top <= y+.5 <= bottom):
+                continue
+            distance = math.dist((x+.5, y+.5), (player.x, player.y))
+            strength = min(1, max(0, (3.65-distance)/1.25))
+            if not strength:
+                continue
+            self.view.floor_quad(mesh, x+.06, y+.06, x+.94, y+.94, None,
+                                 (125, 219, 198, round(33*strength)))
+            for dx, dy, bounds in (
+                (-1, 0, (x+.06, y+.06, x+.11, y+.94)),
+                (1, 0, (x+.89, y+.06, x+.94, y+.94)),
+                (0, -1, (x+.06, y+.06, x+.94, y+.12)),
+                (0, 1, (x+.06, y+.88, x+.94, y+.94)),
+            ):
+                edge_x, edge_y = x+.5+dx*.36, y+.5+dy*.36
+                if not floor.get((x+dx, y+dy)) or not room.counterweight_floor(edge_x, edge_y):
+                    self.view.floor_quad(mesh, *bounds, None, (250, 207, 134, round(190*strength)))
+        self.ui.begin()
+        mesh.draw(self.p, offset=self.view.origin)
+
     def exit_visual(self):
         return self.room.exit_open, (116, 202, 178)
 
@@ -1481,6 +1519,7 @@ class Application:
         layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
         for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
             draw_item(*args)
+        self.draw_counterweight_floor()
         if self.room.quarry:
             self.quarry_art.hints()
         if self.room.lightning_time:

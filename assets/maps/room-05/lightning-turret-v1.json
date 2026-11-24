@@ -1,0 +1,17 @@
+{
+  "image": "lightning-turret-v1.png",
+  "clip": [
+    237,
+    333,
+    747,
+    567
+  ],
+  "muzzlePixelsTopLeft": [
+    12,
+    254
+  ],
+  "authoring": {
+    "tool": "ImageGen",
+    "prompt": "One standalone transparent game sprite for an ancient lightning cannon turret, intended to replace the two small coil boxes visible on the right side of the supplied game screenshot (reference for camera, sizing and materials only). EXACT orientation: the short horizontal cannon barrel points SCREEN LEFT, nearly horizontal, with its muzzle at the left silhouette edge and about halfway up; the right side shows a compact enclosed generator and copper coils. Match the slightly elevated top-down RPG camera in the reference, with visible top and front surfaces, no perspective horizon. Compact stocky silhouette, dark purplish slate stone base with chamfered edges, chunky bronze/brass armor, copper winding on the short left barrel, a small clear pale violet insulator crystal held in a metal cradle near the muzzle; warm highlights and restrained cool violet accents. Hand-painted game sprite with clean dark outline, crisp chunky details, no tiny busy greebles. Designed to remain recognizable when reduced to around 72 px wide. Body centered in a square canvas, full silhouette with comfortable transparent margins on all sides. Absolutely no scene, platform floor, ground shadow, fire, particles, detached sparks, muzzle flash, text, character, alternate variants, or UI. The background itself must be truly transparent RGBA. The machine looks believable and readable at a glance."
+  }
+}

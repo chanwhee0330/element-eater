@@ -919,6 +919,9 @@ class Application:
             layers.append((self.room.forge['origin'][1], self.acquisition_art.draw_forge, ()))
         if self.room.windmill:
             layers.append((self.room.windmill['base'][3], self.acquisition_art.draw_windmill, ()))
+        if self.room.turret_room:
+            layers.extend((y, self.acquisition_art.draw_turret, (index,))
+                          for index, (_, y) in enumerate(self.room.turret_room['emitters']))
         if self.room.capacitor:
             layers.append((self.room.sources[-1].y, self.acquisition_art.draw_capacitor, ()))
             if not self.room.learned_room_element:
@@ -1001,6 +1004,7 @@ class Application:
         self.acquisition_art.forge_props.clear()
         self.acquisition_art.wind_props.clear()
         self.acquisition_art.quarry_props = None
+        self.acquisition_art.turret_image = None
         self.acquisition_art.powerstation_props = None
         self.images.clear()
         self.view.release()

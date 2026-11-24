@@ -66,9 +66,12 @@ class AcquisitionArt:
                            for name in ('wind-vent', 'mist-high', 'mist-low', 'counterweight-props')}
         for name in ('mist-high', 'mist-low', 'counterweight-props'):
             self.p.SDL_SetTextureScaleMode(self.wind_props[name].texture, self.p.SDL_ScaleModeLinear)
-        path = ROOT / 'assets/maps/room-05/rockfall-props.png'
-        self.quarry_props = self.p.load_image(str(path))
+        quarry_folder = ROOT / 'assets/maps/room-05'
+        self.quarry_props = self.p.load_image(str(quarry_folder / 'rockfall-props.png'))
         self.p.SDL_SetTextureScaleMode(self.quarry_props.texture, self.p.SDL_ScaleModeLinear)
+        self.turret_spec = json.loads((quarry_folder / 'lightning-turret-v1.json').read_text(encoding='utf-8'))
+        self.turret_image = self.p.load_image(str(quarry_folder / self.turret_spec['image']))
+        self.p.SDL_SetTextureScaleMode(self.turret_image.texture, self.p.SDL_ScaleModeLinear)
         path = ROOT / 'assets/maps/room-06/powerstation-props.png'
         self.powerstation_props = self.p.load_image(str(path))
         self.p.SDL_SetTextureScaleMode(self.powerstation_props.texture, self.p.SDL_ScaleModeLinear)
@@ -442,12 +445,6 @@ class AcquisitionArt:
 
     def earth(self):
         room = self.app.room
-        for index, (x, y) in enumerate(room.turret_room['emitters']):
-            px, py = self.app.point(x, y)
-            level = 2 if not room.turrets_stopped else 0
-            self.app.conductor_images[level].draw(px, py+13, 67, 63)
-            if level and (room.elapsed * 3 + index*.55) % 1 < .48:
-                self.app.draw_electric_arc(px, py+22, px-23, py+15, 4, 204, index)
         sx, sy = room.turret_room['switch']
         for x in (sx - 1.05, sx + 1.02):
             self.cable([(sx, sy), (sx, sy - .72), (x, sy - .72)], room.turrets_stopped)
@@ -455,6 +452,29 @@ class AcquisitionArt:
             self.app.conductor_images[0 if room.turrets_stopped else 1].draw(px, py+12, 38, 37)
         if room.permanent_bridge:
             self.bridge(room.permanent_bridge, 'iron')
+
+    def draw_turret(self, index):
+        app, room, p = self.app, self.app.room, self.p
+        x, y = room.turret_room['emitters'][index]
+        px, py = app.point(x, y, 21)
+        left, bottom, width, height = self.turret_spec['clip']
+        muzzle_x, muzzle_y = self.turret_spec['muzzlePixelsTopLeft']
+        scale = 1.58 * app.view.tile_width / width
+        image = self.turret_image
+        if room.turrets_stopped:
+            p.SDL_SetTextureColorMod(image.texture, 159, 153, 158)
+        image.clip_draw(left, bottom, width, height,
+                        px + (width/2-muzzle_x)*scale, py + (muzzle_y-height/2)*scale,
+                        width*scale, height*scale)
+        if room.turrets_stopped:
+            p.SDL_SetTextureColorMod(image.texture, 255, 255, 255)
+            return
+        if (room.player.y < room.turret_room['activateY']
+                and index != room.next_turret and room.turret_timer > .69):
+            flash = min(1, (room.turret_timer - .69) / .16)
+            app.ui.begin()
+            app.ui.diamond(px, py, 6*flash, (255, 224, 151, round(235*flash)))
+            app.draw_electric_arc(px, py, px-24*flash, py, 4, round(231*flash), int(room.elapsed*45))
 
     def lightning(self):
         room = self.app.room

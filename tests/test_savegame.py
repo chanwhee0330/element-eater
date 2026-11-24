@@ -2,12 +2,14 @@
 from dataclasses import asdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import Mock
 import json
 import unittest
 
 from src.room import Room
 from src.savegame import SaveStore, restore
 from src.combat import Projectile
+from src.application import Application
 
 
 class SavegameTests(unittest.TestCase):
@@ -20,6 +22,18 @@ class SavegameTests(unittest.TestCase):
     def test_missing_file_has_no_continue(self):
         self.assertIsNone(self.store.load())
         self.assertFalse(self.path.exists())
+
+    def test_new_game_clears_old_progress_but_prologue_practice_keeps_it(self):
+        self.store.write(Room(stage=5))
+        app = Application.__new__(Application)
+        app.enter_play = Mock()
+        app.save_store = self.store
+        app.continue_record = self.store.load()
+        app.new_game(0, practice=True)
+        self.assertEqual(self.store.load()['stage'], 5)
+        app.new_game(0)
+        self.assertFalse(self.path.exists())
+        self.assertIsNone(app.continue_record)
 
     def test_progress_health_enemies_and_projectiles_round_trip(self):
         room = Room()

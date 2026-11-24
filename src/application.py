@@ -307,6 +307,14 @@ class Application:
         self.practice = practice
         self.room = Room(stage=stage)
         self.enter_play()
+        if stage == 0 and not practice:
+            try:
+                self.save_store.clear()
+                self.continue_record = None
+                self.save_error = ''
+            except OSError as exc:
+                self.save_error = '이전 진행 상황을 초기화하지 못했습니다.'
+                print(f'{self.save_error} {exc}', file=sys.stderr)
         self.save_progress()
 
     def continue_game(self):

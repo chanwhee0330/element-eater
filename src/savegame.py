@@ -162,7 +162,10 @@ def actor_from_data(data, template, room, *, recover_puzzle_layout=False):
         number(data[key], 0, maximum)
     if type(data['burn_ticks']) is not int or not 0 <= data['burn_ticks'] <= 3:
         raise ValueError('화상 상태 불일치')
-    number(data['burn_delay'], 0, .6 if data['burn_ticks'] else 0)
+    number(data['burn_delay'], 0, .6)
+    if not data['burn_ticks'] and data['burn_delay']:
+        # 이전 저장에서 변신·파쇄·디버그 처치 후 남은 화상 시간을 지운다.
+        data = dict(data, burn_delay=0)
     number(data['attack_elapsed'], -1, room.tuning.attack_duration)
     for key in ('active', 'moving', 'attack_emitted', 'wind_sliding'):
         boolean(data[key])
@@ -518,7 +521,12 @@ def restore(record, room):
     for shot in shots:
         if not isinstance(shot, dict) or set(shot) != {f.name for f in fields(Projectile)}:
             raise ValueError('탄환 형식 불일치')
-        if shot['owner'] not in ('hero','enemy') or shot['element'] not in ('neutral','water','fire','wind','earth','lightning'):
+        if shot['owner'] not in ('hero', 'enemy'):
+            raise ValueError('탄환 종류 불일치')
+        if shot['element'] == 'mixed':
+            if shot['owner'] != 'hero' or not candidate.guardian or not candidate.guardian.reward_tasted:
+                raise ValueError('혼합 탄환 상태 불일치')
+        elif shot['element'] not in ('neutral', *ELEMENTS):
             raise ValueError('탄환 종류 불일치')
         for key in ('x', 'y', 'dx', 'dy', 'speed', 'remaining', 'age'):
             number(shot[key])
@@ -564,7 +572,7 @@ class SaveStore:
             'player': asdict(room.player), 'enemies': [asdict(e) for e in room.enemies],
             'safe': list(room.safe), 'aggro': room.aggro, 'elapsed': room.elapsed,
             'spike_contact':room.spike_contact,
-            'projectiles':[asdict(s) for s in room.projectiles if s.element != 'mixed'],
+            'projectiles':[asdict(s) for s in room.projectiles],
             'inventory':dict(room.inventory),'selected':room.selected,'sources':[asdict(s) for s in room.sources],
             'lightning_charged': room.lightning_charged, 'lightning_attack': room.lightning_attack,
             'fire_aggro':room.fire_aggro,'ingest_elapsed':room.ingest_elapsed,'ingest_source':room.ingest_source,

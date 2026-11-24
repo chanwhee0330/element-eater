@@ -255,6 +255,7 @@ class Room:
                 self.damage(enemy, enemy.hp)
             enemy.hp = 0
             enemy.burn_ticks = 0
+            enemy.burn_delay = 0
             enemy.wind_sliding = False
             enemy.knockback_left = 0
         self.projectiles.clear()
@@ -393,7 +394,8 @@ class Room:
         jump_range = self.tuning.lightning_jump_range / unit
         dx, dy = player.attack_direction
         candidates = [enemy for enemy in self.enemies if enemy.active and not enemy.falling
-                      and not enemy.invulnerable and enemy.element in ('neutral', BEATS['lightning'])]
+                      and not enemy.invulnerable and enemy.element in ('neutral', BEATS['lightning'])
+                      and (not self.guardian or enemy is not self.enemies[0] or self.boss_exposed)]
         x, y = player.x, player.y
         path = [(x, y)]
         for _ in range(self.tuning.lightning_max_targets):

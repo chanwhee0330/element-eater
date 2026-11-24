@@ -81,6 +81,21 @@ class GuardianRoomTests(unittest.TestCase):
                     self.assertEqual(actor.hp,prior-15 if i<4 else prior)
                     self.assertGreater(((x-actor.x)**2+(y-actor.y)**2)**.5,.42)
 
+    def test_charged_lightning_skips_the_guardian_during_transformation(self):
+        room = self.room
+        guardian, actor = enter_battle(room)
+        guardian.form = actor.element = 'water'
+        room.player.x, room.player.y, room.player.facing = 15, 13.25, 'up'
+        room.selected = 'lightning'
+        room.lightning_charged = True
+        guardian.start_transform(room, actor)
+        self.assertTrue(room.start_attack(room.player))
+        room.attack_tick(room.player, room.tuning.attack_event)
+        self.assertEqual(actor.hp, actor.max_hp)
+        self.assertTrue(room.lightning_charged)
+        self.assertFalse(room.lightning_path)
+        self.assertEqual([shot.element for shot in room.projectiles], ['lightning'])
+
     def test_shared_health_and_timed_random_swap(self):
         room = self.room
         guardian,actor = enter_battle(room)
@@ -98,6 +113,36 @@ class GuardianRoomTests(unittest.TestCase):
         advance(room,guardian.clip('transform').duration)
         self.assertEqual((guardian.form,actor.element,actor.hp),('water','water',290))
         self.assertTrue(room.boss_exposed)
+
+    def test_continue_after_burning_guardian_transforms_or_falls(self):
+        for hp in (30, 450):
+            with self.subTest(hp=hp), TemporaryDirectory() as tmp:
+                room = Room(stage=10)
+                guardian, actor = enter_battle(room)
+                guardian.form = actor.element = 'wind'
+                actor.hp = hp
+                for _ in range(2 if hp == 30 else 1):
+                    room.projectiles.append(
+                        Projectile(actor.x, actor.y+.01, 0, -1, 'hero', 8, 2, 15, element='fire'))
+                    room.update_projectiles(1/120)
+                if hp != 30:
+                    self.assertGreater(actor.burn_ticks, 0)
+                    guardian.form_left = 1/120
+                    room.update(set(), 1/120)
+                    self.assertEqual(guardian.swap, 0)
+                else:
+                    self.assertGreaterEqual(guardian.fall, 0)
+                self.assertEqual((actor.burn_ticks, actor.burn_delay), (0, 0))
+
+                store = SaveStore(Path(tmp) / 'continue.json')
+                # 수정 전 자동 저장도 그대로 이어갈 수 있어야 한다.
+                actor.burn_delay = .4
+                store.write(room)
+                record = store.load()
+                self.assertIsNotNone(record)
+                restored = Room(stage=10)
+                restore(record, restored)
+                self.assertEqual((restored.enemies[0].burn_ticks, restored.enemies[0].burn_delay), (0, 0))
 
     def test_continue_retains_selected_form_and_timer(self):
         room = self.room
@@ -187,6 +232,12 @@ class GuardianRoomTests(unittest.TestCase):
         resumed.update({'attack'}, 1/120)
         advance(resumed, .4)
         self.assertEqual([shot.element for shot in resumed.projectiles], ['mixed'])
+        shot, = resumed.projectiles
+        with TemporaryDirectory() as directory:
+            store = SaveStore(Path(directory) / 'continue.json')
+            store.write(resumed)
+            restore(store.load(), resumed)
+        self.assertEqual(resumed.projectiles, [shot])
         advance(resumed, 1)
         self.assertFalse(resumed.projectiles)
         self.assertIsNone(resumed.outcome)

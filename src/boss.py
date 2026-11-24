@@ -220,6 +220,7 @@ class Guardian:
         if actor.hp != 0:
             return
         actor.burn_ticks = 0
+        actor.burn_delay = 0
         actor.knockback_left = 0
         self.clear_attack(room)
         self.fall = 0
@@ -230,6 +231,7 @@ class Guardian:
         self.swap = 0
         self.clear_attack(room)
         actor.burn_ticks = 0
+        actor.burn_delay = 0
         actor.knockback_left = 0
 
     def debug_prepare(self, room):
@@ -248,6 +250,7 @@ class Guardian:
         actor.hp = 1
         actor.attack_elapsed = -1
         actor.burn_ticks = 0
+        actor.burn_delay = 0
         actor.knockback_left = 0
         actor.invulnerable = 0
         self.form_left = self.spec['formSeconds']

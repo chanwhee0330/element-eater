@@ -12,7 +12,7 @@ WIND_ORB_FLIGHT_END = .87
 COUNTERWEIGHT_SPRITES = {
     'socket': ((165, 162, 429, 298), (52, 34), 0),
     'lever': ((895, 160, 380, 369), (34, 34), 8),
-    'stone': ((1592, 160, 408, 431), (49, 48), 10),
+    'stone': ((1592, 160, 408, 431), (49, 36), 4),
 }
 ROCKFALL_BED = (153, 137, 452, 443)
 ROCKFALL_BOULDER = (837, 100, 500, 514)
@@ -562,14 +562,14 @@ class AcquisitionArt:
         view.wall_shadow(mesh, bounds[0], bounds[2], bounds[3])
         mesh.draw(self.p, offset=view.origin)
         mesh = Mesh()
-        view.masonry_block(mesh, *bounds, 5 + 42 * level, front=front)
+        view.masonry_block(mesh, *bounds, 5 + 18 * level, front=front)
         view.draw_wall(mesh)
         if pillar:
             left, _, right, bottom = bounds
             x, y = self.app.point((left + right) / 2, bottom)
             sx, sy, sw, sh = WALL_PIER
             exposure = .10 + .90 * level
-            height = 61 * exposure
+            height = 31 * exposure
             clip_height = round(sh * exposure)
             self.powerstation_props.clip_draw(sx, sy + sh - clip_height, sw, clip_height,
                                               x, y + height / 2, min(40, (right-left)*view.tile_width), height)

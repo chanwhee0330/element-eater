@@ -1189,6 +1189,8 @@
       ]
     ],
     "coverPixels": [],
+    "wallOpenings": [[24, 16, 20], [1, 16, 20]],
+    "doorWallPixels": [652, 788],
     "walledBoundary": true,
     "doorPixels": [
       686,

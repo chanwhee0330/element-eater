@@ -80,28 +80,71 @@ class Room:
         self.tuning = CombatTuning()
         self.reference_art = self.data.get('referenceArt')
         self.rear_edges = set()
-        openings = {tuple(edge) for edge in self.data.get('openRims', ())}
-        self.rim_edges = ([edge for edge in self.build_rim_edges() if (*edge[0], edge[2]) not in openings]
-                          if not self.reference_art and 'floorRegions' in self.data else [])
+        self.rim_half_x, self.rim_half_y = RIM_HALF_X, RIM_HALF_Y
+        self.reference_door_sides = ()
+        if self.reference_art and 'wallOpenings' in self.reference_art:
+            art = self.reference_art
+            unit = art['pixelsPerTile'] * art['minimumScale']
+            self.rim_half_x = self.rim_half_y = 10 / unit
+            self.rim_edges = self.build_reference_rim_edges(art)
+            if 'doorWallPixels' in art:
+                self.reference_door_sides = tuple(self.reference_door_wall_bounds(art))
+        elif not self.reference_art and 'floorRegions' in self.data:
+            openings = {tuple(edge) for edge in self.data.get('openRims', ())}
+            self.rim_edges = [edge for edge in self.build_rim_edges() if (*edge[0], edge[2]) not in openings]
+        else:
+            self.rim_edges = []
         horizontal = {point for start, end, axis in self.rim_edges if axis == 'horizontal' for point in (start, end)}
         vertical = {point for start, end, axis in self.rim_edges if axis == 'vertical' for point in (start, end)}
         self.rim_corners = horizontal & vertical
-        self.wall_bounds = {}
+        wall_bounds = {}
         for start, end, axis in self.rim_edges:
             x, y = start
             end_x, end_y = end
             if axis == 'horizontal':
-                left = x - (RIM_HALF_X if start in self.rim_corners else 0)
-                right = end_x + (RIM_HALF_X if end in self.rim_corners else 0)
-                bounds = (left, y - RIM_HALF_Y, right, y + RIM_HALF_Y)
+                left = x - (self.rim_half_x if start in self.rim_corners else 0)
+                right = end_x + (self.rim_half_x if end in self.rim_corners else 0)
+                bounds = (left, y - self.rim_half_y, right, y + self.rim_half_y)
             else:
-                top = y - (RIM_HALF_Y if start in self.rim_corners else 0)
-                bottom = end_y + (RIM_HALF_Y if end in self.rim_corners else 0)
-                bounds = (x - RIM_HALF_X, top, x + RIM_HALF_X, bottom)
-            self.wall_bounds[x, y, axis] = bounds
-        self.wall_bounds.update({(x, y, 'horizontal'): (x, y - .24, x + 1, y)
+                top = y - (self.rim_half_y if start in self.rim_corners else 0)
+                bottom = end_y + (self.rim_half_y if end in self.rim_corners else 0)
+                bounds = (x - self.rim_half_x, top, x + self.rim_half_x, bottom)
+            wall_bounds[x, y, axis] = bounds
+        wall_bounds.update({(x, y, 'horizontal'): (x, y - .24, x + 1, y)
                                  for x, y in self.rear_edges})
+        wall_bounds.update({('door', index): bounds
+                                 for index, bounds in enumerate(self.reference_door_sides)})
+        # 레퍼런스 방의 외벽은 이동을 막고, 기존 스킬의 배치 범위에는 관여하지 않는다.
+        self.reference_movement_walls = tuple(wall_bounds.values()) if self.reference_art else ()
+        self.wall_bounds = {} if self.reference_art else wall_bounds
         self.reset()
+
+    def build_reference_rim_edges(self, art):
+        cells = {(x, y) for left, top, right, bottom in art['walkable']
+                 for y in range(top, bottom) for x in range(left, right)}
+        openings = {(x, y) for y, left, right in art['wallOpenings'] for x in range(left, right)}
+        open_banks = {(x, y) for left, top, right, bottom in art.get('openCliffs', ())
+                      for y in range(top, bottom) for x in (left, right)}
+        edges = []
+        for x, y in sorted(cells, key=lambda point: (point[1], point[0])):
+            if (x, y - 1) not in cells and (x, y - 2) not in cells and (x, y) not in openings:
+                edges.append(((x, y), (x + 1, y), 'horizontal'))
+            if (x, y + 1) not in cells and (x, y + 1) not in openings:
+                edges.append(((x, y + 1), (x + 1, y + 1), 'horizontal'))
+            for edge_x, neighbor in ((x, x - 1), (x + 1, x + 1)):
+                if (neighbor, y) not in cells and (edge_x, y) not in open_banks:
+                    edges.append(((edge_x, y), (edge_x, y + 1), 'vertical'))
+        return edges
+
+    def reference_door_wall_bounds(self, art):
+        door_left, _, door_right, door_bottom = art['doorPixels']
+        span_left, span_right = art['doorWallPixels']
+        origin_x, origin_y = art['originPixels']
+        unit = art['pixelsPerTile']
+        base = (door_bottom - origin_y) / unit
+        for start, end in ((span_left, door_left), (door_right, span_right)):
+            for a in range(start, end, unit):
+                yield (a - origin_x) / unit, base - .24, (min(a + unit, end) - origin_x) / unit, base
 
     def build_rim_edges(self):
         arena = self.data['floorRegions'][0]
@@ -465,7 +508,7 @@ class Room:
         # 벽의 면 전체를 검사해 기존 바닥의 가장자리나 물체와 겹치지 않게 한다.
         if any(self.tile(x + half_x * i / 4, y + half_y * j / 4, ignore_earth=True) >= 3
                or self.tile(x + half_x * i / 4, y + half_y * j / 4) >= 3
-               or self.blocked_by_wall(x + half_x * i / 4, y + half_y * j / 4, x, y)
+               or self.blocked_by_wall(x + half_x * i / 4, y + half_y * j / 4, x, y, include_reference_rim=False)
                for i in range(-4, 5) for j in range(-4, 5)):
             return False
         occupants = [(actor.x, actor.y, self.radius) for actor in (player, *self.enemies) if actor.active]
@@ -1357,16 +1400,12 @@ class Room:
             return False
         return True
 
-    def counterweight_floor(self, x, y):
-        return (self.tile(x, y, ignore_block=True) < 3
-                and self.fits(x, y, safe=True, ignore_block=True)
-                and not self.blocked_by_wall(x, y, x, y))
-
-    def blocked_by_wall(self, x, y, old_x, old_y):
+    def blocked_by_wall(self, x, y, old_x, old_y, *, include_reference_rim=True):
         radius = self.radius
         # 세로 투영에서 발밑 충돌 폭도 함께 줄인다.
-        depth = radius * TILE_HEIGHT / TILE_WIDTH
-        for left, top, right, bottom in self.wall_bounds.values():
+        depth = radius if self.reference_art else radius * TILE_HEIGHT / TILE_WIDTH
+        walls = self.reference_movement_walls if include_reference_rim and self.reference_art else self.wall_bounds.values()
+        for left, top, right, bottom in walls:
             if not (left - radius < x < right + radius and top - depth < y < bottom + depth):
                 continue
             if not (left - radius < old_x < right + radius and top - depth < old_y < bottom + depth):

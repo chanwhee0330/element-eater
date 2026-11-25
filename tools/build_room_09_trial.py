@@ -78,12 +78,6 @@ def carve_hint(art, index, floor_x, floor_y):
 def build():
     art = DungeonTerrain(UNIT, ORIGIN, FLOOR, 909, (24,17,22), (1,18,21))
     art.rug(18.85,3,20.15,25)
-    art.rims()
-    for l,t,r,b in COVER:
-        x,y = art.point(l,t)
-        xx,yy = art.point(r,b)
-        art.ledge(x,y,xx-x,yy-y)
-    art.door(DOOR,(600,810))
     for wire in WIRES:
         path = [art.point(*p) for p in wire]
         for width, color in ((6,'#30242c'), (3,'#8d684e'), (1,'#b49171')):
@@ -109,7 +103,8 @@ def build():
                    for i,(elem,role,x,y) in enumerate(enemies,1)],
         'referenceArt':{'image':'trial-terrain.png','minimumScale':1.45,'pixelsPerTile':UNIT,
                         'originPixels':ORIGIN,'walkable':FLOOR,'cover':COVER,
-                        'coverPixels':[[*art.point(l,t),*art.point(r,b)] for l,t,r,b in COVER],
+                        'coverPixels':[],'wallOpenings':[(28,25,27),(1,18,21)],
+                        'doorWallPixels':(600,810),
                         'doorPixels':DOOR,'walledBoundary':True},
         'stonePuzzle':{'start':[27.5,24.5],'plate':[31.5,22.5],'reset':[26.5,27.45],
                        'gate':DRAIN_GATE,'gatePixels':[*art.point(*DRAIN_GATE[:2]),*art.point(*DRAIN_GATE[2:])],

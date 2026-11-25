@@ -12,11 +12,15 @@ WALL_TOP = (151, 176, 238, 255)
 WALL_LIP = (205, 221, 255, 255)
 WALL_FACE = (144, 157, 198, 255)
 WALL_BASE = (87, 100, 148, 255)
+OBSTACLE_CAP = ((34, 73, 76, 255), (86, 140, 134, 255), (169, 222, 199, 255))
+OBSTACLE_FACE = (65, 101, 101, 255)
+OBSTACLE_BASE = (30, 53, 61, 255)
 
 
 class Mesh:
     """SDL이 한 번에 그릴 사각형과 색상 정점."""
     def __init__(self):
+        self.wall_sprite = None
         self.vertices = []
         self.indices = []
 
@@ -26,13 +30,13 @@ class Mesh:
         self.vertices.extend(zip(points, colors or (color,) * 4, uv))
         self.indices.extend(index + i for i in (0, 1, 2, 0, 2, 3))
 
-    def draw(self, p, image=None, offset=(0, 0)):
+    def draw(self, p, image=None, offset=(0, 0), *, opacity=255):
         if not self.vertices:
             return
         dx, dy = offset
         vertices = (p.SDL_Vertex * len(self.vertices))(*(
-            p.SDL_Vertex(p.SDL_FPoint(x + dx, y + dy), p.SDL_Color(*rgba), p.SDL_FPoint(u, v))
-            for (x, y), rgba, (u, v) in self.vertices
+            p.SDL_Vertex(p.SDL_FPoint(x + dx, y + dy), p.SDL_Color(r, g, b, a * opacity // 255), p.SDL_FPoint(u, v))
+            for (x, y), (r, g, b, a), (u, v) in self.vertices
         ))
         indices = (ctypes.c_int * len(self.indices))(*self.indices)
         if p.SDL_RenderGeometry(p.pico2d.renderer, image.texture if image else None,
@@ -50,7 +54,9 @@ def atlas_uv(image, col, row, columns, rows):
 class IsometricRoom:
     tile_width, tile_height = TILE_WIDTH, TILE_HEIGHT
     sprite_height = 54
-    rear_wall_height = 104
+    rear_wall_height = 128
+    rim_wall_height = 30
+    interior_wall_height = 16
 
     def __init__(self, p, width, height):
         self.p, self.width, self.height = p, width, height
@@ -62,6 +68,8 @@ class IsometricRoom:
         )
         self.cache = {}
         self.reference_images = {}
+        self.reference_wall_cache = {}
+        self.foliage_lifts = {}
         self.reference_image = None
         self.reference_scale = 1
         self.shadow = Mesh()
@@ -89,18 +97,27 @@ class IsometricRoom:
 
     def load(self, room):
         self.room = room
+        self.foliage_lifts.clear()
         self.reference_image = None
         self.reference_scale = 1
         self.tile_width, self.tile_height = type(self).tile_width, type(self).tile_height
         if room.reference_art:
             path = room.map_path.parent / room.reference_art['image']
             if path not in self.reference_images:
-                self.reference_images[path] = self.p.load_image(str(path))
+                image = self.p.load_image(str(path))
+                self.p.SDL_SetTextureBlendMode(image.texture, self.p.SDL_BLENDMODE_BLEND)
+                self.reference_images[path] = image
             self.reference_image = self.reference_images[path]
             self.reference_scale = max(room.reference_art.get('minimumScale', 1), self.width / self.reference_image.w,
                                        self.height / self.reference_image.h)
             self.tile_width = self.tile_height = room.reference_art['pixelsPerTile'] * self.reference_scale
             self.walls = []
+            if 'wallOpenings' in room.reference_art:
+                if room.map_path not in self.reference_wall_cache:
+                    walls = list(self.build_reference_walls(room.reference_art))
+                    texture = self.cache_reference_wall_art(walls)
+                    self.reference_wall_cache[room.map_path] = texture, walls
+                _, self.walls = self.reference_wall_cache[room.map_path]
             self.follow(room.player.x, room.player.y)
             return
         if room.map_path not in self.cache:
@@ -171,7 +188,7 @@ class IsometricRoom:
         unit = self.room.reference_art['pixelsPerTile']
         return self.point((x - origin_x) / unit, (y - origin_y) / unit)
 
-    def draw_reference_cover(self, rect):
+    def draw_reference_cover(self, rect, opacity=255):
         x0, y0, x1, y1 = rect
         origin_x, origin_y = self.room.reference_art['originPixels']
         screen_x, screen_y = self.origin
@@ -180,19 +197,109 @@ class IsometricRoom:
         top, bottom = (round(screen_y + (y - origin_y) * scale) for y in (y0, y1))
         source = self.p.SDL_Rect(x0, y0, x1 - x0, y1 - y0)
         target = self.p.SDL_Rect(left, top, right - left, bottom - top)
-        self.p.SDL_RenderCopy(self.p.pico2d.renderer, self.reference_image.texture,
-                              ctypes.byref(source), ctypes.byref(target))
+        texture = self.reference_image.texture
+        if opacity != 255:
+            self.p.SDL_SetTextureAlphaMod(texture, opacity)
+        try:
+            self.p.SDL_RenderCopy(self.p.pico2d.renderer, texture, ctypes.byref(source), ctypes.byref(target))
+        finally:
+            if opacity != 255:
+                self.p.SDL_SetTextureAlphaMod(texture, 255)
 
-    def draw_wall(self, mesh):
-        mesh.draw(self.p, self.atlas, self.origin)
+    def foliage_lift(self, bounds):
+        if not self.room.reference_door_sides:
+            return 0
+        key = tuple(bounds)
+        if key not in self.foliage_lifts:
+            left, top, right, bottom = key
+            x0, y0 = self.project(left, top)
+            x1, y1 = self.project(right, bottom)
+            overlap = 0
+            for depth, mesh in self.walls:
+                if depth <= bottom:
+                    continue
+                _, rect, x, y, _ = mesh.wall_sprite
+                if x0 < x + rect.w and x < x1 and y0 < y + rect.h and y < y1:
+                    overlap = max(overlap, min(y1, y + rect.h) - max(y0, y))
+            self.foliage_lifts[key] = min(overlap, self.rim_wall_height * .55)
+        return self.foliage_lifts[key]
 
-    def wall_cap(self, mesh, x0, y0, x1, y1, height):
-        self.floor_quad(mesh, x0, y0, x1, y1, self.cap_uv, WALL_RIM, height)
+    def draw_wall(self, mesh, opacity=255):
+        if mesh.wall_sprite is None:
+            mesh.draw(self.p, self.atlas, self.origin, opacity=opacity)
+            return
+        texture, source, left, top, original_scale = mesh.wall_sprite
+        x, y = left + self.origin[0], top + self.origin[1]
+        width, height = source.w, source.h
+        if self.reference_scale != original_scale:
+            zoom = self.reference_scale / original_scale
+            x, y = round(left * zoom) + self.origin[0], round(top * zoom) + self.origin[1]
+            width = round((left + source.w) * zoom) + self.origin[0] - x
+            height = round((top + source.h) * zoom) + self.origin[1] - y
+        if x + width <= 0 or y + height <= 0 or x >= self.width or y >= self.height:
+            return
+        p = self.p
+        target = p.SDL_Rect(x, y, width, height)
+        if opacity != 255:
+            p.SDL_SetTextureAlphaMod(texture, opacity)
+        try:
+            p.SDL_RenderCopy(p.pico2d.renderer, texture, ctypes.byref(source), ctypes.byref(target))
+        finally:
+            if opacity != 255:
+                p.SDL_SetTextureAlphaMod(texture, 255)
+
+    def cache_reference_wall_art(self, walls):
+        p = self.p
+        renderer = p.pico2d.renderer
+        width = 1024
+        atlas_x = atlas_y = row_height = 0
+        regions = []
+        for _, mesh in walls:
+            xs, ys = zip(*(position for position, _, _ in mesh.vertices))
+            left, top = math.floor(min(xs)), math.floor(min(ys))
+            w, h = math.ceil(max(xs)) - left, math.ceil(max(ys)) - top
+            if atlas_x + w > width:
+                atlas_x = 0
+                atlas_y += row_height
+                row_height = 0
+            regions.append((mesh, p.SDL_Rect(atlas_x, atlas_y, w, h), left, top))
+            atlas_x += w
+            row_height = max(row_height, h)
+
+        texture = p.SDL_CreateTexture(renderer, p.SDL_PIXELFORMAT_RGBA8888, p.SDL_TEXTUREACCESS_TARGET,
+                                      width, atlas_y + row_height)
+        if not texture:
+            raise RuntimeError('벽 렌더링 텍스처를 만들지 못했습니다.')
+        previous = p.SDL_GetRenderTarget(renderer)
+        try:
+            if p.SDL_SetRenderTarget(renderer, texture) < 0:
+                raise RuntimeError('벽 렌더링 대상으로 전환하지 못했습니다.')
+            p.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0)
+            p.SDL_RenderClear(renderer)
+            p.SDL_SetRenderDrawBlendMode(renderer, p.SDL_BLENDMODE_NONE)
+            for mesh, region, left, top in regions:
+                mesh.draw(p, self.atlas, (region.x - left, region.y - top))
+                mesh.wall_sprite = texture, region, left, top, self.reference_scale
+                mesh.vertices.clear()
+                mesh.indices.clear()
+        except Exception:
+            p.SDL_SetRenderTarget(renderer, previous)
+            p.SDL_DestroyTexture(texture)
+            raise
+        finally:
+            p.SDL_SetRenderTarget(renderer, previous)
+        p.SDL_SetTextureBlendMode(texture, p.SDL_BLENDMODE_BLEND)
+        return texture
+
+    def wall_cap(self, mesh, x0, y0, x1, y1, height, *, obstacle=False):
+        rim, top, lip = OBSTACLE_CAP if obstacle else (WALL_RIM, WALL_TOP, WALL_LIP)
+        self.floor_quad(mesh, x0, y0, x1, y1, self.cap_uv, rim, height)
         inset_x, inset_y = 1.2 / self.tile_width, 1.1 / self.tile_height
         self.floor_quad(mesh, x0 + inset_x, y0 + inset_y, x1 - inset_x, y1 - inset_y,
-                        self.cap_uv, WALL_TOP, height)
-        self.floor_quad(mesh, x0 + inset_x, y1 - 2 * inset_y, x1 - inset_x, y1 - inset_y,
-                        self.cap_uv, WALL_LIP, height)
+                        self.cap_uv, top, height)
+        edge_y = y0 + inset_y if obstacle else y1 - 2 * inset_y
+        self.floor_quad(mesh, x0 + inset_x, edge_y, x1 - inset_x, edge_y + inset_y,
+                        None if obstacle else self.cap_uv, lip, height)
 
     def wall_shadow(self, mesh, left, right, y):
         near, far = (23, 24, 44, 116), (23, 24, 44, 0)
@@ -210,6 +317,7 @@ class IsometricRoom:
                 while bottom < len(tiles) and tiles[bottom][x] == tile:
                     bottom += 1
                 mesh = Mesh()
+                mesh.wall_bounds = (x, top, x + 1, bottom)
                 for y in range(top, bottom):
                     self.masonry_block(mesh, x, y, x + 1, y + 1, height, front=y+1 == bottom)
                 yield bottom, mesh
@@ -221,8 +329,8 @@ class IsometricRoom:
         v0 += (v1 - v0) * .6
         uv = ((u0, v0), (u1, v0), (u1, v1), (u0, v1))
         if front:
-            self.face(mesh, (left, bottom), (right, bottom), height, 0, WALL_FACE, WALL_BASE, uv=uv)
-        self.wall_cap(mesh, left, top, right, bottom, height)
+            self.face(mesh, (left, bottom), (right, bottom), height, 0, OBSTACLE_FACE, OBSTACLE_BASE, uv=uv)
+        self.wall_cap(mesh, left, top, right, bottom, height, obstacle=True)
 
     def build(self, room):
         p = self.p
@@ -237,7 +345,7 @@ class IsometricRoom:
         p.SDL_SetTextureScaleMode(decor_atlas.texture, p.SDL_ScaleModeLinear)
 
         cliff, floor, floor_light, shadows, spikes, rugs, decals, rear, banners = (Mesh() for _ in range(9))
-        walls = list(self.interior_walls(tiles, 42 if room.stage == 1 else 38))
+        walls = list(self.interior_walls(tiles, self.interior_wall_height))
         randomizer = random.Random(data['seed'])
         for y, row in enumerate(tiles):
             for x, tile in enumerate(row):
@@ -305,10 +413,11 @@ class IsometricRoom:
         moss_slot = decor['slots']['moss']
         moss_uv = atlas_uv(decor_atlas, moss_slot % 2, moss_slot // 2, 2, 2)
         for run in decor.get('wallRuns', []):
-            x, y, height = run['x'], run['y'], run['height']
+            x, y = run['x'], run['y']
+            height = round(run['height'] * .6) - 6
             rear_ends.append((x, x + run['width'], y, height))
             for column in range(x, x + run['width']):
-                self.rear_wall(rear, column, y, height=height)
+                self.rear_wall(rear, column, y, height=height, obstacle=True)
             self.wall_shadow(shadows, x, x + run['width'], y)
             for offset in run.get('sconces', []):
                 fixtures.append(self.project(x + offset, y + .03, height * .56))
@@ -322,7 +431,7 @@ class IsometricRoom:
                     self.face(ivy, (center + shift - .35, y + .04), (center + shift + .35, y + .04),
                               vine_top, vine_top - drop, (167, 190, 123, 240), uv=moss_uv)
 
-        walls.extend(self.perimeter_walls(self.room.rim_edges))
+        walls.extend(self.perimeter_walls(room.rim_edges, room.rim_corners, RIM_HALF_X, RIM_HALF_Y))
         for x, y in decor.get('cliffSconces', []):
             fixtures.append(self.project(x, y, -28))
 
@@ -331,11 +440,11 @@ class IsometricRoom:
                 if 0 <= outside_x < cols and tiles[edge_y][outside_x] != ids['pit']:
                     continue
                 half = 10 / self.tile_width
-                for base in range(22, height, 17):
+                for base in range(self.rim_wall_height, height, 17):
                     self.face(rear, (corner_x - half, edge_y), (corner_x + half, edge_y),
                               min(base + 17, height), base, WALL_TOP, WALL_FACE, uv=self.cap_uv)
 
-        ox, oy = 12, 120
+        ox, oy = 12, self.rear_wall_height + 16
         width, height = cols * self.tile_width + 24, rows * self.tile_height + oy + 112
         renderer = p.pico2d.renderer
         terrain = p.SDL_CreateTexture(renderer, p.SDL_PIXELFORMAT_RGBA8888, p.SDL_TEXTUREACCESS_TARGET, width, height)
@@ -363,10 +472,8 @@ class IsometricRoom:
         p.SDL_SetTextureBlendMode(terrain, p.SDL_BLENDMODE_BLEND)
         return backdrop, terrain, (width, height), (ox, oy), walls
 
-    def perimeter_walls(self, edges):
-        corners = self.room.rim_corners
+    def perimeter_walls(self, edges, corners, half_x, half_y):
         # 꼭짓점에는 모서리 돌을 한 번만 놓고, 양쪽 윗돌을 그 돌에 맞춘다.
-        half_x, half_y = RIM_HALF_X, RIM_HALF_Y
         vertical = {start for start, _, axis in edges if axis == 'vertical'}
         for start, end, axis in edges:
             if axis != 'horizontal':
@@ -389,9 +496,48 @@ class IsometricRoom:
         for x, y in sorted(corners):
             yield y + half_y, self.rim_segment(x - half_x, y - half_y, x + half_x, y + half_y)
 
+    def build_reference_walls(self, art):
+        unit = art['pixelsPerTile']
+        scale = self.reference_scale
+        room = self.room
+        yield from self.perimeter_walls(room.rim_edges, room.rim_corners, room.rim_half_x, room.rim_half_y)
+        stone_obstacles = () if self.room.garden else art['cover']
+        for left, top, right, bottom in stone_obstacles:
+            mesh = Mesh()
+            mesh.wall_bounds = (left, top, right, bottom)
+            for row in range(math.ceil(bottom - top)):
+                y = top + row
+                lower = min(y + 1, bottom)
+                for column in range(math.ceil(right - left)):
+                    x = left + column
+                    self.masonry_block(mesh, x, y, min(x + 1, right), lower,
+                                       self.interior_wall_height, front=lower == bottom)
+            yield bottom, mesh
+
+        if not room.reference_door_sides:
+            return
+        door_left, door_top, door_right, door_bottom = art['doorPixels']
+        origin_x, origin_y = art['originPixels']
+        base = (door_bottom - origin_y) / unit
+        opening_height = (door_bottom - door_top + 4) * scale
+        wall_height = max(self.rear_wall_height, opening_height + 14 * scale)
+        for left, top, right, bottom in room.reference_door_sides:
+            mesh = Mesh()
+            mesh.wall_bounds = (left, top, right, bottom)
+            self.rear_wall(mesh, left, bottom, length=right - left, height=wall_height)
+            yield bottom, mesh
+
+        left, right = (door_left - origin_x) / unit, (door_right - origin_x) / unit
+        lintel = Mesh()
+        lintel.wall_bounds = (left, base - .24, right, base)
+        self.face(lintel, (left, base), (right, base), wall_height, opening_height, WALL_FACE, WALL_BASE)
+        self.wall_cap(lintel, left, base - .24, right, base, wall_height)
+        yield base, lintel
+
     def rim_segment(self, x0, y0, x1, y1):
         mesh = Mesh()
-        height = 22
+        mesh.wall_bounds = (x0, y0, x1, y1)
+        height = self.rim_wall_height
         u0, v0 = self.brick_uv[0]
         u1, v1 = self.brick_uv[2]
         v0 += (v1 - v0) * .6
@@ -418,7 +564,7 @@ class IsometricRoom:
                 mesh.quad((tip, left, front, tip), color=(186, 181, 198, 255))
                 mesh.quad((tip, front, right, tip), color=(91, 85, 108, 255))
 
-    def rear_wall(self, mesh, x, y, length=1, *, height=None):
+    def rear_wall(self, mesh, x, y, length=1, *, height=None, obstacle=False):
         height = self.rear_wall_height if height is None else height
         start, end = (x, y), (x + length, y)
         bounds = (x, y - .24, x + length, y)
@@ -427,8 +573,9 @@ class IsometricRoom:
         u1, v1 = self.brick_uv[2]
         mid = (u0 + u1) / 2
         uv = ((u0, v0), (mid, v0), (mid, v1), (u0, v1))
-        self.face(mesh, start, end, height, 0, WALL_FACE, WALL_BASE, uv=uv)
-        self.wall_cap(mesh, *bounds, height)
+        face, base = (OBSTACLE_FACE, OBSTACLE_BASE) if obstacle else (WALL_FACE, WALL_BASE)
+        self.face(mesh, start, end, height, 0, face, base, uv=uv)
+        self.wall_cap(mesh, *bounds, height, obstacle=obstacle)
 
     def sconce(self, x, y):
         p = self.p
@@ -446,6 +593,9 @@ class IsometricRoom:
         for _, terrain, _, _, _ in self.cache.values():
             self.p.SDL_DestroyTexture(terrain)
         self.cache.clear()
+        for texture, _ in self.reference_wall_cache.values():
+            self.p.SDL_DestroyTexture(texture)
+        self.reference_wall_cache.clear()
         self.reference_images.clear()
         self.reference_image = None
         self.backdrop = self.atlas = None

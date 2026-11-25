@@ -50,7 +50,6 @@ def terrain():
     terrain = DungeonTerrain(UNIT, ORIGIN, FLOOR, 70731, (23,16,20), (1,16,20))
     terrain.rug(17.35, 4, 18.65, 10)
     terrain.rug(17.35, 21, 18.65, 24)
-    terrain.rims()
     im, d = terrain.image, terrain.draw
     for wire in WIRES:
         for width, color in ((7, '#282d31'), (3, '#8a7955'), (1, '#aa9270')):
@@ -59,7 +58,6 @@ def terrain():
     d.rectangle((l,t,r,b), fill='#393c3e', outline='#8b8172', width=2)
     for x in range(l+6,r-4,10):
         d.line((x,t+4,x,b-4), fill='#262a2e', width=3)
-    terrain.door((686, 94, 754, 177), (652, 788))
     im.save(MAP / 'garden-terrain.png', optimize=True)
 
 
@@ -150,7 +148,8 @@ def write_map():
                      'x': x, 'y': y, 'facing': 'down'} for i,(x,y,element,behavior) in enumerate(fighters,1)],
         'referenceArt': {'image': 'garden-terrain.png', 'pixelsPerTile': UNIT, 'originPixels': ORIGIN,
                          'minimumScale': 1.36, 'walkable': FLOOR, 'cover': cover, 'coverPixels': [],
-                         'walledBoundary': True, 'doorPixels': [686, 94, 754, 177]},
+                         'walledBoundary': True, 'doorPixels': [686, 94, 754, 177],
+                         'wallOpenings': [(24, 16, 20), (1, 16, 20)], 'doorWallPixels': (652, 788)},
         'fireBarriers': [FIRE],
         'vineGate': {'x': 6, 'y': 13.02, 'width': 4, 'height': .68, 'burnDuration': .675},
         'sluice': {'wheel': WHEEL, 'pump': PUMP, 'gate': GATES[0], 'returnGates': GATES[1:],

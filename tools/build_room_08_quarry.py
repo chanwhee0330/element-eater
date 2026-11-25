@@ -46,15 +46,10 @@ def box(bounds):
 
 
 def terrain():
-    banks = {(x, y) for x in (11, 14) for y in (15, 16)}
-    terrain = DungeonTerrain(UNIT, ORIGIN, FLOOR, 808, (24,16,20), (1,24,28), open_banks=banks)
+    terrain = DungeonTerrain(UNIT, ORIGIN, FLOOR, 808, (24,16,20), (1,24,28))
     terrain.rug(17.35, 19, 18.65, 25)
     terrain.rug(25.35, 3, 26.65, 7)
-    terrain.rims()
     im, d = terrain.image, terrain.draw
-    for bounds in COVER:
-        l,t,r,b = box(bounds)
-        terrain.ledge(l, t, r-l, b-t)
     wire = [point(*xy) for xy in ((16.5,13.5),(16.5,14.13),(17.8,14.13),(17.8,15.45),(22.5,15.45))]
     d.line(wire,fill='#2f292d',width=6)
     d.line(wire,fill='#a48058',width=2)
@@ -64,7 +59,6 @@ def terrain():
     markers = [(x-.33,y-.9,x+.33,y+.9) for x,y in (slot['position'] for slot in WALL_SLOTS)]
     for bounds in [*markers,(30.08,9.66,30.91,10.57)]:
         d.rounded_rectangle(box(bounds),4,fill='#4c4548',outline='#bf9f72',width=2)
-    terrain.door((956, 78, 1028, 154), (924, 1060))
     im.convert('RGB').save(OUT/'quarry-terrain.png',optimize=True)
 
 
@@ -125,6 +119,7 @@ def make_map():
                    for i,(x,y,element,role) in enumerate(enemies,1)],
         'referenceArt':{'image':'quarry-terrain.png','minimumScale':1.3,'pixelsPerTile':UNIT,
                         'originPixels':ORIGIN,'walkable':FLOOR,'cover':COVER,'coverPixels':[],
+                        'wallOpenings':[(25,16,20),(1,24,28)],'doorWallPixels':(924,1060),
                         'doorPixels':[956,78,1028,154],'openCliffs':[BRIDGE],'shotsCrossAbyss':True},
         'vineGate':{'x':15,'y':18.0,'width':6,'height':.67,'burnDuration':.675},
         'earthBridge':BRIDGE,'bridgeAxis':'x','requiredBridge':True,

@@ -1158,45 +1158,26 @@ class Application:
             return
         x, y = self.point(*self.room.block)
         scale = self.view.reference_scale
-        self.block_image.draw(x, y + 12 * scale, 57 * scale, 51 * scale)
+        self.block_image.draw(x, y + 6 * scale, 57 * scale, 39 * scale)
 
-    def draw_counterweight_floor(self):
-        room = self.room
-        if not room.puzzle or room.plate_pressed or room.player.falling:
-            return
-        player = room.player
-        start, plate = room.puzzle['start'], room.puzzle['plate']
-        left, top, right, bottom = room.puzzle.get('yard', (
-            min(start[0], plate[0])-3, min(start[1], plate[1])-3,
-            max(start[0], plate[0])+3, max(start[1], plate[1])+3,
-        ))
-        if not (left-.5 <= player.x <= right+.5 and top-.5 <= player.y <= bottom+.5):
-            return
-        mesh = Mesh()
-        floor = {}
-        for y in range(math.floor(player.y)-4, math.floor(player.y)+5):
-            for x in range(math.floor(player.x)-4, math.floor(player.x)+5):
-                floor[x, y] = room.counterweight_floor(x+.5, y+.5)
-        for (x, y), clear in floor.items():
-            if not clear or not (left <= x+.5 <= right and top <= y+.5 <= bottom):
+    def fade_walls_over_puzzle_block(self, layers):
+        view = self.view
+        x, y = self.room.block
+        reference = self.room.reference_art or {}
+        cover_bounds = dict(zip(map(tuple, reference.get('coverPixels', ())), reference.get('cover', ())))
+        for index, (depth, draw, args) in enumerate(layers):
+            if draw == view.draw_wall:
+                bounds = args[0].wall_bounds
+            elif draw == view.draw_reference_cover:
+                bounds = cover_bounds.get(tuple(args[0]))
+                if bounds is None:
+                    continue
+            else:
                 continue
-            distance = math.dist((x+.5, y+.5), (player.x, player.y))
-            strength = min(1, max(0, (3.65-distance)/1.25))
-            if not strength:
-                continue
-            self.view.floor_quad(mesh, x+.06, y+.06, x+.94, y+.94, None,
-                                 (125, 219, 198, round(33*strength)))
-            for dx, dy, bounds in (
-                (-1, 0, (x+.06, y+.06, x+.11, y+.94)),
-                (1, 0, (x+.89, y+.06, x+.94, y+.94)),
-                (0, -1, (x+.06, y+.06, x+.94, y+.12)),
-                (0, 1, (x+.06, y+.88, x+.94, y+.94)),
-            ):
-                edge_x, edge_y = x+.5+dx*.36, y+.5+dy*.36
-                if not floor.get((x+dx, y+dy)) or not room.counterweight_floor(edge_x, edge_y):
-                    self.view.floor_quad(mesh, *bounds, None, (250, 207, 134, round(190*strength)))
-        self.ui.begin()
-        mesh.draw(self.p, offset=self.view.origin)
+            left, top, right, _ = bounds
+            # 평형추 아랫면의 폭은 .98칸이고, 칸 중앙에 놓일 때는 .01칸이 남는다.
+            if 0 < top - y <= .51 and left < x + .49 and x - .49 < right:
+                layers[index] = depth, draw, (*args, 100)
 
     def exit_visual(self):
         return self.room.exit_open, (116, 202, 178)
@@ -1226,6 +1207,18 @@ class Application:
             self.p.draw_line(left, y, right, y, 164, 126, 88)
 
     def draw_exit(self):
+        if self.room.reference_art and 'doorWallPixels' in self.room.reference_art:
+            x0, y0, x1, y1 = self.room.reference_art['doorPixels']
+            scale = self.view.reference_scale
+            left, top = self.view.reference_point(x0, y0)
+            right, bottom = self.view.reference_point(x1, y1)
+            self.ui.begin()
+            self.ui.rounded(left - 4 * scale, bottom, right - left + 8 * scale,
+                            top - bottom + 4 * scale, 26 * scale, (113, 99, 130, 255))
+            self.ui.rounded(left, bottom, right - left, top - bottom,
+                            24 * scale, (25, 21, 30, 255))
+            self.p.draw_rectangle(left, bottom, right, bottom + 25 * scale,
+                                  25, 21, 30, filled=True)
         if self.room.guardian:
             self.guardian_art.exit()
             return
@@ -1491,6 +1484,7 @@ class Application:
             layers.append((self.room.sluice['gate'][3], self.draw_stone_gate, (self.room.sluice, False)))
         if self.room.puzzle:
             if not self.room.debug_cleared:
+                self.fade_walls_over_puzzle_block(layers)
                 layers.append((self.room.block[1], self.draw_puzzle_block, ()))
             if self.room.quarry:
                 layers.extend(self.quarry_art.layers())
@@ -1526,7 +1520,6 @@ class Application:
         layers.extend((s.y, self.draw_shot, (s,)) for s in self.room.projectiles)
         for _, draw_item, args in sorted(layers, key=lambda layer: layer[0]):
             draw_item(*args)
-        self.draw_counterweight_floor()
         if self.room.quarry:
             self.quarry_art.hints()
         if self.room.lightning_time:

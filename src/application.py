@@ -104,7 +104,7 @@ class Application:
             key: stage for stage in STAGES if stage < 10
             for key in (getattr(p, f'SDLK_{stage}'), getattr(p, f'SDLK_KP_{stage}'))
         }
-        self.stage_keys.update({p.SDLK_0: 10, p.SDLK_KP_0: 10})
+        self.stage_keys.update({p.SDLK_BACKQUOTE: 0, p.SDLK_0: 10, p.SDLK_KP_0: 10})
         orb_icons = {element: self.source_images[element, 'orb'] for element in ELEMENTS}
         self.ui = GameUI(p, self.images['hero', 'idle'], orb_icons)
         self.font = self.ui.fonts[18]
@@ -363,11 +363,7 @@ class Application:
                 if event.type == p.SDL_MOUSEBUTTONDOWN and event.button == p.SDL_BUTTON_LEFT:
                     self.activate_title(index)
         elif event.type == p.SDL_KEYDOWN:
-            if event.key == p.SDLK_BACKQUOTE:
-                self.new_game(0, practice=True)
-            elif event.key in self.stage_keys:
-                self.new_game(self.stage_keys[event.key], practice=True)
-            elif event.key in (p.SDLK_LEFT, p.SDLK_a, p.SDLK_RIGHT, p.SDLK_d, p.SDLK_TAB):
+            if event.key in (p.SDLK_LEFT, p.SDLK_a, p.SDLK_RIGHT, p.SDLK_d, p.SDLK_TAB):
                 direction = -1 if event.key in (p.SDLK_LEFT, p.SDLK_a) else 1
                 self.title_index = (self.title_index+direction) % 3
                 if self.title_index == 0 and self.continue_record is None:
@@ -399,6 +395,9 @@ class Application:
         for event in events:
             if event.type == p.SDL_QUIT:
                 self.finish()
+            elif event.type == p.SDL_KEYDOWN and event.key in self.stage_keys:
+                if not getattr(event, 'repeat', False):
+                    self.new_game(self.stage_keys[event.key], practice=True)
             elif self.scene == 'title':
                 self.handle_title(event)
             elif self.fading_stage:

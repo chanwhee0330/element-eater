@@ -32,17 +32,7 @@ def export_terrain():
     art = DungeonTerrain(UNIT, ORIGIN, FLOOR, 1010, (23,13,17), (1,13,17))
     art.rug(14.05,18,15.95,24)
     art.rug(14.15,1,15.85,5)
-    art.rims()
     d = art.draw
-    cover_pixels = []
-    for l,t,r,b in COVER:
-        x,y = art.point(l,t)
-        right,bottom = art.point(r,b)
-        art.ledge(x,y,right-x,bottom-y)
-        cover_pixels.append([x,y,right,bottom+9])
-        for px in (x+4,right-9):
-            d.rectangle((px,y+1,px+5,bottom-2), fill='#876d66', outline='#4f3f4d')
-            d.point((px+2,y+4),fill='#d0a47a')
     cx,cy = art.point(*CENTER)
     for radius,color,width in ((136,'#453340',10),(132,'#866254',2),(128,'#bb8c60',3),
                                (124,'#6c4a49',3),(117,'#927469',2),(99,'#503b43',8),
@@ -87,8 +77,8 @@ def export_terrain():
         'aggroTrigger':dict(x=3,y=5,width=24,height=14),
         'enemies':[dict(id='guardian-1',x=CENTER[0],y=CENTER[1],element='fire',behaviorType='melee',facing='down')],
         'referenceArt':dict(image='guardian-terrain.png',minimumScale=1.15,pixelsPerTile=UNIT,
-                            originPixels=ORIGIN,walkable=FLOOR,cover=COVER,coverPixels=cover_pixels,
-                            walledBoundary=True),
+                            originPixels=ORIGIN,walkable=FLOOR,cover=COVER,coverPixels=[],
+                            wallOpenings=[(24,13,17),(1,13,17)],walledBoundary=True),
         'earthBridge':EARTH_GAP, 'layoutRevision':2,
         'boss':dict(hp=450,formSeconds=8.0,center=CENTER,devices=DEVICES,feeds=feeds,
                     windStartY=7.5,windPlateY=6.15,arena=(5,4.5,25,17.6),

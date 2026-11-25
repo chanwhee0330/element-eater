@@ -14,6 +14,9 @@ class GardenArt:
         self.fps = meta['fps']
         self.frames = meta['frames']
         self.width, self.height = meta['frameSize']
+        scenery = meta['scenery']
+        self.scenery_sheet = app.p.load_image(str(folder / scenery['image']))
+        self.scenery_rows = scenery['rows']
 
     @property
     def room(self):
@@ -30,9 +33,18 @@ class GardenArt:
         if (-width/2 <= sx <= self.app.width + width/2 and -height/2 <= sy <= self.app.height + height/2):
             self.sheet.clip_draw(left, bottom, self.width, self.height, sx, sy, width, height)
 
-    def scenery(self, kind, bounds, phase):
+    def scenery(self, kind, bounds, index):
         left, top, right, bottom = bounds
-        self.sprite(kind, (left+right)/2, (top+bottom)/2, right-left, bottom-top, phase)
+        y0, width, height = self.scenery_rows[kind][index]
+        x, y = self.app.point((left+right)/2, (top+bottom)/2)
+        if kind == 'planter':
+            y += self.app.view.foliage_lift(bounds)
+        scale = self.app.view.reference_scale
+        w, h = width*scale, height*scale
+        if -w/2 <= x <= self.app.width+w/2 and -h/2 <= y <= self.app.height+h/2:
+            frame = int(self.room.elapsed*self.fps + index*3) % self.frames
+            self.scenery_sheet.clip_draw(frame*width, self.scenery_sheet.h-y0-height,
+                                         width, height, x, y, w, h)
 
     def mechanism(self, key):
         room = self.room
@@ -132,7 +144,7 @@ class GardenArt:
         for kind, bounds in (('planter', room.garden['planters']), ('pool', room.garden['pools']),
                              ('fountain', [room.garden['fountain']])):
             for index, rect in enumerate(bounds):
-                yield rect[3], self.scenery, (kind, rect, index*3)
+                yield rect[3], self.scenery, (kind, rect, index)
         for i, (x, y) in enumerate(room.garden['lamps']):
             active = (room.sluice_wheel, room.sluice_pump, True, True, room.exit_open, room.exit_open)[i]
             yield y, self.sprite, ('lamp-active' if active else 'lamp', x, y-.23, .68, .85, i*2)

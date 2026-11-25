@@ -757,11 +757,17 @@ class Application:
         x, y = self.point(gate['x'] + gate['width'] / 2, gate['y'] + gate['height'])
         clip, pivot = frame['pico2dClip'], frame['pivotPixelsTopLeft']
         width, height = clip['width'], clip['height']
-        scale = gate['width'] * self.view.tile_width / (width * .82)
-        sway = 1 + .025 * math.sin(self.room.elapsed*3.3) if (self.room.garden or self.room.quarry) and burn_time < 0 else 1
-        self.vine_image.clip_draw(clip['left'], clip['bottom'], width, height,
-                                  x, y + (pivot['y'] - height / 2) * scale * sway,
-                                  width * scale, height * scale * sway)
+        unit = self.view.tile_width
+        pieces = math.ceil(gate['width'] / 2.65) if self.room.stage in (7, 8, 9) else 1
+        span = gate['width'] * unit / pieces
+        scale = span / (width * .82)
+        left, top = gate['x'], gate['y']
+        lift = self.view.foliage_lift((left, top, left + gate['width'], top + gate['height']))
+        for index in range(pieces):
+            center = x + (index + .5 - pieces / 2) * span
+            self.vine_image.clip_draw(clip['left'], clip['bottom'], width, height,
+                                      center, y + lift + (pivot['y'] - height / 2) * scale,
+                                      width * scale, height * scale)
         player = self.room.player
         can_burn = not self.room.forge or self.room.inventory['fire']
         if self.room.fire_barriers and can_burn and burn_time < 0 and math.hypot(

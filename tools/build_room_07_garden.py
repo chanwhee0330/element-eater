@@ -89,8 +89,8 @@ def sheet_frame(kind, i, active):
                 d.line((64,42,64+(j-2)*4,h,x,29), fill='#80d4dc', width=2)
                 d.point((x,33+i%4), fill='#c7f2e7')
     elif kind == 'planter':
-        d.rounded_rectangle((1, 6, 126, 94), 10, fill='#302739')
-        d.rounded_rectangle((1, 1, 126, 86), 10, fill='#5e5269', outline='#8c7c8c', width=3)
+        d.rounded_rectangle((1, 6, 126, 94), 10, fill='#1e353d')
+        d.rounded_rectangle((1, 1, 126, 86), 10, fill='#447370', outline='#a9dec7', width=3)
         d.rounded_rectangle((8, 9, 119, 80), 6, fill='#263b31')
         for j in range(12):
             x, y = 17+19*(j%6), 27+32*(j//6)
@@ -132,6 +132,65 @@ def sprites():
                                                        'frames': 12, 'fps': 9, 'rows': clips}, indent=2)+'\n')
 
 
+def scenery():
+    layouts = {'planter': PLANTERS, 'pool': POOLS, 'fountain': [FOUNTAIN]}
+    sizes = {kind: [(r-l, b-t) for l,t,r,b in bounds] for kind, bounds in layouts.items()}
+    sizes = {kind: [(round(w*UNIT), round(h*UNIT)) for w,h in dimensions]
+             for kind, dimensions in sizes.items()}
+    sheet = Image.new('RGBA', (12 * max(w for row in sizes.values() for w, _ in row),
+                               sum(h for row in sizes.values() for _, h in row)))
+    rows = {}
+    top = 0
+    for kind, dimensions in sizes.items():
+        rows[kind] = []
+        for w,h in dimensions:
+            rows[kind].append([top,w,h])
+            for i in range(12):
+                frame = Image.new('RGBA', (w,h))
+                d = ImageDraw.Draw(frame)
+                phase = math.tau*i/12
+                if kind == 'planter':
+                    d.rounded_rectangle((0,2,w-1,h-1), 4, fill='#2e2334')
+                    d.rounded_rectangle((0,0,w-1,h-3), 4, fill='#594b60', outline='#91817f')
+                    d.rounded_rectangle((3,3,w-4,h-6), 3, fill='#293227')
+                    for y in range(9,h-8,10):
+                        for x in range(7+(y//10%2)*3,w-5,9):
+                            sway = round(2*math.sin(phase+x*.22+y*.31))
+                            d.ellipse((x-4+sway,y-4,x+4+sway,y+3), fill='#4d6538')
+                            d.ellipse((x-2,y-4,x+3,y), fill='#7d894e')
+                            if (x+y)//10 % 3 == 0:
+                                d.point((x,y-2), fill='#b39d69')
+                else:
+                    fountain = kind == 'fountain'
+                    if fountain:
+                        d.ellipse((0,2,w-1,h-1), fill='#30273c')
+                        d.ellipse((1,0,w-2,h-4), fill='#514357', outline='#84758e', width=2)
+                        d.ellipse((5,4,w-6,h-8), fill='#274e51', outline='#1d3238')
+                        for ring in range(4):
+                            radius = (ring + i/12 + .5) * min(w,h)/11
+                            cx, cy = w/2, h/2
+                            d.arc((cx-radius,cy-radius*.72,cx+radius,cy+radius*.72),
+                                  12 + ring*29, 250 + ring*22, fill='#638f87')
+                        d.ellipse((cx-9,cy-6,cx+9,cy+6), fill='#5d5f59', outline='#9c9a82')
+                        for jet in range(-2,3):
+                            rise = 9 + round(4*math.sin(phase+jet))
+                            d.line((cx,cy,cx+jet*3,cy-rise), fill='#8eab99')
+                    else:
+                        d.rounded_rectangle((0,2,w-1,h-1), 4, fill='#30273c')
+                        d.rounded_rectangle((0,0,w-1,h-3), 4, fill='#514357', outline='#84758e')
+                        d.rounded_rectangle((3,3,w-4,h-6), 3, fill='#274e51')
+                        for y in range(6,h-8,5):
+                            for x in range(4+(i+y)%9,w-5,13):
+                                d.line((x,y,min(w-5,x+6),y), fill='#638f87')
+                sheet.paste(frame, (i*w,top))
+            top += h
+    sheet.save(MAP/'garden-scenery.png', optimize=True)
+    meta_file = MAP/'garden-objects.json'
+    meta = json.loads(meta_file.read_text(encoding='utf-8'))
+    meta['scenery'] = {'image':'garden-scenery.png', 'rows':rows}
+    meta_file.write_text(json.dumps(meta, indent=2)+'\n', encoding='utf-8')
+
+
 def write_map():
     tile_ids = dict(floor=0, crackedFloor=1, mossFloor=2, wall=3, pit=4, spikes=5)
     fighters = [(3.65,18,'wind','ranged'), (6.9,16.45,'wind','melee'), (6.15,20.8,'wind','melee'),
@@ -163,4 +222,5 @@ def write_map():
 if __name__ == '__main__':
     terrain()
     sprites()
+    scenery()
     write_map()

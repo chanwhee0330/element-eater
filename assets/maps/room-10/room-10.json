@@ -906,12 +906,6 @@
     "wallOpenings": [[24, 13, 17], [1, 13, 17]],
     "walledBoundary": true
   },
-  "earthBridge": [
-    18.38,
-    10.64,
-    19.86,
-    11.84
-  ],
   "layoutRevision": 2,
   "boss": {
     "hp": 450,

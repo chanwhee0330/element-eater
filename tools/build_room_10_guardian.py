@@ -18,7 +18,6 @@ FLOOR = [(13,1,17,4), (9,3,21,5), (6,5,24,7), (3,7,27,17), (1,10,3,14),
 COVER = [(6,8.6,8.5,9.25), (21.5,8.6,24,9.25), (6.7,14.7,9,15.35), (21,14.7,23.3,15.35)]
 CENTER = (15,11.25)
 DEVICES = [(12.45,14.86), (10.88,10.05), (15,6.15), (19.12,10.05), (17.55,14.86)]
-EARTH_GAP = (18.38,10.64,19.86,11.84)
 GLYPHS = (
     [[(0,-8),(-6,1),(-6,5),(0,8),(6,5),(6,1),(0,-8)]],
     [[(-6,6),(-8,1),(-4,-6),(-1,-2),(2,-10),(8,0),(6,6),(-6,6)], [(-2,4),(1,0),(4,4)]],
@@ -79,7 +78,7 @@ def export_terrain():
         'referenceArt':dict(image='guardian-terrain.png',minimumScale=1.15,pixelsPerTile=UNIT,
                             originPixels=ORIGIN,walkable=FLOOR,cover=COVER,coverPixels=[],
                             wallOpenings=[(24,13,17),(1,13,17)],walledBoundary=True),
-        'earthBridge':EARTH_GAP, 'layoutRevision':2,
+        'layoutRevision':2,
         'boss':dict(hp=450,formSeconds=8.0,center=CENTER,devices=DEVICES,feeds=feeds,
                     windStartY=7.5,windPlateY=6.15,arena=(5,4.5,25,17.6),
                     exitGate=(13,2.05,17,2.55),exitOpening=(14.32,15.68)),

@@ -118,6 +118,19 @@ def restore_guardian(room, stored, actor):
             raise ValueError('혼합 구슬 섭취 연출 상태 불일치')
         guardian.reward_scene_elapsed = scene_elapsed
     room.enemies[0].element = guardian.element
+    pits = stored.get('pits', [])
+    if not isinstance(pits, list) or (pits and guardian.summon < SUMMON_SECONDS):
+        raise ValueError('수호자 낭떠러지 상태 불일치')
+    restored_pits = []
+    for point in pits:
+        if not isinstance(point, list) or len(point) != 2:
+            raise ValueError('수호자 낭떠러지 위치 불일치')
+        x = number(point[0], 0, room.data['columns'])
+        y = number(point[1], 0, room.data['rows'])
+        if room.tile(x, y, ignore_earth=True) >= 3:
+            raise ValueError('수호자 낭떠러지 바닥 불일치')
+        restored_pits.append((x, y))
+    guardian.pits = restored_pits
 
 
 def trial_wheel_resume_position(room, x, y):
@@ -390,7 +403,11 @@ def restore(record, room):
         number(bottom, top, candidate.data['rows'])
         if left == right or top == bottom:
             raise ValueError('임시 지형 면적 불일치')
-        if kind == 'floor':
+        if kind == 'floor' and candidate.guardian:
+            if not any(tuple(bounds) == candidate.guardian.pit_bridge_bounds(*point)
+                       for point in candidate.guardian.pits):
+                raise ValueError('수호자 낭떠러지 발판 위치 불일치')
+        elif kind == 'floor':
             previous = candidate.turret_room and candidate.turret_room.get('previousBridge')
             if not candidate.earth_bridge or bounds not in (candidate.earth_bridge, previous):
                 raise ValueError('임시 바닥 위치 불일치')

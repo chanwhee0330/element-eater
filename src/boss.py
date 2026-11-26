@@ -17,6 +17,7 @@ FIRE_FAN = (-.54, -.27, 0, .27, .54)
 WATER_GAPS = (-.42, .42)
 WATER_RING_DELAY = .29
 EARTH_INTERVAL = .22
+EARTH_PIT_RADIUS = (.92, .63)
 STAGGER = .94
 SUMMON_SECONDS = 1.92
 SUMMON_SHOCK_AT = 1.34
@@ -82,9 +83,9 @@ def guardian_hit_masks():
 
 
 class Guardian:
-    def __init__(self, spec, bridge):
+    def __init__(self, spec):
         self.spec = spec
-        self.bridge = bridge
+        self.pits = []
         self.ritual = 0
         self.placed = set()
         self.placed_at = {}
@@ -204,9 +205,16 @@ class Guardian:
         left,right = self.spec['exitOpening']
         if inside(gate,x,y) and (self.gate_progress < 1 or not left <= x < right):
             return 3
-        if inside(self.bridge, x, y):
-            return 0
         return None
+
+    def pit_at(self, x, y):
+        rx, ry = EARTH_PIT_RADIUS
+        return any(((x - px) / rx)**2 + ((y - py) / ry)**2 < 1 for px, py in self.pits)
+
+    @staticmethod
+    def pit_bridge_bounds(x, y):
+        rx, ry = EARTH_PIT_RADIUS
+        return x - rx, y - ry, x + rx, y + ry
 
     def clear_attack(self, room):
         self.target = None
@@ -376,6 +384,12 @@ class Guardian:
                     room.feedback.append(Feedback(x,y,'',False,.28,.28))
                     if math.hypot(player.x-x,player.y-y) <= 1.02:
                         room.damage(player,10)
+                    spawn = room.data['playerSpawn']
+                    if (room.tile(x,y,ignore_earth=True) < 3
+                            and abs(y - spawn['y']) >= EARTH_PIT_RADIUS[1] + room.radius):
+                        self.pits.append((x,y))
+                        if not room.fits(*room.safe[:2], safe=True):
+                            room.safe = spawn['x'], spawn['y'], spawn['facing']
         elif actor.element == 'wind':
             if prior < release <= age:
                 room.sound_events.append('gust')
@@ -411,4 +425,5 @@ class Guardian:
                                                   'reward_loaded','reward_tasted','reward_scene_elapsed')}
         state['placed'] = sorted(self.placed)
         state['reward_orbs'] = sorted(self.reward_orbs)
+        state['pits'] = [list(point) for point in self.pits]
         return state

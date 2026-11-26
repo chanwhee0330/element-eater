@@ -812,7 +812,8 @@ class Application:
                                    round(115 * (1 - age / .8)), filled=True)
 
     def draw_earth_terrain(self, terrain):
-        if terrain.kind == 'floor' and (self.room.quarry or self.room.acquisition and self.room.turret_room):
+        if terrain.kind == 'floor' and (self.room.guardian or self.room.quarry
+                                        or self.room.acquisition and self.room.turret_room):
             self.acquisition_art.bridge(terrain.bounds, 'earth', terrain.remaining / self.room.earth_seconds)
             return
         if (self.room.quarry or self.room.trial) and terrain.kind == 'wall':

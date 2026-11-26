@@ -4,7 +4,7 @@ import json
 import math
 
 from .acquisition_art import ROCKFALL_BOULDER, ROCKFALL_DEBRIS
-from .boss import (COLORS, EARTH_INTERVAL, FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH,
+from .boss import (COLORS, EARTH_INTERVAL, EARTH_PIT_RADIUS, FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH,
                    GUARDIAN_DRAW_UNIT, GUARDIAN_SHOT_LIFT, RITUAL, SHATTER_AT, SUMMON_SECONDS,
                    SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, WATER_GAPS, WATER_RING_DELAY)
 from .elements import NAMES, WEAKNESS
@@ -29,6 +29,7 @@ class GuardianArt:
         self.props = self.p.load_image(str(folder/'guardian-objects.png'))
         self.props_frames = json.loads((folder/'guardian-objects.json').read_text(encoding='utf-8'))
         self.assembly = self.p.load_image(str(folder/'guardian-assembly.png'))
+        self.earth_pit = self.p.load_image(str(folder/'guardian-earth-pit.png'))
         wheel_folder = folder.parent/'room-09'
         self.gate_meta = json.loads((wheel_folder/'trial-waterwheel.json').read_text(encoding='utf-8'))
         self.gate_image = self.p.load_image(str(wheel_folder/self.gate_meta['image']))
@@ -78,7 +79,6 @@ class GuardianArt:
         g = self.guardian
         t = self.room.elapsed
         self.app.ui.begin()
-        self.app.acquisition_art.bridge(g.bridge, 'stone')
         center = g.spec['center']
         angles = [math.atan2(y-center[1], x-center[0]) for x, y in g.spec['devices']]
         for i,(point,feed) in enumerate(zip(g.spec['devices'],g.spec['feeds'])):
@@ -139,6 +139,11 @@ class GuardianArt:
                     self.line(start,end,(68,48,61))
         if g.summoning:
             self.summon_light()
+        rx, ry = EARTH_PIT_RADIUS
+        for point in sorted(g.pits, key=lambda point: point[1]):
+            x, y = self.app.point(*point)
+            self.earth_pit.draw(x, y, round(2.12 * rx * self.unit),
+                                round(2.12 * ry * self.app.view.tile_height))
         self.warnings()
 
     def summon_light(self):

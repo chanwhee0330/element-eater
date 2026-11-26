@@ -7,7 +7,7 @@ import math
 import random
 from .combat import CombatTuning, Projectile, Feedback
 from .elements import ELEMENTS, BEATS, Source
-from .boss import FALL_SECONDS, GUARDIAN_SHOT_LIFT, Guardian
+from .boss import EARTH_PIT_RADIUS, FALL_SECONDS, GUARDIAN_SHOT_LIFT, Guardian
 from .quarry import LaserField, Quarry, contains
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -243,7 +243,7 @@ class Room:
         self.gate_time = 0
         self.power_gate_time = 0
         self.boss = self.data.get('boss')
-        self.guardian = Guardian(self.boss, self.data['earthBridge']) if self.boss else None
+        self.guardian = Guardian(self.boss) if self.boss else None
         if self.boss:
             guardian = self.enemies[0]
             guardian.hp = guardian.max_hp = self.boss['hp']
@@ -478,6 +478,23 @@ class Room:
             return False
         dx, dy = self.direction(player.facing)
         x, y = player.x + dx * 1.65, player.y + dy * 1.65
+        if self.guardian:
+            rx, ry = EARTH_PIT_RADIUS
+            pits = sorted(self.guardian.pits, key=lambda point: math.hypot(
+                point[0] - player.x, point[1] - player.y))
+            for px, py in pits:
+                across_x, across_y = px - player.x, py - player.y
+                forward = across_x * dx + across_y * dy
+                sideways = abs(across_x * dy - across_y * dx)
+                if not (0 < forward <= 2.6 and sideways < (ry if dx else rx)):
+                    continue
+                bounds = self.guardian.pit_bridge_bounds(px, py)
+                if any(terrain.kind == 'floor' and terrain.bounds == bounds for terrain in self.earth_terrain):
+                    continue
+                if not self.line_clear(player.x, player.y, px, py):
+                    continue
+                self.earth_terrain.append(EarthTerrain('floor', bounds, self.earth_seconds))
+                return self.consume_earth(px, py, '흙 바닥')
         bridge = self.earth_bridge
         if bridge and not self.guardian and not self.turrets_stopped and not (self.quarry and self.debug_cleared):
             left, top, right, bottom = bridge
@@ -1342,6 +1359,8 @@ class Room:
         if not ignore_earth:
             for terrain in self.earth_terrain:
                 if terrain.contains(x, y):
+                    if self.guardian and terrain.kind == 'floor':
+                        continue
                     return 3 if terrain.kind == 'wall' else 0
         if self.puzzle:
             x0, y0, x1, y1 = self.puzzle['gate']
@@ -1368,6 +1387,12 @@ class Room:
                     return 3
             for x0, y0, x1, y1 in self.reference_art['walkable']:
                 if x0 <= x < x1 and y0 <= y < y1:
+                    if self.guardian and self.guardian.pit_at(x, y):
+                        bridged = not ignore_earth and any(
+                            terrain.kind == 'floor' and terrain.contains(x, y)
+                            for terrain in self.earth_terrain
+                        )
+                        return 0 if bridged else 4
                     return 0
             if any(self.inside_floor(x, y, polygon)
                    for polygon in self.reference_art.get('floorPolygons', ())):
@@ -1390,7 +1415,8 @@ class Room:
             return False
         if (self.reference_art and self.reference_art.get('walledBoundary')
                 and self.tile(x, y, ignore_earth=ignore_earth, ignore_block=ignore_block) == 4):
-            return False
+            if safe or not (self.guardian and self.guardian.pit_at(x, y)):
+                return False
         for dx in (-self.radius, self.radius):
             for dy in (-self.radius, self.radius):
                 tile = self.tile(x + dx, y + dy, ignore_earth=ignore_earth, ignore_block=ignore_block)

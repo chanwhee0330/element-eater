@@ -29,7 +29,10 @@ DEFEAT_SECONDS = 2.85
 SHATTER_AT = .35
 GATE_SECONDS = .70
 GATE_WATCH = .8
-DASH_SECONDS = .32
+DASH_SECONDS = .64
+DASH_DISTANCE = 12
+LIGHTNING_BEAT = .12
+LIGHTNING_REACH = 17
 GUARDIAN_DRAW_UNIT = 36.8
 GUARDIAN_SHOT_LIFT = .61
 ATLAS_FOLDER = Path(__file__).resolve().parents[1] / 'assets/sprites/boss/animation'
@@ -283,6 +286,20 @@ class Guardian:
         y = min(bottom,max(top,actor.y+dy))
         room.move(actor,x-actor.x,y-actor.y,safe=True)
 
+    def dash_endpoint(self, room, x, y, distance):
+        left, top, right, bottom = self.spec['arena']
+        parts = max(1, math.ceil(distance / .08))
+        dx = math.cos(self.heading) * distance / parts
+        dy = math.sin(self.heading) * distance / parts
+        for _ in range(parts):
+            tx, ty = x + dx, y + dy
+            if (not (left <= tx <= right and top <= ty <= bottom)
+                    or room.blocked_by_wall(tx, ty, x, y)
+                    or not room.fits(tx, ty, safe=True)):
+                break
+            x, y = tx, ty
+        return x, y
+
     def push_from_altar(self, room, time):
         player = room.player
         cx, cy = self.spec['center']
@@ -395,8 +412,9 @@ class Guardian:
                 room.sound_events.append('gust')
             duration = max(0,min(release+DASH_SECONDS,age)-max(release,prior))
             if duration:
-                self.move(room,actor,math.cos(self.heading)*6*duration/DASH_SECONDS,
-                          math.sin(self.heading)*6*duration/DASH_SECONDS)
+                old = actor.x, actor.y
+                actor.x, actor.y = self.dash_endpoint(room, *old, DASH_DISTANCE * duration / DASH_SECONDS)
+                actor.moving = (actor.x, actor.y) != old
                 if math.hypot(player.x-actor.x,player.y-actor.y) <= .72:
                     room.damage(player,10)
         elif actor.element == 'water':
@@ -412,7 +430,8 @@ class Guardian:
             room.sound_events.append('flame' if actor.element == 'fire' else 'electric')
             offsets = FIRE_FAN if actor.element == 'fire' else (0,)
             for offset in offsets:
-                self.shot(room,actor,self.heading+offset,8.7 if actor.element == 'fire' else 14,17)
+                self.shot(room,actor,self.heading+offset,8.7 if actor.element == 'fire' else 14,
+                          17 if actor.element == 'fire' else LIGHTNING_REACH)
         if age >= clip.duration:
             self.attack_age = -1
             self.target = None

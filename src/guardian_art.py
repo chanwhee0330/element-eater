@@ -4,8 +4,9 @@ import json
 import math
 
 from .acquisition_art import ROCKFALL_BOULDER, ROCKFALL_DEBRIS
-from .boss import (COLORS, EARTH_INTERVAL, EARTH_PIT_RADIUS, FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH,
-                   GUARDIAN_DRAW_UNIT, GUARDIAN_SHOT_LIFT, RITUAL, SHATTER_AT, SUMMON_SECONDS,
+from .boss import (COLORS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
+                   FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH, GUARDIAN_DRAW_UNIT,
+                   GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, LIGHTNING_REACH, RITUAL, SHATTER_AT, SUMMON_SECONDS,
                    SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, WATER_GAPS, WATER_RING_DELAY)
 from .elements import NAMES, WEAKNESS
 from .element_master_aura import draw_master_aura
@@ -30,6 +31,7 @@ class GuardianArt:
         self.props_frames = json.loads((folder/'guardian-objects.json').read_text(encoding='utf-8'))
         self.assembly = self.p.load_image(str(folder/'guardian-assembly.png'))
         self.earth_pit = self.p.load_image(str(folder/'guardian-earth-pit.png'))
+        self.attack_effects = self.p.load_image(str(folder/'guardian-attack-effects.png'))
         wheel_folder = folder.parent/'room-09'
         self.gate_meta = json.loads((wheel_folder/'trial-waterwheel.json').read_text(encoding='utf-8'))
         self.gate_image = self.p.load_image(str(wheel_folder/self.gate_meta['image']))
@@ -205,19 +207,80 @@ class GuardianArt:
                 if age < release+i*WATER_RING_DELAY:
                     gap += g.heading
                     self.arc(origin,1.7+i*.79,gap+.57,gap+math.tau-.57,color,195)
+        elif element == 'wind' and age < release:
+            end = g.dash_endpoint(self.room, *origin, DASH_DISTANCE)
+            if end == origin:
+                return
+            dx, dy = math.cos(g.heading), math.sin(g.heading)
+            for i in range(-14, 15):
+                offset = i * .05
+                edge = abs(i) >= 13
+                self.line((origin[0] - dy * offset, origin[1] + dx * offset),
+                          (end[0] - dy * offset, end[1] + dx * offset),
+                          (255, 54, 61) if edge else (218, 29, 42), 235 if edge else 78)
         elif age < release:
-            length = 6 if element == 'wind' else 12
+            length = LIGHTNING_REACH if element == 'lightning' else 12
             offsets = FIRE_FAN if element == 'fire' else (0,)
             for offset in offsets:
                 a=g.heading+offset
                 dx,dy=math.cos(a),math.sin(a)
-                end=origin[0]+length*dx,origin[1]+length*dy
+                end = origin
+                for i in range(1, math.ceil(length * 10) + 1):
+                    tx, ty = origin[0] + i * .1 * dx, origin[1] + i * .1 * dy
+                    if (not (0 <= tx < self.room.data['columns'] and 0 <= ty < self.room.data['rows'])
+                            or self.room.tile(tx, ty, airborne=True) == 3):
+                        break
+                    end = tx, ty
                 self.line(origin,end,color,218 if element!='fire' else 152)
-                if element in ('wind','lightning'):
-                    span=.70 if element=='wind' else .13
-                    for sign in (-1,1):
-                        self.line((origin[0]+dy*span*sign,origin[1]-dx*span*sign),
-                                  (end[0]+dy*span*sign,end[1]-dx*span*sign),color,164)
+
+    def attack_projectile(self, shot):
+        x, y = self.app.point(shot.x, shot.y)
+        if shot.element == 'lightning':
+            self.lightning_pulses(shot)
+            return
+        image = self.attack_effects
+        frame = int(shot.age * 18) % 8
+        if shot.element == 'fire':
+            scale = .6 + .4 * ease(shot.age / .17)
+            height = self.unit * 3.1 * scale
+            image.clip_draw(64 * frame, 96, 64, 96, x, y + height * .35,
+                            self.unit * 2.13 * scale, height)
+            return
+        dx, dy = self.app.view.project(shot.dx, shot.dy)
+        radius = .45 + shot.age * shot.speed
+        span = self.unit * min(2.6, max(.56, .38 * radius))
+        crest = self.unit * (.95 + .35 * ease(shot.age / .45))
+        angle = math.atan2(-dy, dx)
+        image.clip_composite_draw(64 * frame, 0, 64, 96, angle, '',
+                                  x - .20 * crest * math.cos(angle),
+                                  y - .20 * crest * math.sin(angle), crest, span)
+
+    def lightning_pulses(self, shot):
+        beat = int(shot.age / LIGHTNING_BEAT)
+        phase = shot.age - beat * LIGHTNING_BEAT
+        unit = self.unit
+        self.app.ui.begin()
+        for trail in range(min(2, beat), -1, -1):
+            age = phase + trail * LIGHTNING_BEAT
+            strength = max(0, 1 - age / (2.5 * LIGHTNING_BEAT))
+            if not strength:
+                continue
+            back = age * shot.speed
+            x, y = self.app.point(shot.x - back * shot.dx, shot.y - back * shot.dy)
+            color = (167, 88, 249)
+            alpha = round(strength * 252)
+            self.p.draw_circle(x, y, round(unit * (.28 + .21 * (1 - strength))),
+                               *color, alpha // 2, filled=True)
+            for branch in range(5):
+                offset = (branch - 2) * unit * .35
+                height = unit * (.40 + .24 * (2 - abs(branch))) * (.62 + .38 * strength)
+                self.app.draw_electric_arc(x, y, x + offset, y + height, unit * .20,
+                                           alpha, beat + branch - trail, glow=color, core=(250, 231, 255))
+            for offset in (-2, 0, 2):
+                self.app.draw_electric_arc(x + offset, y, x - offset, y + unit * 1.3 * strength,
+                                           unit * .12, alpha, beat - trail, glow=color, core=(255, 246, 255))
+        x, y = self.app.point(shot.x, shot.y)
+        self.app.ui.diamond(x, y, max(2, round(unit * .12)), (226, 189, 255, 210))
 
     def prop(self, kind, frame, point, width):
         left,bottom,w,h=self.props_frames[kind][frame]
@@ -319,6 +382,14 @@ class GuardianArt:
         state,age = g.pose(actor)
         if g.summoning:
             age = 0
+        if g.form == 'wind' and state == 'attack' and actor.moving:
+            dash_age = age - g.clip('attack').events['release']
+            if 0 < dash_age < DASH_SECONDS:
+                for lag, opacity in ((.095, .15), (.045, .30)):
+                    distance = DASH_DISTANCE * min(lag, dash_age) / DASH_SECONDS
+                    echo = self.app.point(actor.x - math.cos(g.heading) * distance,
+                                          actor.y - math.sin(g.heading) * distance)
+                    self.draw_pose(g.form, g.clip(state).frame(max(0, age - lag)), echo, opacity)
         self.draw_pose(g.form,g.clip(state).frame(age),point,1,hit=actor.hit_flash>0)
 
     def shatter(self, point, time):

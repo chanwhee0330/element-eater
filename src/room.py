@@ -7,7 +7,7 @@ import math
 import random
 from .combat import CombatTuning, Projectile, Feedback
 from .elements import ELEMENTS, BEATS, Source
-from .boss import EARTH_PIT_RADIUS, FALL_SECONDS, GUARDIAN_SHOT_LIFT, Guardian
+from .boss import EARTH_PIT_RADIUS, FALL_SECONDS, GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, Guardian
 from .quarry import LaserField, Quarry, contains
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1144,6 +1144,7 @@ class Room:
                 continue
             distance = min(shot.speed*dt, shot.remaining)
             parts = max(1, math.ceil(distance/.06))
+            prior_age = shot.age
             shot.age += dt
             for _ in range(parts):
                 shot.x += shot.dx * distance/parts
@@ -1247,6 +1248,9 @@ class Room:
                     break
             if shot.remaining <= .00001:
                 shot.active = False
+            if (shot.active and self.guardian and shot.owner == 'enemy' and shot.element == 'lightning'
+                    and int(prior_age / LIGHTNING_BEAT) < int(shot.age / LIGHTNING_BEAT)):
+                self.sound_events.append('electric')
         self.projectiles[:] = [s for s in self.projectiles if s.active]
 
     @property

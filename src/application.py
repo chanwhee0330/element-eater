@@ -649,6 +649,9 @@ class Application:
         if shot.element == 'mixed':
             self.guardian_art.mixed_projectile(shot)
             return
+        if self.guardian_art and shot.owner == 'enemy' and shot.element in ('fire', 'water', 'lightning'):
+            self.guardian_art.attack_projectile(shot)
+            return
         image, meta = self.shot_images[shot.element], self.shot_metadata[shot.element]
         frame = meta['frames'][f'right_{int(shot.age * 12) % 8}']['pico2dClip']
         lift = self.view.tile_height*GUARDIAN_SHOT_LIFT if self.room.guardian else 21

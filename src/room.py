@@ -1220,8 +1220,9 @@ class Room:
                     if not actor.active or actor.falling:
                         continue
                     guardian = self.guardian if self.guardian and actor is self.enemies[0] else None
+                    hit_radius = .42 if actor.kind == 'hero' else self.tuning.enemy_hit_radius
                     reaches = (guardian.hits(actor,shot.x,shot.y) if guardian
-                               else math.hypot(actor.x-shot.x,actor.y-shot.y) <= .42)
+                               else math.hypot(actor.x-shot.x,actor.y-shot.y) <= hit_radius)
                     if reaches:
                         neutral_target = shot.owner == 'hero' and actor.element == 'neutral'
                         allowed = shot.owner != 'hero' or shot.element == 'neutral' or BEATS.get(shot.element) == actor.element or neutral_target

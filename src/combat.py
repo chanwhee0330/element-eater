@@ -11,6 +11,7 @@ class CombatTuning:
     neutral_damage: int = 5
     neutral_target_damage: int = 15
     enemy_damage: int = 10
+    enemy_hit_radius: float = .60
     attack_duration: float = 8 / 12
     attack_event: float = 3 / 12
     player_interval: float = .7

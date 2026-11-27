@@ -14,7 +14,10 @@ RITUAL = ('water', 'fire', 'wind', 'earth', 'lightning')
 COLORS = {'water': (113, 218, 240), 'fire': (255, 137, 82), 'wind': (173, 226, 184),
           'earth': (218, 177, 126), 'lightning': (212, 162, 255)}
 FIRE_FAN = (-.54, -.27, 0, .27, .54)
-WATER_GAPS = (-.42, .42)
+WATER_GAPS = (-.9, .9)
+WATER_GAP_HALF = .57
+WATER_WAVES = 30
+WATER_ORIGIN_OFFSET = .45
 WATER_RING_DELAY = .29
 EARTH_INTERVAL = .22
 EARTH_PIT_RADIUS = (.92, .63)
@@ -31,6 +34,7 @@ GATE_SECONDS = .70
 GATE_WATCH = .8
 DASH_SECONDS = .64
 DASH_DISTANCE = 12
+DASH_DEBRIS_SECONDS = .46
 LIGHTNING_BEAT = .12
 LIGHTNING_REACH = 17
 GUARDIAN_DRAW_UNIT = 36.8
@@ -50,8 +54,36 @@ def facing_for(dx, dy):
     return 'down' if dy >= 0 else 'up'
 
 
-def angle_delta(a, b):
-    return (a - b + math.pi) % math.tau - math.pi
+def water_wave_size(shot):
+    radius = WATER_ORIGIN_OFFSET + shot.age * shot.speed
+    return .60 + .20 * min(1, shot.age / .45), min(2.65, max(.56, .18 * radius))
+
+
+def water_wave_reaches(shot, x, y, player_radius):
+    depth, span = water_wave_size(shot)
+    dx, dy = x - shot.x, y - shot.y
+    forward = abs(dx * shot.dx + dy * shot.dy)
+    across = abs(dx * shot.dy - dy * shot.dx)
+    return math.hypot(max(0, forward - depth / 2), max(0, across - span / 2)) <= player_radius
+
+
+def water_wave_wall_contact(shot, walls):
+    depth, span = water_wave_size(shot)
+    half_depth, half_span = depth / 2, span / 2
+    ux, uy = abs(shot.dx), abs(shot.dy)
+    extent_x = half_depth * ux + half_span * uy
+    extent_y = half_depth * uy + half_span * ux
+    for left, top, right, bottom in walls:
+        if (shot.x + extent_x < left or shot.x - extent_x > right
+                or shot.y + extent_y < top or shot.y - extent_y > bottom):
+            continue
+        # 월드 축과 파도 진행/가로 축에서 폭이 겹치는지 검사한다.
+        half_x, half_y = (right - left) / 2, (bottom - top) / 2
+        dx, dy = left + half_x - shot.x, top + half_y - shot.y
+        if (abs(dx * shot.dx + dy * shot.dy) <= half_depth + half_x * ux + half_y * uy
+                and abs(dx * shot.dy - dy * shot.dx) <= half_span + half_x * uy + half_y * ux):
+            return max(left, min(right, shot.x)), max(top, min(bottom, shot.y))
+    return None
 
 
 class Clip:
@@ -111,6 +143,8 @@ class Guardian:
     def __init__(self, spec):
         self.spec = spec
         self.pits = []
+        self.broken_cover = set()
+        self.dash_debris = []
         self.ritual = 0
         self.placed = set()
         self.placed_at = {}
@@ -241,6 +275,21 @@ class Guardian:
             return 3
         return None
 
+    def water_wave_walls(self, room):
+        for index, bounds in enumerate(room.reference_art['cover']):
+            if index not in self.broken_cover:
+                yield bounds
+        yield from (terrain.bounds for terrain in room.earth_terrain if terrain.kind == 'wall')
+        yield from room.reference_movement_walls
+        gate = self.spec['exitGate']
+        if self.gate_progress < 1:
+            yield gate
+        else:
+            left, top, right, bottom = gate
+            opening_left, opening_right = self.spec['exitOpening']
+            yield left, top, opening_left, bottom
+            yield opening_right, top, right, bottom
+
     def pit_at(self, x, y):
         rx, ry = EARTH_PIT_RADIUS
         return any(((x - px) / rx)**2 + ((y - py) / ry)**2 < 1 for px, py in self.pits)
@@ -323,7 +372,7 @@ class Guardian:
             actor.facing = facing_for(dx, dy)
         actor.moving |= was_moving
 
-    def dash_endpoint(self, room, x, y, distance):
+    def dash_endpoint(self, room, x, y, distance, *, shatter=False):
         left, top, right, bottom = self.spec['arena']
         parts = max(1, math.ceil(distance / .08))
         dx = math.cos(self.heading) * distance / parts
@@ -332,10 +381,33 @@ class Guardian:
             tx, ty = x + dx, y + dy
             if (not (left <= tx <= right and top <= ty <= bottom)
                     or room.blocked_by_wall(tx, ty, x, y)
-                    or not room.fits(tx, ty, safe=True)):
+                    or not room.fits(tx, ty, safe=True, ignore_breakable_walls=True)):
                 break
+            if shatter:
+                self.shatter_dash_cover(room, tx, ty)
             x, y = tx, ty
         return x, y
+
+    def shatter_dash_cover(self, room, x, y):
+        radius = room.radius
+
+        def touches(bounds):
+            left, top, right, bottom = bounds
+            return left - radius <= x < right + radius and top - radius <= y < bottom + radius
+
+        broken = []
+        for index, bounds in enumerate(room.reference_art['cover']):
+            if index not in self.broken_cover and touches(bounds):
+                self.broken_cover.add(index)
+                broken.append(bounds)
+        walls = [terrain for terrain in room.earth_terrain
+                 if terrain.kind == 'wall' and touches(terrain.bounds)]
+        for wall in walls:
+            room.earth_terrain.remove(wall)
+            broken.append(wall.bounds)
+        if broken:
+            room.sound_events.append('break')
+            self.dash_debris.extend((bounds, room.elapsed) for bounds in broken)
 
     def push_from_altar(self, room, time):
         player = room.player
@@ -351,6 +423,9 @@ class Guardian:
 
     def step(self, room, dt):
         actor = room.enemies[0]
+        if self.dash_debris:
+            self.dash_debris[:] = [event for event in self.dash_debris
+                                   if room.elapsed - event[1] < DASH_DEBRIS_SECONDS]
         was_moving, prior_facing = actor.moving, actor.facing
         old_x, old_y = actor.x, actor.y
         actor.moving = False
@@ -466,7 +541,8 @@ class Guardian:
             duration = max(0,min(release+DASH_SECONDS,age)-max(release,prior))
             if duration:
                 old = actor.x, actor.y
-                actor.x, actor.y = self.dash_endpoint(room, *old, DASH_DISTANCE * duration / DASH_SECONDS)
+                actor.x, actor.y = self.dash_endpoint(room, *old, DASH_DISTANCE * duration / DASH_SECONDS,
+                                                      shatter=True)
                 actor.moving = (actor.x, actor.y) != old
                 if math.hypot(player.x-actor.x,player.y-actor.y) <= .72:
                     room.damage(player,10)
@@ -474,11 +550,11 @@ class Guardian:
             for i,gap in enumerate(WATER_GAPS):
                 if prior < release+i*WATER_RING_DELAY <= age:
                     room.sound_events.append('splash')
-                    gap += self.heading
-                    for j in range(18):
-                        angle = gap+j*math.tau/18
-                        if abs(angle_delta(angle,gap)) >= .57:
-                            self.shot(room,actor,angle,4.4,14,offset=.45)
+                    start = self.heading + gap + WATER_GAP_HALF
+                    spread = math.tau - 2 * WATER_GAP_HALF
+                    for j in range(WATER_WAVES):
+                        angle = start + (j + .5) / WATER_WAVES * spread
+                        self.shot(room, actor, angle, 4.4, 14, offset=WATER_ORIGIN_OFFSET)
         elif prior < release <= age:
             room.sound_events.append('flame' if actor.element == 'fire' else 'electric')
             offsets = FIRE_FAN if actor.element == 'fire' else (0,)
@@ -498,4 +574,5 @@ class Guardian:
         state['placed'] = sorted(self.placed)
         state['reward_orbs'] = sorted(self.reward_orbs)
         state['pits'] = [list(point) for point in self.pits]
+        state['broken_cover'] = sorted(self.broken_cover)
         return state

@@ -4,10 +4,11 @@ import json
 import math
 
 from .acquisition_art import ROCKFALL_BOULDER, ROCKFALL_DEBRIS
-from .boss import (COLORS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
+from .boss import (COLORS, DASH_DEBRIS_SECONDS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
                    FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH, GUARDIAN_DRAW_UNIT,
                    GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, LIGHTNING_REACH, RITUAL, SHATTER_AT, SUMMON_SECONDS,
-                   SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, WATER_GAPS, WATER_RING_DELAY)
+                   SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, WATER_GAPS, WATER_GAP_HALF,
+                   WATER_RING_DELAY, water_wave_size)
 from .elements import NAMES, WEAKNESS
 from .element_master_aura import draw_master_aura
 
@@ -209,7 +210,7 @@ class GuardianArt:
             for i,gap in enumerate(WATER_GAPS):
                 if age < release+i*WATER_RING_DELAY:
                     gap += g.heading
-                    self.arc(origin,1.7+i*.79,gap+.57,gap+math.tau-.57,color,195)
+                    self.arc(origin, 1.7+i*.79, gap+WATER_GAP_HALF, gap+math.tau-WATER_GAP_HALF, color, 195)
         elif element == 'wind' and age < release:
             end = g.dash_endpoint(self.room, *origin, DASH_DISTANCE)
             if end == origin:
@@ -250,13 +251,11 @@ class GuardianArt:
                             self.unit * 2.13 * scale, height)
             return
         dx, dy = self.app.view.project(shot.dx, shot.dy)
-        radius = .45 + shot.age * shot.speed
-        span = self.unit * min(2.6, max(.56, .38 * radius))
-        crest = self.unit * (.95 + .35 * ease(shot.age / .45))
+        depth, span = water_wave_size(shot)
         angle = math.atan2(-dy, dx)
-        image.clip_composite_draw(64 * frame, 0, 64, 96, angle, '',
-                                  x - .20 * crest * math.cos(angle),
-                                  y - .20 * crest * math.sin(angle), crest, span)
+        # 원본의 좌우 투명 여백을 빼고 포말을 월드 판정 중심에 맞춘다.
+        image.clip_composite_draw(64 * frame + 19, 0, 36, 96, angle, '',
+                                  x, y, self.unit * depth, self.unit * span)
 
     def lightning_pulses(self, shot):
         beat = int(shot.age / LIGHTNING_BEAT)
@@ -349,7 +348,22 @@ class GuardianArt:
                 age=g.attack_age-release-i*EARTH_INTERVAL
                 if -.29 < age < .30:
                     layers.append((point[1]+.08,self.rock,(point,age,i)))
+        for bounds, started in g.dash_debris:
+            age = self.room.elapsed - started
+            if age < DASH_DEBRIS_SECONDS:
+                layers.append((bounds[3], self.wall_debris, (bounds, age)))
         return layers
+
+    def wall_debris(self, bounds, age):
+        left, top, right, bottom = bounds
+        x, y = self.app.point((left + right) / 2, (top + bottom) / 2)
+        progress = age / DASH_DEBRIS_SECONDS
+        size = self.unit * max(.9, right - left, bottom - top)
+        image = self.app.acquisition_art.quarry_props
+        image.opacify(1 - progress)
+        image.clip_draw(*ROCKFALL_DEBRIS, x, y + size * (.12 + .18 * (1 - progress)),
+                        size * (1 + .6 * progress), size * (.48 + .22 * progress))
+        image.opacify(1)
 
     def rock(self, point, age, index):
         x,y=self.app.point(*point)

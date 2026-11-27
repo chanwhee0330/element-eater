@@ -118,6 +118,13 @@ def restore_guardian(room, stored, actor):
             raise ValueError('혼합 구슬 섭취 연출 상태 불일치')
         guardian.reward_scene_elapsed = scene_elapsed
     room.enemies[0].element = guardian.element
+    broken_cover = stored.get('broken_cover', [])
+    if (not isinstance(broken_cover, list) or (broken_cover and guardian.summon < SUMMON_SECONDS)
+            or any(type(index) is not int or not 0 <= index < len(room.reference_art['cover'])
+                   for index in broken_cover)
+            or len(set(broken_cover)) != len(broken_cover)):
+        raise ValueError('수호자 석벽 파괴 상태 불일치')
+    guardian.broken_cover = set(broken_cover)
     pits = stored.get('pits', [])
     if not isinstance(pits, list) or (pits and guardian.summon < SUMMON_SECONDS):
         raise ValueError('수호자 낭떠러지 상태 불일치')

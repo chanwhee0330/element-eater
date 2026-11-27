@@ -7,7 +7,8 @@ import math
 import random
 from .combat import CombatTuning, Projectile, Feedback
 from .elements import ELEMENTS, BEATS, Source
-from .boss import EARTH_PIT_RADIUS, FALL_SECONDS, GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, Guardian
+from .boss import (EARTH_PIT_RADIUS, FALL_SECONDS, GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT,
+                   Guardian, water_wave_reaches, water_wave_wall_contact)
 from .quarry import LaserField, Quarry, contains
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1137,11 +1138,15 @@ class Room:
 
     def update_projectiles(self, dt):
         # 작은 간격으로 벽과 캐릭터를 검사해 빠른 탄환의 관통을 막는다.
+        wave_walls = None
         for shot in list(self.projectiles):
             if self.outcome:
                 break
             if not shot.active:
                 continue
+            boss_wave = self.guardian and shot.owner == 'enemy' and shot.element == 'water'
+            if boss_wave and wave_walls is None:
+                wave_walls = tuple(self.guardian.water_wave_walls(self))
             distance = min(shot.speed*dt, shot.remaining)
             parts = max(1, math.ceil(distance/.06))
             prior_age = shot.age
@@ -1171,11 +1176,14 @@ class Room:
                         break
                 hits_rim = self.turret_room and any(left <= shot.x < right and top <= shot.y < bottom
                                                     for left, top, right, bottom in self.wall_bounds.values())
+                wave_contact = water_wave_wall_contact(shot, wave_walls) if boss_wave else None
                 if (self.tile(shot.x, shot.y, airborne=True) == 3 or hits_rim
+                        or wave_contact is not None
                         or not (0 <= shot.x < self.data['columns'] and 0 <= shot.y < self.data['rows'])):
                     shot.active = False
                     self.sound_events.append('impact')
-                    self.feedback.append(Feedback(shot.x, shot.y-.4, '', shot.owner == 'hero', .16, .16))
+                    x, y = wave_contact if wave_contact is not None else (shot.x, shot.y)
+                    self.feedback.append(Feedback(x, y-.4, '', shot.owner == 'hero', .16, .16))
                     break
                 relay = self.acquisition and self.acquisition.get('relay')
                 if (relay and shot.owner == 'hero' and shot.element == 'lightning'
@@ -1221,8 +1229,18 @@ class Room:
                         continue
                     guardian = self.guardian if self.guardian and actor is self.enemies[0] else None
                     hit_radius = .42 if actor.kind == 'hero' else self.tuning.enemy_hit_radius
-                    reaches = (guardian.hits(actor,shot.x,shot.y) if guardian
-                               else math.hypot(actor.x-shot.x,actor.y-shot.y) <= hit_radius)
+                    if guardian:
+                        reaches = guardian.hits(actor, shot.x, shot.y)
+                    elif boss_wave:
+                        reaches = water_wave_reaches(shot, actor.x, actor.y, hit_radius)
+                        if reaches:
+                            # 파도 중심이 벽 옆을 지나가도 포말 판정이 벽을 가로지르지 않는다.
+                            dx, dy = actor.x - shot.x, actor.y - shot.y
+                            steps = max(1, math.ceil(math.hypot(dx, dy) / .06))
+                            reaches = all(self.tile(shot.x + dx * i / steps, shot.y + dy * i / steps,
+                                                    airborne=True) != 3 for i in range(1, steps + 1))
+                    else:
+                        reaches = math.hypot(actor.x-shot.x,actor.y-shot.y) <= hit_radius
                     if reaches:
                         neutral_target = shot.owner == 'hero' and actor.element == 'neutral'
                         allowed = shot.owner != 'hero' or shot.element == 'neutral' or BEATS.get(shot.element) == actor.element or neutral_target
@@ -1320,7 +1338,8 @@ class Room:
                         cells[x, y].append((left, top, right, bottom))
         return cells
 
-    def tile(self, x, y, *, ignore_block=False, ignore_earth=False, airborne=False):
+    def tile(self, x, y, *, ignore_block=False, ignore_earth=False, airborne=False,
+             ignore_breakable_walls=False):
         if self.trial:
             if any(i not in self.trial_returns and contains(gate, x, y)
                    for i, gate in enumerate(self.trial['returns'])):
@@ -1364,6 +1383,8 @@ class Room:
         if not ignore_earth:
             for terrain in self.earth_terrain:
                 if terrain.contains(x, y):
+                    if ignore_breakable_walls and terrain.kind == 'wall':
+                        continue
                     if self.guardian and terrain.kind == 'floor':
                         continue
                     return 3 if terrain.kind == 'wall' else 0
@@ -1387,7 +1408,9 @@ class Room:
             cover = self.trial_cells.get((math.floor(x), math.floor(y)))
             return 4 if cover is None else 3 if any(contains(bounds, x, y) for bounds in cover) else 0
         if self.reference_art:
-            for x0, y0, x1, y1 in self.reference_art['cover']:
+            for index, (x0, y0, x1, y1) in enumerate(self.reference_art['cover']):
+                if self.guardian and (ignore_breakable_walls or index in self.guardian.broken_cover):
+                    continue
                 if x0 <= x < x1 and y0 <= y < y1:
                     return 3
             for x0, y0, x1, y1 in self.reference_art['walkable']:
@@ -1414,17 +1437,20 @@ class Room:
             return self.data['tiles'][y][x]
         return 4
 
-    def fits(self, x, y, safe=False, *, ignore_earth=False, ignore_block=False):
+    def fits(self, x, y, safe=False, *, ignore_earth=False, ignore_block=False,
+             ignore_breakable_walls=False):
         lasers = self.active_lasers
         if lasers and lasers.touches_beam(x, y, self.radius, () if ignore_earth else self.earth_terrain):
             return False
         if (self.reference_art and self.reference_art.get('walledBoundary')
-                and self.tile(x, y, ignore_earth=ignore_earth, ignore_block=ignore_block) == 4):
+                and self.tile(x, y, ignore_earth=ignore_earth, ignore_block=ignore_block,
+                              ignore_breakable_walls=ignore_breakable_walls) == 4):
             if safe or not (self.guardian and self.guardian.pit_at(x, y)):
                 return False
         for dx in (-self.radius, self.radius):
             for dy in (-self.radius, self.radius):
-                tile = self.tile(x + dx, y + dy, ignore_earth=ignore_earth, ignore_block=ignore_block)
+                tile = self.tile(x + dx, y + dy, ignore_earth=ignore_earth, ignore_block=ignore_block,
+                                 ignore_breakable_walls=ignore_breakable_walls)
                 if tile == 3 or (safe and tile >= 3):
                     return False
         if any(s.solid and math.hypot(x-s.x, y-s.y) < .42+self.radius for s in self.sources):

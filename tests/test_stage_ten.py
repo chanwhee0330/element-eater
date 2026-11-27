@@ -1,14 +1,17 @@
 import json
+import math
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from src.boss import (DEFEAT_SECONDS, FORMS, GATE_SECONDS, GUARDIAN_DRAW_UNIT, GUARDIAN_SHOT_LIFT,
-                      MIXED_INGEST_BITE, MIXED_INGEST_SECONDS, SUMMON_SECONDS, RITUAL)
+from src.boss import (DASH_DISTANCE, DASH_SECONDS, DEFEAT_SECONDS, FORMS, GATE_SECONDS,
+                      GUARDIAN_DRAW_UNIT, GUARDIAN_SHOT_LIFT,
+                      MIXED_INGEST_BITE, MIXED_INGEST_SECONDS, SUMMON_SECONDS, RITUAL,
+                      WATER_GAPS, WATER_RING_DELAY)
 from src.combat import Projectile
 from src.elements import WEAKNESS
-from src.room import Room
+from src.room import EarthTerrain, Room
 from src.savegame import SaveStore, restore
 
 
@@ -95,6 +98,115 @@ class GuardianRoomTests(unittest.TestCase):
         self.assertTrue(room.lightning_charged)
         self.assertFalse(room.lightning_path)
         self.assertEqual([shot.element for shot in room.projectiles], ['lightning'])
+
+    def test_water_wave_foam_hits_outside_the_old_point_radius(self):
+        room = self.room
+        guardian, actor = enter_battle(room)
+        guardian.form = actor.element = 'water'
+        room.player.x, room.player.y = 16, 13.85
+        room.projectiles = [Projectile(16, 13, 1, 0, 'enemy', 4.4, 6, 10, age=1.8, element='water')]
+        room.update_projectiles(.01)
+        self.assertEqual(room.player.hp, room.player.max_hp - 10)
+        self.assertFalse(room.projectiles)
+
+    def test_water_wave_edge_stops_on_stone_and_earth_walls(self):
+        for origin, player, earth_bounds in (
+            ((5.35, 9.58), (9.1, 8.95), None),
+            ((9.85, 10.18), (11.65, 9.60), (10.4, 9.1, 11.05, 9.9)),
+        ):
+            with self.subTest(earth_wall=earth_bounds is not None):
+                room = Room(stage=10)
+                if earth_bounds:
+                    room.earth_terrain.append(EarthTerrain('wall', earth_bounds, room.earth_seconds))
+                room.player.x, room.player.y = player
+                shot = Projectile(*origin, 1, 0, 'enemy', 4.4, 10, 10, age=1.40, element='water')
+                room.projectiles.append(shot)
+                for _ in range(140):
+                    room.update_projectiles(1 / 120)
+                self.assertFalse(shot.active)
+                self.assertEqual(room.player.hp, room.player.max_hp)
+                self.assertNotEqual(room.tile(shot.x, shot.y, airborne=True), 3)
+                self.assertIn('impact', room.sound_events)
+
+    def test_water_wave_uses_open_space_and_does_not_hit_destroyed_cover(self):
+        for destroyed, y in ((False, 10.55), (True, 9.58)):
+            with self.subTest(destroyed=destroyed):
+                room = Room(stage=10)
+                if destroyed:
+                    room.guardian.broken_cover.add(0)
+                room.player.x, room.player.y = 9.1, y
+                room.projectiles.append(Projectile(5.35, y, 1, 0, 'enemy', 4.4, 10, 10,
+                                                   age=1.40, element='water'))
+                for _ in range(140):
+                    room.update_projectiles(1 / 120)
+                self.assertEqual(room.player.hp, room.player.max_hp - 10)
+
+    def test_water_rings_hit_aim_line_but_leave_each_warned_gap_open(self):
+        for index, gap in enumerate(WATER_GAPS):
+            for offset, damage in ((0, 10), (gap, 0)):
+                with self.subTest(ring=index, offset=offset):
+                    room = Room(stage=10)
+                    guardian, actor = enter_battle(room)
+                    guardian.form = actor.element = 'water'
+                    guardian.heading = math.pi / 2
+                    angle = guardian.heading + offset
+                    room.player.x = actor.x + 4 * math.cos(angle)
+                    room.player.y = actor.y + 4 * math.sin(angle)
+                    release = guardian.clip('attack').events['release'] + index * WATER_RING_DELAY
+                    guardian.attack_age = release - .01
+                    guardian.update_attack(room, actor, .02)
+                    for _ in range(120):
+                        room.update_projectiles(1 / 120)
+                    self.assertEqual(room.player.hp, room.player.max_hp - damage)
+
+    def test_wind_dash_breaks_cover_and_earth_wall_on_contact_and_saves_it(self):
+        room = self.room
+        guardian, actor = enter_battle(room)
+        guardian.form = actor.element = 'wind'
+        guardian.cooldown = 0
+        actor.x, actor.y = 11, 8.94
+        room.player.x, room.player.y = 5.45, actor.y
+        earth_wall = EarthTerrain('wall', (9.2, 8.35, 9.84, 9.48), room.earth_seconds)
+        room.earth_terrain.append(earth_wall)
+
+        room.update(set(), 1 / 120)
+        predicted_x, _ = guardian.dash_endpoint(room, actor.x, actor.y, DASH_DISTANCE)
+        release = guardian.clip('attack').events['release']
+        advance(room, release - .04)
+        self.assertEqual(guardian.broken_cover, set())
+        self.assertIn(earth_wall, room.earth_terrain)
+        self.assertEqual(room.tile(7, actor.y), 3)
+        self.assertLess(predicted_x, 6)
+
+        advance(room, .24)
+        self.assertEqual(guardian.broken_cover, {0})
+        self.assertNotIn(earth_wall, room.earth_terrain)
+        self.assertEqual(len(guardian.dash_debris), 2)
+        self.assertEqual(room.tile(7, actor.y), 0)
+        advance(room, DASH_SECONDS)
+        self.assertAlmostEqual(actor.x, predicted_x, delta=.08)
+        self.assertEqual(room.player.hp, room.player.max_hp - 10)
+
+        with TemporaryDirectory() as directory:
+            store = SaveStore(Path(directory) / 'continue.json')
+            store.write(room)
+            resumed = Room()
+            restore(store.load(), resumed)
+        self.assertEqual(resumed.guardian.broken_cover, {0})
+        self.assertEqual(resumed.tile(7, actor.y), 0)
+        resumed.reset()
+        self.assertEqual(resumed.tile(7, actor.y), 3)
+
+    def test_wind_dash_stops_at_a_pit_beyond_breakable_cover(self):
+        room = self.room
+        guardian, _ = enter_battle(room)
+        guardian.heading = math.pi
+        guardian.pits.append((5.65, 8.94))
+        x, y = guardian.dash_endpoint(room, 11, 8.94, DASH_DISTANCE, shatter=True)
+        self.assertEqual(guardian.broken_cover, {0})
+        self.assertTrue(room.fits(x, y, safe=True))
+        self.assertGreater(x, 6.5)
+        self.assertLess(x, 7)
 
     def test_shared_health_and_timed_random_swap(self):
         room = self.room

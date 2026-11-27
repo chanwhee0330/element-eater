@@ -225,6 +225,9 @@ class IsometricRoom:
         return self.foliage_lifts[key]
 
     def draw_wall(self, mesh, opacity=255):
+        guardian = self.room.guardian
+        if guardian and getattr(mesh, 'cover_index', None) in guardian.broken_cover:
+            return
         if mesh.wall_sprite is None:
             mesh.draw(self.p, self.atlas, self.origin, opacity=opacity)
             return
@@ -502,8 +505,9 @@ class IsometricRoom:
         room = self.room
         yield from self.perimeter_walls(room.rim_edges, room.rim_corners, room.rim_half_x, room.rim_half_y)
         stone_obstacles = () if self.room.garden else art['cover']
-        for left, top, right, bottom in stone_obstacles:
+        for index, (left, top, right, bottom) in enumerate(stone_obstacles):
             mesh = Mesh()
+            mesh.cover_index = index
             mesh.wall_bounds = (left, top, right, bottom)
             for row in range(math.ceil(bottom - top)):
                 y = top + row

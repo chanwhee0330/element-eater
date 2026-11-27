@@ -1,0 +1,65 @@
+{
+  "image": "guardian-cast-effects.png",
+  "cell": 224,
+  "columns": 18,
+  "rows": 18,
+  "pivot": [
+    112,
+    184
+  ],
+  "scale": 1.58,
+  "count": 16,
+  "event": 7,
+  "clips": {
+    "fire": {
+      "attack": {
+        "behind": 0,
+        "front": 16
+      },
+      "transform": {
+        "behind": 32,
+        "front": 48
+      }
+    },
+    "wind": {
+      "attack": {
+        "behind": 64,
+        "front": 80
+      },
+      "transform": {
+        "behind": 96,
+        "front": 112
+      }
+    },
+    "earth": {
+      "attack": {
+        "behind": 128,
+        "front": 144
+      },
+      "transform": {
+        "behind": 160,
+        "front": 176
+      }
+    },
+    "lightning": {
+      "attack": {
+        "behind": 192,
+        "front": 208
+      },
+      "transform": {
+        "behind": 224,
+        "front": 240
+      }
+    },
+    "water": {
+      "attack": {
+        "behind": 256,
+        "front": 272
+      },
+      "transform": {
+        "behind": 288,
+        "front": 304
+      }
+    }
+  }
+}

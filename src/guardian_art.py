@@ -4,7 +4,7 @@ import json
 import math
 
 from .acquisition_art import ROCKFALL_BOULDER, ROCKFALL_DEBRIS
-from .boss import (COLORS, DASH_DEBRIS_SECONDS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
+from .boss import (ATLAS_FOLDER, COLORS, DASH_DEBRIS_SECONDS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
                    FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH, GUARDIAN_DRAW_UNIT,
                    GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, LIGHTNING_REACH, RITUAL, SHATTER_AT, SUMMON_SECONDS,
                    SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, WATER_GAPS, WATER_GAP_HALF,
@@ -33,12 +33,13 @@ class GuardianArt:
         self.assembly = self.p.load_image(str(folder/'guardian-assembly.png'))
         self.earth_pit = self.p.load_image(str(folder/'guardian-earth-pit.png'))
         self.attack_effects = self.p.load_image(str(folder/'guardian-attack-effects.png'))
+        self.cast_spec = json.loads((ATLAS_FOLDER/'guardian-cast-effects.json').read_text(encoding='utf-8'))
+        self.cast_image = self.p.load_image(str(ATLAS_FOLDER/self.cast_spec['image']))
         wheel_folder = folder.parent/'room-09'
         self.gate_meta = json.loads((wheel_folder/'trial-waterwheel.json').read_text(encoding='utf-8'))
         self.gate_image = self.p.load_image(str(wheel_folder/self.gate_meta['image']))
         self.images = {element:self.p.load_image(str(path))
                        for element,(path,_) in self.room.guardian.clips.items()}
-
         self.walk_images = {element: self.p.load_image(str(path))
                             for element, (path, _) in self.room.guardian.walk_clips.items()}
 
@@ -150,6 +151,8 @@ class GuardianArt:
             x, y = self.app.point(*point)
             self.earth_pit.draw(x, y, round(2.12 * rx * self.unit),
                                 round(2.12 * ry * self.app.view.tile_height))
+        actor = self.room.enemies[0]
+        self.cast_layer('behind', self.app.point(actor.x, actor.y))
         self.warnings()
 
     def summon_light(self):
@@ -395,6 +398,7 @@ class GuardianArt:
             return
         if g.swap >= 0:
             self.transform(point, actor.facing)
+            self.cast_layer('front', point)
             return
         state,age = g.pose(actor)
         if g.summoning:
@@ -408,6 +412,7 @@ class GuardianArt:
                                           actor.y - math.sin(g.heading) * distance)
                     self.draw_clip(g.form, state, max(0, age - lag), echo, opacity)
         self.draw_clip(g.form, state, age, point, 1, hit=actor.hit_flash > 0)
+        self.cast_layer('front', point)
 
     def shatter(self, point, time):
         g, ui = self.guardian, self.app.ui
@@ -500,6 +505,38 @@ class GuardianArt:
         frame = g.clip(state, form=form).frame(age)
         self.draw_pose(form, frame, point, opacity, hit=hit, directional=state in g.walk_clips[form][1])
 
+    def cast_frame(self, age, event_time, duration):
+        event, count = self.cast_spec['event'], self.cast_spec['count']
+        if age < event_time:
+            return min(event - 1, int(age / event_time * event))
+        tail = count - event
+        return event + min(tail - 1, int((age - event_time) / (duration - event_time) * tail))
+
+    def cast_layer(self, layer, point):
+        g = self.guardian
+        if g.swap >= 0:
+            kind, age, key = 'transform', g.swap, 'elementChange'
+        elif g.attack_age >= 0:
+            kind, age, key = 'attack', g.attack_age, 'release'
+        else:
+            return
+        clip = g.clip(kind)
+        event_time = clip.events[key]
+        form = g.element
+        self.draw_cast(form, kind, layer, self.cast_frame(age, event_time, clip.duration), point)
+
+    def draw_cast(self, form, kind, layer, frame, point):
+        spec = self.cast_spec
+        first = spec['clips'][form][kind][layer]
+        row, col = divmod(first + frame, spec['columns'])
+        size = spec['cell']
+        px, py = spec['pivot']
+        scale = spec['scale'] * self.unit / GUARDIAN_DRAW_UNIT
+        x, y = point
+        self.cast_image.clip_draw(col * size, (spec['rows'] - 1 - row) * size, size, size,
+                                  x + (size/2 - px) * scale, y + (py - size/2) * scale,
+                                  size * scale, size * scale)
+
     def draw_pose(self, form, frame, point, opacity, vertical_scale=1, hit=False, directional=False):
         if opacity <= 0:
             return
@@ -528,16 +565,6 @@ class GuardianArt:
         arriving_state = 'idle' if facing == 'down' else g.directional_state('arrive', facing)
         arriving_age = max(0, g.swap-switch if facing == 'down' else g.swap-switch+.20)
         self.draw_clip(g.next_form, arriving_state, arriving_age, point, fade)
-        burst=1-abs(g.swap-switch)/.28
-        if burst > 0:
-            self.app.ui.begin()
-            x,y=point
-            y+=self.unit*2.45
-            shade=COLORS[g.next_form]
-            for factor,alpha in ((.92,50),(.61,107),(.32,201)):
-                radius=round(self.unit*burst*factor)
-                if radius:
-                    self.p.draw_circle(x,y,radius,*shade,round(burst*alpha),filled=True)
 
     def assemble(self):
         g=self.guardian

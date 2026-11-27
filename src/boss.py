@@ -35,12 +35,19 @@ LIGHTNING_BEAT = .12
 LIGHTNING_REACH = 17
 GUARDIAN_DRAW_UNIT = 36.8
 GUARDIAN_SHOT_LIFT = .61
+GUARDIAN_WALK_SPEED = 1.65
 ATLAS_FOLDER = Path(__file__).resolve().parents[1] / 'assets/sprites/boss/animation'
 
 
 def inside(bounds, x, y):
     left, top, right, bottom = bounds
     return left <= x < right and top <= y < bottom
+
+
+def facing_for(dx, dy):
+    if abs(dx) > abs(dy):
+        return 'right' if dx > 0 else 'left'
+    return 'down' if dy >= 0 else 'up'
 
 
 def angle_delta(a, b):
@@ -78,10 +85,25 @@ def guardian_atlases():
 
 
 @lru_cache(maxsize=1)
+def guardian_walk_atlases():
+    atlases = {}
+    for element in FORMS:
+        spec = json.loads((ATLAS_FOLDER/f'guardian-{element}-walk.json').read_text(encoding='utf-8'))
+        atlases[element] = ATLAS_FOLDER/spec['image'], {
+            state: Clip(spec, meta) for state, meta in spec['clips'].items()
+        }
+    return atlases
+
+
+@lru_cache(maxsize=1)
 def guardian_hit_masks():
     spec = json.loads((ATLAS_FOLDER/'guardian-hit-masks.json').read_text(encoding='utf-8'))
     masks = {form:{state:tuple(base64.b64decode(mask) for mask in frames)
                    for state,frames in poses.items()} for form,poses in spec['poses'].items()}
+    walk = json.loads((ATLAS_FOLDER/'guardian-walk-hit-masks.json').read_text(encoding='utf-8'))
+    for form, poses in walk.items():
+        masks[form].update({state: tuple(base64.b64decode(mask) for mask in frames)
+                            for state, frames in poses.items()})
     return spec['cellSize'],spec['frameSize']//spec['cellSize'],masks
 
 
@@ -109,6 +131,7 @@ class Guardian:
         self.cooldown = 1.0
         self.fall = -1.0
         self.clips = guardian_atlases()
+        self.walk_clips = guardian_walk_atlases()
 
     @property
     def summoning(self):
@@ -136,13 +159,21 @@ class Guardian:
             return self.next_form
         return self.form
 
-    def clip(self, state):
-        return self.clips[self.form][1][state]
+    def clip(self, state, *, form=None):
+        form = form or self.form
+        if state in self.walk_clips[form][1]:
+            return self.walk_clips[form][1][state]
+        return self.clips[form][1][state]
+
+    @staticmethod
+    def directional_state(state, facing):
+        return state if facing == 'down' else f'{state}_{facing}'
 
     def pose(self, actor):
         if self.attack_age >= 0:
-            return 'attack',self.attack_age
-        return ('walk' if actor.moving else 'idle'),actor.animation_time
+            facing = facing_for(math.cos(self.heading), math.sin(self.heading))
+            return self.directional_state('attack', facing), self.attack_age
+        return self.directional_state('walk' if actor.moving else 'idle', actor.facing), actor.animation_time
 
     def hits(self, actor, x, y):
         state,age = self.pose(actor)
@@ -284,7 +315,13 @@ class Guardian:
         left,top,right,bottom = self.spec['arena']
         x = min(right,max(left,actor.x+dx))
         y = min(bottom,max(top,actor.y+dy))
-        room.move(actor,x-actor.x,y-actor.y,safe=True)
+        old_x, old_y = actor.x, actor.y
+        was_moving = actor.moving
+        room.move(actor,x-old_x,y-old_y,safe=True)
+        if actor.moving:
+            dx, dy = actor.x-old_x, actor.y-old_y
+            actor.facing = facing_for(dx, dy)
+        actor.moving |= was_moving
 
     def dash_endpoint(self, room, x, y, distance):
         left, top, right, bottom = self.spec['arena']
@@ -314,6 +351,9 @@ class Guardian:
 
     def step(self, room, dt):
         actor = room.enemies[0]
+        was_moving, prior_facing = actor.moving, actor.facing
+        old_x, old_y = actor.x, actor.y
+        actor.moving = False
         if self.ritual < len(RITUAL):
             return
         if self.summoning:
@@ -356,13 +396,13 @@ class Guardian:
             self.form_left = 0
             self.start_transform(room,actor)
             return
-        actor.animation_time += dt
         if actor.knockback_left > 0:
             span = min(dt,actor.knockback_left)
             dx,dy = actor.knockback
             self.move(room,actor,dx*span,dy*span)
             actor.knockback_left -= span
         if self.attack_age >= 0:
+            actor.facing = facing_for(math.cos(self.heading), math.sin(self.heading))
             self.update_attack(room, actor, dt)
             return
         player = room.player
@@ -371,10 +411,23 @@ class Guardian:
         if not player.falling and self.cooldown <= 0 and distance < 11:
             self.target = (player.x, player.y)
             self.heading = math.atan2(dy,dx)
+            if distance:
+                actor.facing = facing_for(math.cos(self.heading), math.sin(self.heading))
             self.attack_age = 0
             room.sound_events.append('warning')
         elif distance > 5.5 and not player.falling:
-            self.move(room,actor,dx/distance*1.65*dt,dy/distance*1.65*dt)
+            self.move(room, actor, dx / distance * GUARDIAN_WALK_SPEED * dt,
+                      dy / distance * GUARDIAN_WALK_SPEED * dt)
+        if actor.moving and self.attack_age < 0:
+            if not was_moving or actor.facing != prior_facing:
+                actor.animation_time = 0
+            side = actor.facing in ('left', 'right')
+            advance = abs(actor.x - old_x) if side else abs(actor.y - old_y)
+            actor.animation_time += advance / GUARDIAN_WALK_SPEED
+        elif was_moving:
+            actor.animation_time = 0
+        else:
+            actor.animation_time += dt
         self.cooldown = max(0,self.cooldown-dt)
 
     def earth_points(self):

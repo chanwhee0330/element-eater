@@ -1,0 +1,2097 @@
+{
+  "schema": "element-eater.sprite-atlas.v1",
+  "image": "guardian-water-walk.png",
+  "element": "water",
+  "imageSize": {
+    "width": 3840,
+    "height": 3840
+  },
+  "frameSize": {
+    "width": 320,
+    "height": 320
+  },
+  "pivotPixelsTopLeft": {
+    "x": 160,
+    "y": 264
+  },
+  "layout": {
+    "columns": 12,
+    "rows": 12
+  },
+  "clips": {
+    "attack_right": {
+      "frames": [
+        "attack_right_0",
+        "attack_right_1",
+        "attack_right_2",
+        "attack_right_3",
+        "attack_right_4",
+        "attack_right_5",
+        "attack_right_6",
+        "attack_right_7",
+        "attack_right_8",
+        "attack_right_9",
+        "attack_right_10",
+        "attack_right_11",
+        "attack_right_12",
+        "attack_right_13",
+        "attack_right_14",
+        "attack_right_15",
+        "attack_right_16",
+        "attack_right_17"
+      ],
+      "loop": false,
+      "events": [
+        {
+          "frame": 7,
+          "name": "release"
+        }
+      ]
+    },
+    "transform_right": {
+      "frames": [
+        "transform_right_0",
+        "transform_right_1",
+        "transform_right_2",
+        "transform_right_3",
+        "transform_right_4",
+        "transform_right_5"
+      ],
+      "loop": false
+    },
+    "idle_right": {
+      "frames": [
+        "idle_right_0"
+      ],
+      "loop": true
+    },
+    "walk_right": {
+      "frames": [
+        "walk_right_0",
+        "walk_right_1",
+        "walk_right_2",
+        "walk_right_3",
+        "walk_right_4",
+        "walk_right_5",
+        "walk_right_6",
+        "walk_right_7",
+        "walk_right_8",
+        "walk_right_9",
+        "walk_right_10",
+        "walk_right_11"
+      ],
+      "loop": true
+    },
+    "arrive_right": {
+      "frames": [
+        "arrive_right_0",
+        "arrive_right_1",
+        "arrive_right_2",
+        "arrive_right_3",
+        "arrive_right_4",
+        "arrive_right_5"
+      ],
+      "loop": false
+    },
+    "attack_left": {
+      "frames": [
+        "attack_left_0",
+        "attack_left_1",
+        "attack_left_2",
+        "attack_left_3",
+        "attack_left_4",
+        "attack_left_5",
+        "attack_left_6",
+        "attack_left_7",
+        "attack_left_8",
+        "attack_left_9",
+        "attack_left_10",
+        "attack_left_11",
+        "attack_left_12",
+        "attack_left_13",
+        "attack_left_14",
+        "attack_left_15",
+        "attack_left_16",
+        "attack_left_17"
+      ],
+      "loop": false,
+      "events": [
+        {
+          "frame": 7,
+          "name": "release"
+        }
+      ]
+    },
+    "transform_left": {
+      "frames": [
+        "transform_left_0",
+        "transform_left_1",
+        "transform_left_2",
+        "transform_left_3",
+        "transform_left_4",
+        "transform_left_5"
+      ],
+      "loop": false
+    },
+    "idle_left": {
+      "frames": [
+        "idle_left_0"
+      ],
+      "loop": true
+    },
+    "walk_left": {
+      "frames": [
+        "walk_left_0",
+        "walk_left_1",
+        "walk_left_2",
+        "walk_left_3",
+        "walk_left_4",
+        "walk_left_5",
+        "walk_left_6",
+        "walk_left_7",
+        "walk_left_8",
+        "walk_left_9",
+        "walk_left_10",
+        "walk_left_11"
+      ],
+      "loop": true
+    },
+    "arrive_left": {
+      "frames": [
+        "arrive_left_0",
+        "arrive_left_1",
+        "arrive_left_2",
+        "arrive_left_3",
+        "arrive_left_4",
+        "arrive_left_5"
+      ],
+      "loop": false
+    },
+    "attack_up": {
+      "frames": [
+        "attack_up_0",
+        "attack_up_1",
+        "attack_up_2",
+        "attack_up_3",
+        "attack_up_4",
+        "attack_up_5",
+        "attack_up_6",
+        "attack_up_7",
+        "attack_up_8",
+        "attack_up_9",
+        "attack_up_10",
+        "attack_up_11",
+        "attack_up_12",
+        "attack_up_13",
+        "attack_up_14",
+        "attack_up_15",
+        "attack_up_16",
+        "attack_up_17"
+      ],
+      "loop": false,
+      "events": [
+        {
+          "frame": 7,
+          "name": "release"
+        }
+      ]
+    },
+    "transform_up": {
+      "frames": [
+        "transform_up_0",
+        "transform_up_1",
+        "transform_up_2",
+        "transform_up_3",
+        "transform_up_4",
+        "transform_up_5"
+      ],
+      "loop": false
+    },
+    "idle_up": {
+      "frames": [
+        "idle_up_0"
+      ],
+      "loop": true
+    },
+    "walk_up": {
+      "frames": [
+        "walk_up_0",
+        "walk_up_1",
+        "walk_up_2",
+        "walk_up_3",
+        "walk_up_4",
+        "walk_up_5",
+        "walk_up_6",
+        "walk_up_7",
+        "walk_up_8",
+        "walk_up_9",
+        "walk_up_10",
+        "walk_up_11"
+      ],
+      "loop": true
+    },
+    "arrive_up": {
+      "frames": [
+        "arrive_up_0",
+        "arrive_up_1",
+        "arrive_up_2",
+        "arrive_up_3",
+        "arrive_up_4",
+        "arrive_up_5"
+      ],
+      "loop": false
+    },
+    "walk": {
+      "frames": [
+        "walk_0",
+        "walk_1",
+        "walk_2",
+        "walk_3",
+        "walk_4",
+        "walk_5",
+        "walk_6",
+        "walk_7",
+        "walk_8",
+        "walk_9",
+        "walk_10",
+        "walk_11"
+      ],
+      "loop": true
+    }
+  },
+  "frames": {
+    "attack_right_0": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_1": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_2": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_3": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_4": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_5": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_6": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_7": {
+      "duration": 136,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_8": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_9": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_10": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_11": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 3520,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_12": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_13": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_14": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_15": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_16": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_right_17": {
+      "duration": 137,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_right_0": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_right_1": {
+      "duration": 66,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_right_2": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_right_3": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_right_4": {
+      "duration": 66,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_right_5": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 3200,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "idle_right_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_1": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_2": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_3": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_4": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_5": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_6": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_7": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_8": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_9": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_10": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 2880,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_right_11": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_right_0": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_right_1": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_right_2": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_right_3": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_right_4": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_right_5": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_0": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_1": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_2": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_3": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_4": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 2560,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_5": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_6": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_7": {
+      "duration": 136,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_8": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_9": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_10": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_11": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_12": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_13": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_14": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_15": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_16": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 2240,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_left_17": {
+      "duration": 137,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_left_0": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_left_1": {
+      "duration": 66,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_left_2": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_left_3": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_left_4": {
+      "duration": 66,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_left_5": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "idle_left_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_1": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_2": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_3": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 1920,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_4": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_5": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_6": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_7": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_8": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_9": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_10": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_left_11": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_left_0": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_left_1": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_left_2": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_left_3": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 1600,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_left_4": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_left_5": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_0": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_1": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_2": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_3": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_4": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_5": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_6": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_7": {
+      "duration": 136,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_8": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_9": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 1280,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_10": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_11": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_12": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_13": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_14": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_15": {
+      "duration": 72,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_16": {
+      "duration": 71,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "attack_up_17": {
+      "duration": 137,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_up_0": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_up_1": {
+      "duration": 66,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_up_2": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_up_3": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 960,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_up_4": {
+      "duration": 66,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "transform_up_5": {
+      "duration": 67,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "idle_up_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_1": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_2": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_3": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_4": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_5": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_6": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_7": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_8": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 640,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_9": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_10": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_up_11": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_up_0": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_up_1": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_up_2": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_up_3": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_up_4": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "arrive_up_5": {
+      "duration": 110,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_0": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2880,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_1": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3200,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_2": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 3520,
+        "bottom": 320,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_3": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 0,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_4": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 320,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_5": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 640,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_6": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 960,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_7": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1280,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_8": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1600,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_9": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 1920,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_10": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2240,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    },
+    "walk_11": {
+      "duration": 100,
+      "pivotPixelsTopLeft": {
+        "x": 160,
+        "y": 264
+      },
+      "pico2dClip": {
+        "left": 2560,
+        "bottom": 0,
+        "width": 320,
+        "height": 320
+      }
+    }
+  }
+}

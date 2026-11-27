@@ -1752,8 +1752,9 @@ class Room:
                     actor.burn_delay = .6 if actor.burn_ticks else 0
                     self.damage(actor, 3)
         previous_movement = {id(e): e.moving for e in self.enemies}
-        for enemy in self.enemies:
-            enemy.moving = False
+        if not self.guardian:
+            for enemy in self.enemies:
+                enemy.moving = False
         if player.falling > 0:
             if self.guardian:
                 self.guardian.step(self, dt)

@@ -38,6 +38,9 @@ class GuardianArt:
         self.images = {element:self.p.load_image(str(path))
                        for element,(path,_) in self.room.guardian.clips.items()}
 
+        self.walk_images = {element: self.p.load_image(str(path))
+                            for element, (path, _) in self.room.guardian.walk_clips.items()}
+
     @property
     def room(self):
         return self.app.room
@@ -377,20 +380,20 @@ class GuardianArt:
             self.shatter(point, g.fall)
             return
         if g.swap >= 0:
-            self.transform(point)
+            self.transform(point, actor.facing)
             return
         state,age = g.pose(actor)
         if g.summoning:
             age = 0
-        if g.form == 'wind' and state == 'attack' and actor.moving:
+        if g.form == 'wind' and g.attack_age >= 0 and actor.moving:
             dash_age = age - g.clip('attack').events['release']
             if 0 < dash_age < DASH_SECONDS:
                 for lag, opacity in ((.095, .15), (.045, .30)):
                     distance = DASH_DISTANCE * min(lag, dash_age) / DASH_SECONDS
                     echo = self.app.point(actor.x - math.cos(g.heading) * distance,
                                           actor.y - math.sin(g.heading) * distance)
-                    self.draw_pose(g.form, g.clip(state).frame(max(0, age - lag)), echo, opacity)
-        self.draw_pose(g.form,g.clip(state).frame(age),point,1,hit=actor.hit_flash>0)
+                    self.draw_clip(g.form, state, max(0, age - lag), echo, opacity)
+        self.draw_clip(g.form, state, age, point, 1, hit=actor.hit_flash > 0)
 
     def shatter(self, point, time):
         g, ui = self.guardian, self.app.ui
@@ -478,10 +481,15 @@ class GuardianArt:
             self.p.draw_rectangle(0, 0, app.width-1, bars, 10, 8, 16, filled=True)
             self.p.draw_rectangle(0, app.height-bars, app.width-1, app.height-1, 10, 8, 16, filled=True)
 
-    def draw_pose(self, form, frame, point, opacity, vertical_scale=1, hit=False):
+    def draw_clip(self, form, state, age, point, opacity, *, hit=False):
+        g = self.guardian
+        frame = g.clip(state, form=form).frame(age)
+        self.draw_pose(form, frame, point, opacity, hit=hit, directional=state in g.walk_clips[form][1])
+
+    def draw_pose(self, form, frame, point, opacity, vertical_scale=1, hit=False, directional=False):
         if opacity <= 0:
             return
-        image=self.images[form]
+        image = (self.walk_images if directional else self.images)[form]
         clip,pivot=frame['pico2dClip'],frame['pivotPixelsTopLeft']
         w,h=clip['width'],clip['height']
         scale=self.unit/GUARDIAN_DRAW_UNIT
@@ -495,16 +503,17 @@ class GuardianArt:
         image.opacify(1)
         self.p.SDL_SetTextureColorMod(image.texture,255,255,255)
 
-    def transform(self, point):
+    def transform(self, point, facing):
         g=self.guardian
         clip=g.clip('transform')
         switch=clip.events['elementChange']
         fade=ease((g.swap-switch+.20)/.46)
         # 공용 준비 동작 뒤에는 이번에 뽑힌 형태의 실제 시트를 드러낸다.
-        charge=clip.frame(min(g.swap,clip.ends[5]-1e-6))
-        self.draw_pose(g.form,charge,point,1-fade)
-        arriving=g.clips[g.next_form][1]['idle'].frame(max(0,g.swap-switch))
-        self.draw_pose(g.next_form,arriving,point,fade)
+        charge_state = g.directional_state('transform', facing)
+        self.draw_clip(g.form, charge_state, min(g.swap, clip.ends[5]-1e-6), point, 1-fade)
+        arriving_state = 'idle' if facing == 'down' else g.directional_state('arrive', facing)
+        arriving_age = max(0, g.swap-switch if facing == 'down' else g.swap-switch+.20)
+        self.draw_clip(g.next_form, arriving_state, arriving_age, point, fade)
         burst=1-abs(g.swap-switch)/.28
         if burst > 0:
             self.app.ui.begin()

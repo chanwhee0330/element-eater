@@ -61,7 +61,10 @@ def restore_guardian(room, stored, actor):
             raise ValueError('오원 제단 시간 불일치')
         setattr(guardian,key,value)
     spec = guardian.spec
-    guardian.wind_y = number(stored['wind_y'],spec['windPlateY'],spec['windStartY'])
+    wind_y = stored['wind_y']
+    if wind_y == spec.get('previousWindPlateY', spec['windPlateY']):
+        wind_y = spec['windPlateY']
+    guardian.wind_y = number(wind_y, spec['windPlateY'], spec['windStartY'])
     guardian.wind_moving = boolean(stored['wind_moving'])
     guardian.heading = number(stored['heading'],-math.pi,math.pi)
     guardian.cooldown = number(stored['cooldown'],0,2)

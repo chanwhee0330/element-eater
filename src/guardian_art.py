@@ -16,6 +16,9 @@ from .element_master_aura import draw_master_aura
 PROLOGUE_SECONDS = 7.2
 ENDING_RETURN_DELAY = .8
 MIXER_REVEAL_AT = .53
+ALTAR_CELL = 128
+ALTAR_FLOOR_PIVOT = 106
+ALTAR_WIDTH = 2.65
 
 
 def ease(value):
@@ -28,8 +31,10 @@ class GuardianArt:
         self.app = app
         self.p = app.p
         folder = app.room.map_path.parent
-        self.props = self.p.load_image(str(folder/'guardian-objects.png'))
-        self.props_frames = json.loads((folder/'guardian-objects.json').read_text(encoding='utf-8'))
+        self.altar_flames = self.p.load_image(str(folder/'guardian-objects.png'))
+        props_frames = json.loads((folder/'guardian-objects.json').read_text(encoding='utf-8'))
+        self.altar_flame_frames = props_frames['fire'][1:]
+        self.element_altars = self.p.load_image(str(folder/'guardian-element-altars.png'))
         self.assembly = self.p.load_image(str(folder/'guardian-assembly.png'))
         self.earth_pit = self.p.load_image(str(folder/'guardian-earth-pit.png'))
         self.attack_effects = self.p.load_image(str(folder/'guardian-attack-effects.png'))
@@ -82,6 +87,10 @@ class GuardianArt:
         self.p.draw_circle(x, y, 4, *color, filled=True)
         self.p.draw_circle(x, y, 2, 255, 244, 219, filled=True)
 
+    def altar_loaded(self, element):
+        g = self.guardian
+        return element in g.placed and g.summon < SUMMON_SHOCK_AT
+
     def floor(self):
         g = self.guardian
         t = self.room.elapsed
@@ -89,34 +98,39 @@ class GuardianArt:
         center = g.spec['center']
         angles = [math.atan2(y-center[1], x-center[0]) for x, y in g.spec['devices']]
         for i,(point,feed) in enumerate(zip(g.spec['devices'],g.spec['feeds'])):
-            color = COLORS[RITUAL[i]]
+            element = RITUAL[i]
+            color = COLORS[element]
+            loaded = self.altar_loaded(element)
             if g.ritual < len(RITUAL) or g.summoning:
-                on = RITUAL[i] in g.placed
-                current = g.can_place_orb(self.room, RITUAL[i])
+                on = loaded
+                current = g.can_place_orb(self.room, element)
             else:
-                on, current = RITUAL[i] == g.element and g.fall < 0, False
+                on, current = element == g.element and g.fall < 0, False
             if not (on or current):
                 continue
             alpha = 221 if on else 100+77*math.sin(t*5)**2
             x,y = point
-            diamond = [(x,y-.61),(x+.74,y),(x,y+.61),(x-.74,y)]
-            for start,end in zip(diamond,diamond[1:]+diamond[:1]):
-                self.line(start,end,color,alpha)
+            if loaded or current:
+                glyph_y = y + g.spec['deviceGlyphOffsetY']
+                diamond = [(x,glyph_y-.61),(x+.74,glyph_y),(x,glyph_y+.61),(x-.74,glyph_y)]
+                for start,end in zip(diamond,diamond[1:]+diamond[:1]):
+                    self.line(start,end,color,alpha)
             if on:
-                if RITUAL[i] in g.placed and g.summon < SUMMON_SHOCK_AT:
+                if loaded:
                     px, py = self.app.point(x, y)
                     radius = max(10, round(self.unit * .58))
                     self.app.ui.orb_socket_glow(px, py, radius, color)
                     self.p.draw_circle(px, py, radius-5, *color, 100, filled=True)
                     for edge in range(radius-5, radius+1):
                         self.p.draw_circle(px, py, edge, *color, 235)
-                age = t - g.placed_at.get(RITUAL[i], t - 1)
+                age = t - g.placed_at.get(element, t - 1)
                 if not (g.ritual < len(RITUAL) or g.summoning):
                     age = 1
                 a = angles[i]
                 feed_progress = min(1, max(0, age / .18))
                 tip = tuple(start + (end-start)*feed_progress for start, end in zip(point, feed))
-                self.line(point, tip, color, alpha)
+                if loaded:
+                    self.line(point, tip, color, alpha)
                 if feed_progress < 1:
                     self.altar_light_tip(tip, color)
                     continue
@@ -287,34 +301,63 @@ class GuardianArt:
         x, y = self.app.point(shot.x, shot.y)
         self.app.ui.diamond(x, y, max(2, round(unit * .12)), (226, 189, 255, 210))
 
-    def prop(self, kind, frame, point, width):
-        left,bottom,w,h=self.props_frames[kind][frame]
-        x,y=self.app.point(*point)
-        scale=width*self.unit/w
-        self.props.clip_draw(left,bottom,w,h,x,y+h*scale/2-6,w*scale,h*scale)
+    def charged_altar(self, element, x, y, scale):
+        elapsed = self.room.elapsed
+        socket = y + 31 * scale
+        color = COLORS[element]
+        self.app.ui.begin()
+        if element == 'fire':
+            frames = self.altar_flame_frames
+            left, bottom, width, height = frames[int(elapsed * 19) % len(frames)]
+            flame_height = 110
+            flame_scale = scale * .78
+            self.altar_flames.clip_draw(left, bottom + height - flame_height, width, flame_height,
+                                        x, socket + flame_height * flame_scale / 2,
+                                        width * flame_scale, flame_height * flame_scale)
+        elif element == 'lightning':
+            terminal_y = y + 45 * scale
+            beat = int(elapsed * 12)
+            self.app.draw_electric_arc(x - 35 * scale, terminal_y, x + 36 * scale, terminal_y,
+                                       6 * scale, 185 + 45 * (beat % 2), beat,
+                                       glow=color, core=(244, 218, 255))
+        elif element == 'earth':
+            for side in (-1, 1):
+                pulse = math.sin(elapsed * 4 + side * 1.1) ** 6
+                self.app.ui.diamond(x + side * 34 * scale, y + 48 * scale, 3.7 * scale,
+                                    (255, 222, 156, round(215 * pulse)))
+        else:
+            water = element == 'water'
+            rate = 1.5 if water else 2.4
+            for shift in (0, .5):
+                phase = (elapsed * rate + shift) % 1
+                radius = (8 + 18 * phase) * scale
+                level = socket + (0 if water else 17 * phase * scale)
+                start = 0 if water else (elapsed * 3 + shift * math.tau)
+                sweep = math.tau if water else math.pi * 1.1
+                p0 = x + radius * math.cos(start), level + radius * .32 * math.sin(start)
+                for segment in range(1, 13):
+                    angle = start + sweep * segment / 12
+                    p1 = x + radius * math.cos(angle), level + radius * .32 * math.sin(angle)
+                    self.p.draw_line(*p0, *p1, *color, round(170 * (1 - phase)))
+                    p0 = p1
+            if water:
+                for i in range(3):
+                    phase = (elapsed * 1.8 + i / 3) % 1
+                    px = x + (i - 1) * (4 + 6 * phase) * scale
+                    py = socket + (5 + 18 * math.sin(math.pi * phase)) * scale
+                    self.app.ui.diamond(px, py, max(1, 2 * scale), (187, 246, 255, round(140*(1-phase))))
 
     def device(self, index):
         g=self.guardian
-        t=self.room.elapsed
-        x,y=point=g.spec['devices'][index]
+        x, y = g.spec['devices'][index]
         element = RITUAL[index]
-        active = element in g.placed
-        if index == 0:
-            self.prop('basin',1+int(t*10)%12 if active else 0,point,2.12)
-        elif index == 1:
-            self.prop('fire',1+int(t*19)%11 if active else 0,point,1.80)
-        elif index == 2:
-            self.app.acquisition_art.draw_counterweight_prop('socket',point)
-        elif index == 3:
-            self.app.acquisition_art.draw_counterweight_prop('socket',point)
-        elif index == 4:
-            self.prop('coil',2+int(t*13)%3 if active else 0,point,1.62)
-        if self.room.stage == 10 and not active and g.ritual < len(RITUAL):
-            px, py = self.app.point(x, y, self.unit * .96)
-            orb = self.app.source_images[element, 'orb']
-            orb.opacify(.28)
-            orb.draw(px, py, self.unit * .75, self.unit * .75)
-            orb.opacify(1)
+        size = ALTAR_WIDTH * self.unit
+        px, py = self.app.point(x, y)
+        lift = (ALTAR_FLOOR_PIVOT / ALTAR_CELL - .5) * size
+        self.element_altars.clip_draw(index * ALTAR_CELL, 0, ALTAR_CELL, ALTAR_CELL,
+                                      px, py + lift, size, size)
+        if self.altar_loaded(element):
+            self.charged_altar(element, px, py, size / ALTAR_CELL)
 
     def loose_orb(self, element):
         x, y, phase = self.guardian.orb_flight(element)

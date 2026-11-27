@@ -17,7 +17,8 @@ FLOOR = [(13,1,17,4), (9,3,21,5), (6,5,24,7), (3,7,27,17), (1,10,3,14),
          (27,10,29,14), (6,17,24,19), (9,19,21,21), (13,21,17,24)]
 COVER = [(6,8.6,8.5,9.25), (21.5,8.6,24,9.25), (6.7,14.7,9,15.35), (21,14.7,23.3,15.35)]
 CENTER = (15,11.25)
-DEVICES = [(12.45,14.86), (10.88,10.05), (15,6.15), (19.12,10.05), (17.55,14.86)]
+DEVICES = [(11.27,16.39), (9.10,10.13), (15,5.25), (20.90,10.13), (18.73,16.39)]
+DEVICE_GLYPH_OFFSET_Y = .76
 GLYPHS = (
     [[(0,-8),(-6,1),(-6,5),(0,8),(6,5),(6,1),(0,-8)]],
     [[(-6,6),(-8,1),(-4,-6),(-1,-2),(2,-10),(8,0),(6,6),(-6,6)], [(-2,4),(1,0),(4,4)]],
@@ -43,7 +44,7 @@ def export_terrain():
         d.line(points,fill='#594149',width=3)
         d.line([(x+1,y) for x,y in points],fill='#ad846a')
     feeds = []
-    for i, ((tx,ty), glyph) in enumerate(zip(DEVICES,GLYPHS)):
+    for (tx,ty), glyph in zip(DEVICES, GLYPHS):
         x,y = art.point(tx,ty)
         dx,dy = tx-CENTER[0],ty-CENTER[1]
         length = math.hypot(dx,dy)
@@ -52,6 +53,7 @@ def export_terrain():
         d.line((join,(x,y)),fill='#45343f',width=6)
         d.line((join,(x,y)),fill='#9f765f',width=2)
         feeds.append(tip)
+        x, y = art.point(tx, ty + DEVICE_GLYPH_OFFSET_Y)
         diamond = [(x,y-19),(x+23,y),(x,y+19),(x-23,y)]
         d.polygon([(u,v+2) for u,v in diamond],fill='#41323b')
         d.polygon(diamond,fill='#625256',outline='#aa9484',width=2)
@@ -80,7 +82,9 @@ def export_terrain():
                             wallOpenings=[(24,13,17),(1,13,17)],walledBoundary=True),
         'layoutRevision':2,
         'boss':dict(hp=450,formSeconds=8.0,center=CENTER,devices=DEVICES,feeds=feeds,
-                    windStartY=7.5,windPlateY=6.15,arena=(5,4.5,25,17.6),
+                    deviceGlyphOffsetY=DEVICE_GLYPH_OFFSET_Y,
+                    windStartY=7.5,windPlateY=DEVICES[2][1],previousWindPlateY=6.15,
+                    arena=(5,4.5,25,17.6),
                     exitGate=(13,2.05,17,2.55),exitOpening=(14.32,15.68)),
     }
     (OUT/'room-10.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

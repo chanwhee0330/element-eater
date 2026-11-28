@@ -45,6 +45,8 @@ LIGHTNING_REACH = 17
 GUARDIAN_DRAW_UNIT = 36.8
 GUARDIAN_SHOT_LIFT = .61
 GUARDIAN_WALK_SPEED = 1.65
+PEDESTAL_HALF_WIDTH = .94
+PEDESTAL_REACH = 1.35
 ATLAS_FOLDER = Path(__file__).resolve().parents[1] / 'assets/sprites/boss/animation'
 
 
@@ -147,6 +149,8 @@ def guardian_hit_masks():
 class Guardian:
     def __init__(self, spec):
         self.spec = spec
+        self.pedestal_bases = tuple((x - PEDESTAL_HALF_WIDTH, y - .48, x + PEDESTAL_HALF_WIDTH, y + .07)
+                                    for x, y in spec['devices'])
         self.pits = []
         self.broken_cover = set()
         self.dash_debris = []
@@ -247,14 +251,19 @@ class Guardian:
         return x + (x-cx)*spread, y + (y-cy)*spread, phase
 
     def nearby_pedestal(self, player, *, retrieve=False):
+        reach = 1.1 if retrieve else PEDESTAL_REACH
         for index, pedestal in enumerate(self.spec['devices']):
             element = RITUAL[index]
             if retrieve and element not in self.placed:
                 continue
             point = self.orb_flight(element)[:2] if retrieve else pedestal
-            if math.dist((player.x, player.y), point) <= 1.1:
+            if math.dist((player.x, player.y), point) <= reach:
                 return element
         return None
+
+    def overlaps_pedestal(self, x, y, radius):
+        return any(left - radius < x < right + radius and top - radius < y < bottom + radius
+                   for left, top, right, bottom in self.pedestal_bases)
 
     def can_place_orb(self, room, element):
         return (self.ritual < len(RITUAL) and element not in self.placed

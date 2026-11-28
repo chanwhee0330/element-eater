@@ -41,13 +41,14 @@ class GuardianRoomTests(unittest.TestCase):
         room.projectiles.append(Projectile(x,y+.2,0,-1,'hero',8,1,15,element='water'))
         room.update_projectiles(.05)
         self.assertEqual(guardian.ritual, 0)
-        room.player.x, room.player.y = x, y
+        room.player.x, room.player.y = x, y + .7
         room.restore_selected_element('fire')
         room.update({'connect'}, 1/120)
         self.assertEqual(guardian.ritual, 0)
         self.assertEqual(room.inventory['water'], 1)
         for index in (2, 0, 3, 1, 4):
-            room.player.x, room.player.y = guardian.spec['devices'][index]
+            x, y = guardian.spec['devices'][index]
+            room.player.x, room.player.y = x, y + .7
             room.restore_selected_element(RITUAL[index])
             room.update({'connect'}, 1/120)
         self.assertEqual(guardian.ritual, 5)
@@ -69,6 +70,28 @@ class GuardianRoomTests(unittest.TestCase):
         self.assertEqual((room.selected, room.inventory['lightning']), ('lightning', 1))
         self.assertNotIn('lightning', guardian.placed)
         self.assertFalse(room.exit_open)
+
+    def test_player_stops_at_each_pedestal_and_guardian_crosses(self):
+        room = self.room
+        g, actor = enter_battle(room)
+        for element, (x, y) in zip(RITUAL, g.spec['devices']):
+            with self.subTest(element=element):
+                room.player.x, room.player.y = x - 1.7, y
+                room.move(room.player, 3.4, 0, safe=True)
+                self.assertLess(room.player.x, x - 1)
+                self.assertEqual(g.nearby_pedestal(room.player), element)
+                actor.x, actor.y = x - 1.7, y
+                g.move(room, actor, 3.4, 0)
+                self.assertGreater(actor.x, x + 1.6)
+
+        x, y = g.spec['devices'][RITUAL.index('wind')]
+        g.heading = 0
+        dash_x, _ = g.dash_endpoint(room, x - 1.7, y, 3.4, shatter=True)
+        self.assertGreater(dash_x, x + 1.6)
+        room.player.x, room.player.y = x, y + 1.3
+        for _ in range(100):
+            room.update({'w'}, 1/120)
+        self.assertGreater(room.player.y, y)
 
     def test_projectiles_hit_both_arms_and_legs_of_every_form(self):
         room = self.room

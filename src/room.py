@@ -1,6 +1,7 @@
 """첫 방의 이동·추격·무속성 전투. 렌더러 없이도 검사 가능한 게임 상태."""
 from collections import deque
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
 import json
 import math
@@ -1457,12 +1458,12 @@ class Room:
             return False
         return True
 
-    def blocked_by_wall(self, x, y, old_x, old_y, *, include_reference_rim=True):
+    def blocked_by_wall(self, x, y, old_x, old_y, *, include_reference_rim=True, pedestals=()):
         radius = self.radius
         # 세로 투영에서 발밑 충돌 폭도 함께 줄인다.
         depth = radius if self.reference_art else radius * TILE_HEIGHT / TILE_WIDTH
         walls = self.reference_movement_walls if include_reference_rim and self.reference_art else self.wall_bounds.values()
-        for left, top, right, bottom in walls:
+        for left, top, right, bottom in chain(walls, pedestals):
             if not (left - radius < x < right + radius and top - depth < y < bottom + depth):
                 continue
             if not (left - radius < old_x < right + radius and top - depth < old_y < bottom + depth):
@@ -1476,13 +1477,16 @@ class Room:
 
     def move(self, actor, dx, dy, safe=False):
         old = actor.x, actor.y
+        pedestals = self.guardian.pedestal_bases if self.guardian and actor is self.player else ()
         parts = max(1, math.ceil(math.hypot(dx, dy) / .08))
         for _ in range(parts):
             x = actor.x + dx / parts
-            if not self.blocked_by_wall(x, actor.y, actor.x, actor.y) and self.fits(x, actor.y, safe):
+            if (not self.blocked_by_wall(x, actor.y, actor.x, actor.y, pedestals=pedestals)
+                    and self.fits(x, actor.y, safe)):
                 actor.x = x
             y = actor.y + dy / parts
-            if not self.blocked_by_wall(actor.x, y, actor.x, actor.y) and self.fits(actor.x, y, safe):
+            if (not self.blocked_by_wall(actor.x, y, actor.x, actor.y, pedestals=pedestals)
+                    and self.fits(actor.x, y, safe)):
                 actor.y = y
         actor.moving = math.hypot(actor.x - old[0], actor.y - old[1]) > .00001
         if actor.moving:
@@ -1849,6 +1853,7 @@ class Room:
             return
         if (tile < 3 and self.fits(player.x, player.y, safe=True)
                 and self.fits(player.x, player.y, safe=True, ignore_earth=True)
+                and not (self.guardian and self.guardian.overlaps_pedestal(player.x, player.y, self.radius))
                 and not self.in_trial_sweep(player.x, player.y)):
             self.safe = player.x, player.y, player.facing
         self.update_turrets(dt)

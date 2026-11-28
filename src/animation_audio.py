@@ -67,7 +67,7 @@ def animated_objects(room):
     add('power-error', room.power_flash > 0, 'blocked')
     for index, time_left in enumerate(room.power_hits):
         add(('conductor', index), time_left > 0, 'electric')
-    add('exit', room.exit_open, 'gate')
+    add('exit', room.exit_open and not room.guardian, 'gate')
 
     guardian = room.guardian
     if guardian and room.stage == 10:
@@ -75,7 +75,10 @@ def animated_objects(room):
             add(('pedestal', index), True, 'orb')
         add('summoning', guardian.summoning, 'transform')
         add('boss-defeated', guardian.fall >= 0, 'shockwave')
+        for index, cue in enumerate(('splash', 'flame', 'gust', 'stone', 'electric')):
+            add(('gate-rune', index), index < guardian.gate_runes, cue)
         add('boss-exit', guardian.gate_progress > 0, 'gate')
+        add('boss-exit-burst', guardian.gate_progress > 0, 'shockwave')
         add('reward-ingest', guardian.reward_scene_elapsed is not None, 'ingest')
     return events
 

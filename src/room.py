@@ -1182,6 +1182,9 @@ class Room:
                         or wave_contact is not None
                         or not (0 <= shot.x < self.data['columns'] and 0 <= shot.y < self.data['rows'])):
                     shot.active = False
+                    if self.guardian and self.guardian.strike_gate(shot):
+                        self.sound_events.append('shockwave')
+                        break
                     self.sound_events.append('impact')
                     x, y = wave_contact if wave_contact is not None else (shot.x, shot.y)
                     self.feedback.append(Feedback(x, y-.4, '', shot.owner == 'hero', .16, .16))

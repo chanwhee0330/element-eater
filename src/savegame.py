@@ -9,8 +9,9 @@ from copy import deepcopy
 from .room import ROOT, Room, Actor, EarthTerrain, STAGES
 from .combat import Projectile
 from .elements import Source, ELEMENTS
-from .boss import (FALL_SECONDS, FORMS, GATE_SECONDS, GATE_WATCH, MIXED_INGEST_BITE,
-                   MIXED_INGEST_SECONDS, RITUAL, SUMMON_SECONDS, TRANSFORM_WARNING_SECONDS)
+from .boss import (FALL_SECONDS, FORMS, GATE_SECONDS, GATE_SEQUENCE_SECONDS, GATE_WATCH,
+                   MIXED_INGEST_BITE, MIXED_INGEST_SECONDS, RITUAL, SUMMON_SECONDS,
+                   TRANSFORM_WARNING_SECONDS)
 
 DEFAULT_SAVE = ROOT / 'saves/continue.json'
 DIRECTIONS = {'up', 'down', 'left', 'right'}
@@ -30,7 +31,7 @@ def boolean(value):
     return value
 
 
-def restore_guardian(room, stored, actor):
+def restore_guardian(room, stored, actor, player):
     guardian = room.guardian
     ritual = stored['ritual']
     if type(ritual) is not int or not 0 <= ritual <= len(RITUAL):
@@ -124,6 +125,18 @@ def restore_guardian(room, stored, actor):
                 or guardian.reward_tasted != (scene_elapsed >= MIXED_INGEST_BITE)):
             raise ValueError('혼합 구슬 섭취 연출 상태 불일치')
         guardian.reward_scene_elapsed = scene_elapsed
+    guardian.gate_elapsed = number(stored.get('gate_elapsed', -1), -1, GATE_SEQUENCE_SECONDS)
+    if (guardian.gate_elapsed != -1
+            and (guardian.gate_elapsed < 0 or guardian.fall < FALL_SECONDS
+                 or not guardian.reward_tasted or guardian.reward_scene_elapsed is not None)):
+        raise ValueError('최종 성문 봉인 상태 불일치')
+    if ('gate_elapsed' not in stored and guardian.reward_tasted
+            and guardian.reward_scene_elapsed is None and guardian.fall >= FALL_SECONDS + GATE_SECONDS):
+        left, right = guardian.spec['exitOpening']
+        if (left <= number(player['x']) < right
+                and number(player['y']) < guardian.spec['exitGate'][3] + room.radius):
+            # 이미 성문을 통과하던 이전 저장은 입구를 열어 둔다.
+            guardian.gate_elapsed = GATE_SEQUENCE_SECONDS
     room.enemies[0].element = guardian.element
     broken_cover = stored.get('broken_cover', [])
     if (not isinstance(broken_cover, list) or (broken_cover and guardian.summon < SUMMON_SECONDS)
@@ -335,7 +348,7 @@ def restore(record, room):
         if -1 < candidate.conductor_vine_time < 0:
             raise ValueError('전도체 덩굴 상태 불일치')
     if candidate.guardian:
-        restore_guardian(candidate,state['boss'],state['enemies'][0])
+        restore_guardian(candidate,state['boss'],state['enemies'][0],state['player'])
     if candidate.data.get('requiredBridge'):
         candidate.bridge_crossed = boolean(state['bridge_crossed'])
         candidate.bridge_entry_side = state.get('bridge_entry_side')

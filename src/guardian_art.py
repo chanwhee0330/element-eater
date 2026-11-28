@@ -5,13 +5,14 @@ import math
 
 from .acquisition_art import ROCKFALL_BOULDER, ROCKFALL_DEBRIS
 from .boss import (ATLAS_FOLDER, COLORS, DASH_DEBRIS_SECONDS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
-                   FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH, GUARDIAN_DRAW_UNIT,
+                   FALL_SECONDS, FIRE_FAN, GATE_SEAL_SECONDS, GATE_SEQUENCE_SECONDS, GUARDIAN_DRAW_UNIT,
                    GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, LIGHTNING_REACH, RITUAL, SHATTER_AT, SUMMON_SECONDS,
                    SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, TRANSFORM_FLASH_PERIOD, TRANSFORM_FLASH_SECONDS,
                    TRANSFORM_MIST_SECONDS, WATER_GAPS, WATER_GAP_HALF,
                    WATER_RING_DELAY, water_wave_size)
 from .elements import NAMES, WEAKNESS
 from .element_master_aura import draw_master_aura
+from .guardian_gate_art import draw_gate_seal
 
 
 PROLOGUE_SECONDS = 7.2
@@ -185,6 +186,18 @@ class GuardianArt:
             self.earth_pit.draw(x, y, round(2.12 * rx * self.unit),
                                 round(2.12 * ry * self.app.view.tile_height))
         actor = self.room.enemies[0]
+        gate_age = g.gate_elapsed - GATE_SEAL_SECONDS
+        if 0 <= gate_age < GATE_SEQUENCE_SECONDS - GATE_SEAL_SECONDS:
+            pulse = (ease(gate_age / .36)
+                     * ease((GATE_SEQUENCE_SECONDS - g.gate_elapsed) / .66))
+            for i, (point, feed) in enumerate(zip(g.spec['devices'], g.spec['feeds'])):
+                color = COLORS[RITUAL[i]]
+                angle = angles[i]
+                left = angle - ((angle - angles[i-1]) % math.tau) / 2
+                right = angle + ((angles[(i+1) % len(angles)] - angle) % math.tau) / 2
+                self.altar_arc(center, 4.25, left, right, color, 128 * pulse)
+                self.arc(center, 3.23, left, right, color, 178 * pulse)
+                self.line(point, feed, color, 211 * pulse)
         if pulse := self.transform_flash():
             index = RITUAL.index(g.warning_form)
             point, feed = g.spec['devices'][index], g.spec['feeds'][index]
@@ -710,7 +723,7 @@ class GuardianArt:
 
     def exit(self):
         g=self.guardian
-        x,y=self.app.point(15,g.spec['exitGate'][3])
+        x,y=self.app.point(self.room.data['plannedExit']['x'],g.spec['exitGate'][3])
         width,height=self.gate_meta['frameSize']
         positions=self.gate_meta['openingFrames']
         frame=0 if g.gate_progress <= 0 else 1+min(positions, int(g.gate_progress*positions))
@@ -718,6 +731,8 @@ class GuardianArt:
         scale=self.unit/30*.92
         self.gate_image.clip_draw(col*width,self.gate_image.h-(row+1)*height,width,height,
                                   x,y+(110-height/2)*scale,width*scale,height*scale)
+        if g.fall >= FALL_SECONDS:
+            draw_gate_seal(self.app, x, y, scale)
     def core(self, x, y, size, elapsed):
         ui = self.app.ui
         ui.begin()
@@ -900,12 +915,14 @@ class GuardianArt:
     def status(self):
         g=self.guardian
         if g.fall >= 0:
-            if g.gate_progress >= 1:
+            if not g.collapsing:
                 ui = self.app.ui
                 x, y = self.app.width / 2, self.app.height - 111
                 ui.begin()
                 ui.panel(x - 215, y - 18, 430, 36, accent=True)
-                label = ('Space 혼합 공격 · 북쪽 성문으로 나가기' if g.reward_tasted else
+                label = ('북쪽 성문을 지나세요' if g.gate_progress >= 1 else
+                         '오원 봉인 해제 중' if g.gate_elapsed >= 0 else
+                         '북쪽 성문 중앙에 Space 혼합 공격' if g.reward_tasted else
                          '떨어진 구슬을 회수하세요' if g.placed else '쓰러진 수호자 자리 · 오원 혼합기')
                 ui.text(label, x, y, 15)
             return
@@ -947,12 +964,22 @@ class GuardianArt:
             if fill:
                 self.app.ui.rounded(left,y+7,(segment-4)*fill,6,2,(*COLORS[color],255))
 
-    def show_exit_inset(self):
-        g=self.guardian
-        if not FALL_SECONDS <= g.fall < FALL_SECONDS+GATE_SECONDS+GATE_WATCH:
-            return False
-        x,y=self.app.point(15,g.spec['exitGate'][3])
-        return not (140<=x<=self.app.width-140 and 74<=y<=self.app.height-146)
+    def show_gate_cinematic(self):
+        return 0 <= self.guardian.gate_elapsed < GATE_SEQUENCE_SECONDS
+
+    def gate_camera(self):
+        app = self.app
+        age = self.guardian.gate_elapsed
+        focus = app.room.data['plannedExit']['x'], self.guardian.spec['exitGate'][3]
+        x, y = app.point(*focus)
+        amount = ease(min(age / .36, (GATE_SEQUENCE_SECONDS - age) / .58))
+        burst = age - GATE_SEAL_SECONDS
+        shake = 11 * (1 - burst / .34) if 0 <= burst < .34 else 0
+        surge = ease(1 - abs(burst + .08) / .28)
+        target = (x + (app.width * .5 - x) * amount + math.sin(age * 113) * shake,
+                  y + (app.height * .58 - y) * amount + math.cos(age * 97) * shake)
+        self.p.draw_rectangle(0, 0, app.width - 1, app.height - 1, 20, 17, 22, filled=True)
+        app.draw_world_from(focus, 1 + (.56 + .15 * surge) * amount, screen_point=target)
 
     def camera(self):
         g=self.guardian

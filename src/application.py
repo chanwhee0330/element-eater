@@ -1402,12 +1402,11 @@ class Application:
             guardian = self.room.guardian
             if guardian and guardian.summoning:
                 self.guardian_art.camera()
+            elif guardian and self.guardian_art.show_gate_cinematic():
+                self.guardian_art.gate_camera()
             else:
                 self.draw_world()
             self.draw_trial_cutscene()
-            if guardian and not self.paused and not self.room.outcome and self.guardian_art.show_exit_inset():
-                viewport = p.SDL_Rect((self.width-424)//2,118,424,238)
-                self.draw_inset((15,2.4),1.05,viewport,'북쪽 성문 개방')
             self.draw_hud()
             self.acquisition_art.draw_prompt()
             if guardian:

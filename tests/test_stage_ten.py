@@ -5,7 +5,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from src.boss import (DASH_DISTANCE, DASH_SECONDS, DEFEAT_SECONDS, FORMS, GATE_SECONDS,
+from src.boss import (DASH_DISTANCE, DASH_SECONDS, DEFEAT_SECONDS, FALL_SECONDS, FORMS,
+                      GATE_PLAYBACK_RATE, GATE_RUNE_TIMES, GATE_SEAL_SECONDS, GATE_SEQUENCE_SECONDS, GATE_SECONDS,
                       GUARDIAN_DRAW_UNIT, GUARDIAN_SHOT_LIFT,
                       MIXED_INGEST_BITE, MIXED_INGEST_SECONDS, SUMMON_SECONDS, RITUAL,
                       TRANSFORM_MIST_SECONDS, TRANSFORM_WARNING_SECONDS,
@@ -337,24 +338,28 @@ class GuardianRoomTests(unittest.TestCase):
         self.assertEqual(resumed.guardian.form,'lightning')
         self.assertIsNone(resumed.guardian.next_form)
 
-    def test_zero_shared_health_opens_only_the_center_of_the_gate(self):
+    def test_zero_shared_health_leaves_the_gate_sealed(self):
         room = self.room
         guardian, actor = enter_battle(room)
         guardian.form = actor.element = 'wind'
         self.assertTrue(room.damage(actor,450))
         self.assertFalse(actor.active)
         self.assertFalse(room.fits(15,2.3,safe=True))
-        advance(room,DEFEAT_SECONDS+GATE_SECONDS+.06)
-        self.assertTrue(room.exit_open)
-        self.assertTrue(room.fits(15,2.3,safe=True))
-        self.assertFalse(room.fits(13.6,2.3,safe=True))
+        advance(room, DEFEAT_SECONDS + GATE_SEQUENCE_SECONDS)
+        room.projectiles.append(Projectile(15, 2.6, 0, -1, 'hero', 6, 2, 15, element='fire'))
+        advance(room, .15)
+        self.assertFalse(room.projectiles)
+        self.assertIsNotNone(room.final_reward)
+        self.assertFalse(room.exit_open)
+        self.assertFalse(room.fits(15, 2.3, safe=True))
+        self.assertEqual(guardian.gate_elapsed, -1)
 
     def test_final_reward_requires_mixing_and_leaving_after_continue(self):
         room = self.room
         _, actor = enter_battle(room)
         room.damage(actor, actor.hp)
         self.assertIsNone(room.final_reward)
-        advance(room, DEFEAT_SECONDS + GATE_SECONDS + .06)
+        advance(room, DEFEAT_SECONDS + .06)
         reward = room.final_reward
         self.assertTrue(room.fits(*reward, safe=True))
         room.update({'ingest'}, 1/120)
@@ -415,16 +420,72 @@ class GuardianRoomTests(unittest.TestCase):
         advance(resumed, 1)
         self.assertFalse(resumed.projectiles)
         self.assertIsNone(resumed.outcome)
+        # 혼합탄도 성벽 옆을 맞히면 봉인이 반응하지 않는다.
+        resumed.projectiles.append(Projectile(13.7, 2.8, 0, -1, 'hero', 6, 4.5, 15, element='mixed'))
+        advance(resumed, .2)
+        self.assertFalse(resumed.projectiles)
+        self.assertEqual(resumed.guardian.gate_elapsed, -1)
+        self.assertFalse(resumed.exit_open)
+
+        resumed.player.x, resumed.player.y, resumed.player.facing = exit_point['x'], 3.9, 'up'
         resumed.update({'attack'}, 1/120)
-        advance(resumed, .4)
-        self.assertEqual([shot.element for shot in resumed.projectiles], ['mixed'])
-        resumed.player.x, resumed.player.y = exit_point['x'], 2.08
-        advance(resumed, .1)
+        advance(resumed, .7)
+        self.assertFalse(resumed.projectiles)
+        self.assertGreaterEqual(resumed.guardian.gate_elapsed, 0)
+        beat = (GATE_RUNE_TIMES[2] + GATE_RUNE_TIMES[3]) / 2
+        impact_time = resumed.elapsed - resumed.guardian.gate_elapsed / GATE_PLAYBACK_RATE
+        advance(resumed, (beat - resumed.guardian.gate_elapsed) / GATE_PLAYBACK_RATE)
+        self.assertEqual(resumed.guardian.gate_runes, 3)
+        self.assertFalse(resumed.exit_open)
+        self.assertFalse(resumed.fits(15, 2.3, safe=True))
+        with TemporaryDirectory() as directory:
+            store = SaveStore(Path(directory) / 'continue.json')
+            store.write(resumed)
+            restore(store.load(), resumed)
+        self.assertEqual(resumed.guardian.gate_runes, 3)
+        middle = GATE_SEAL_SECONDS + GATE_SECONDS / 2
+        advance(resumed, (middle - resumed.guardian.gate_elapsed) / GATE_PLAYBACK_RATE)
+        self.assertEqual(resumed.guardian.gate_runes, 5)
+        self.assertGreater(resumed.guardian.gate_progress, 0)
+        self.assertFalse(resumed.exit_open)
+        remaining = (GATE_SEQUENCE_SECONDS - resumed.guardian.gate_elapsed) / GATE_PLAYBACK_RATE
+        advance(resumed, remaining - .025)
+        self.assertLess(resumed.guardian.gate_elapsed, GATE_SEQUENCE_SECONDS)
+        advance(resumed, .025)
+        self.assertEqual(resumed.guardian.gate_elapsed, GATE_SEQUENCE_SECONDS)
+        self.assertAlmostEqual(resumed.elapsed - impact_time, 6.34, delta=1/60)
+        self.assertTrue(resumed.exit_open)
+        self.assertTrue(resumed.fits(15, 2.3, safe=True))
+        self.assertFalse(resumed.fits(13.6, 2.3, safe=True))
         self.assertIsNone(resumed.outcome)
-        resumed.player.x, resumed.player.y = exit_point['x'], exit_point['y']
-        advance(resumed, .1)
+        for _ in range(180):
+            resumed.update({'w'}, 1/120)
         self.assertEqual(resumed.outcome, 'clear')
         self.assertIsNone(resumed.final_reward)
+
+    def test_legacy_save_in_the_gate_remains_passable(self):
+        room = self.room
+        guardian, actor = enter_battle(room)
+        room.damage(actor, actor.hp)
+        advance(room, DEFEAT_SECONDS + .06)
+        room.player.x, room.player.y = room.final_reward
+        for element in RITUAL:
+            self.assertTrue(room.insert_final_orb(element))
+        room.update({'ingest'}, 1/120)
+        guardian.advance_reward_scene(MIXED_INGEST_SECONDS)
+        with TemporaryDirectory() as directory:
+            store = SaveStore(Path(directory) / 'continue.json')
+            store.write(room)
+            old = store.load()
+        del old['state']['boss']['gate_elapsed']
+        old['state']['boss']['fall'] = FALL_SECONDS + GATE_SECONDS + .15
+        self.assertFalse(room.exit_open)
+        restore(old, room)
+        self.assertFalse(room.exit_open)
+        old['state']['player'].update(x=15, y=2.3)
+        restore(old, room)
+        self.assertTrue(room.exit_open)
+        self.assertTrue(room.fits(15, 2.3, safe=True))
 
     def test_debug_boss_starts_battle_at_one_hp_and_still_drops_reward(self):
         room = self.room

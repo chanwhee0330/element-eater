@@ -35,8 +35,13 @@ MIXED_INGEST_SECONDS = 5.6
 FALL_SECONDS = .94
 DEFEAT_SECONDS = 2.85
 SHATTER_AT = .35
+# 이어하기는 재생 속도와 별개로 이 기준 시간축의 진행 지점을 저장한다.
+GATE_RUNE_TIMES = (.28, .54, .80, 1.06, 1.32)
+GATE_SEAL_SECONDS = 1.67
 GATE_SECONDS = .70
 GATE_WATCH = .8
+GATE_SEQUENCE_SECONDS = GATE_SEAL_SECONDS + GATE_SECONDS + GATE_WATCH
+GATE_PLAYBACK_RATE = .5
 DASH_SECONDS = .64
 DASH_DISTANCE = 12
 DASH_DEBRIS_SECONDS = .46
@@ -174,6 +179,7 @@ class Guardian:
         self.heading = 0.0
         self.cooldown = 1.0
         self.fall = -1.0
+        self.gate_elapsed = -1.0
         self.clips = guardian_atlases()
         self.walk_clips = guardian_walk_atlases()
 
@@ -195,7 +201,13 @@ class Guardian:
 
     @property
     def gate_progress(self):
-        return max(0, min(1, (self.fall-FALL_SECONDS)/GATE_SECONDS))
+        if self.gate_elapsed >= GATE_SEAL_SECONDS + GATE_SECONDS:
+            return 1
+        return max(0, (self.gate_elapsed - GATE_SEAL_SECONDS) / GATE_SECONDS)
+
+    @property
+    def gate_runes(self):
+        return bisect_right(GATE_RUNE_TIMES, self.gate_elapsed)
 
     @property
     def collapsing(self):
@@ -293,6 +305,17 @@ class Guardian:
         if inside(gate,x,y) and (self.gate_progress < 1 or not left <= x < right):
             return 3
         return None
+
+    def strike_gate(self, shot):
+        left, right = self.spec['exitOpening']
+        _, top, _, bottom = self.spec['exitGate']
+        if (self.gate_elapsed < 0 and self.fall >= FALL_SECONDS
+                and self.reward_tasted and self.reward_scene_elapsed is None
+                and shot.owner == 'hero' and shot.element == 'mixed'
+                and inside((left, top, right, bottom), shot.x, shot.y)):
+            self.gate_elapsed = 0
+            return True
+        return False
 
     def water_wave_walls(self, room):
         for index, bounds in enumerate(room.reference_art['cover']):
@@ -473,13 +496,13 @@ class Guardian:
                 # 저장된 파쇄 진행 척도는 유지하고 실제 재생 시간만 늘린다.
                 to_end = (FALL_SECONDS - self.fall) * DEFEAT_SECONDS / FALL_SECONDS
                 if dt >= to_end:
-                    self.fall = FALL_SECONDS + (dt - to_end)
+                    self.fall = FALL_SECONDS
                 else:
                     self.fall += dt * FALL_SECONDS / DEFEAT_SECONDS
                 if previous < SHATTER_AT <= self.fall:
                     room.sound_events.append('boss-shatter')
-            else:
-                self.fall = min(FALL_SECONDS+GATE_SECONDS+GATE_WATCH+1,self.fall+dt)
+            elif self.gate_elapsed >= 0:
+                self.gate_elapsed = min(GATE_SEQUENCE_SECONDS, self.gate_elapsed + dt * GATE_PLAYBACK_RATE)
             return
         if self.swap >= 0:
             self.swap += dt
@@ -596,7 +619,7 @@ class Guardian:
     def record(self):
         state = {key:getattr(self,key) for key in ('ritual','summon','wind_y','wind_moving',
                                                   'form','warning_form','next_form','form_left','swap',
-                                                  'attack_age','target','heading','cooldown','fall',
+                                                  'attack_age','target','heading','cooldown','fall','gate_elapsed',
                                                   'reward_loaded','reward_tasted','reward_scene_elapsed')}
         state['placed'] = sorted(self.placed)
         state['reward_orbs'] = sorted(self.reward_orbs)

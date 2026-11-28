@@ -10,7 +10,7 @@ from .room import ROOT, Room, Actor, EarthTerrain, STAGES
 from .combat import Projectile
 from .elements import Source, ELEMENTS
 from .boss import (FALL_SECONDS, FORMS, GATE_SECONDS, GATE_WATCH, MIXED_INGEST_BITE,
-                   MIXED_INGEST_SECONDS, RITUAL, SUMMON_SECONDS)
+                   MIXED_INGEST_SECONDS, RITUAL, SUMMON_SECONDS, TRANSFORM_WARNING_SECONDS)
 
 DEFAULT_SAVE = ROOT / 'saves/continue.json'
 DIRECTIONS = {'up', 'down', 'left', 'right'}
@@ -51,6 +51,7 @@ def restore_guardian(room, stored, actor):
     if form not in FORMS or (next_form is not None and (next_form not in FORMS or next_form == form)):
         raise ValueError('수호자 원소 불일치')
     guardian.form,guardian.next_form = form,next_form
+    guardian.warning_form = stored.get('warning_form')
     guardian.form_left = number(stored['form_left'],0,interval)
     for key, end in (('summon',SUMMON_SECONDS),('swap',guardian.clip('transform').duration),
                      ('attack_age',guardian.clip('attack').duration),
@@ -80,6 +81,9 @@ def restore_guardian(room, stored, actor):
             or (guardian.target is None) != (guardian.attack_age < 0)
             or guardian.attack_age >= 0 and not guardian.vulnerable
             or (guardian.next_form is not None) != (guardian.swap >= 0)
+            or guardian.warning_form is not None and (
+                guardian.warning_form not in FORMS or guardian.warning_form == form
+                or not guardian.vulnerable or not 0 < guardian.form_left <= TRANSFORM_WARNING_SECONDS)
             or guardian.swap >= 0 and (not guardian.battle or guardian.form_left != 0)
             or guardian.fall >= 0 and guardian.summon < SUMMON_SECONDS):
         raise ValueError('수호자 진행 상태 불일치')

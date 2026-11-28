@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 from random import Random
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 
 FOLDER = Path(__file__).resolve().parents[1] / 'assets/sprites/boss/animation'
@@ -202,6 +202,17 @@ def render(element, kind, layer, frame):
     return image
 
 
+def save_transform_mist():
+    puff = Image.new('L', (64, 64))
+    draw = ImageDraw.Draw(puff)
+    for bounds, opacity in (((7, 23, 43, 49), 92), ((25, 17, 54, 44), 128),
+                            ((18, 23, 43, 43), 178), ((37, 27, 55, 40), 136)):
+        draw.ellipse(bounds, fill=opacity)
+    image = Image.new('RGBA', puff.size, (255, 255, 255))
+    image.putalpha(puff.filter(ImageFilter.GaussianBlur(4)))
+    image.save(FOLDER / 'guardian-transform-mist.png', optimize=True)
+
+
 def main():
     clips = {}
     for element in PALETTES:
@@ -223,6 +234,7 @@ def main():
     spec = {'image': filename, 'cell': SIZE, 'columns': COLUMNS, 'rows': rows,
             'pivot': PIVOT, 'scale': 1.58, 'count': FRAMES, 'event': EVENT, 'clips': clips}
     (FOLDER / 'guardian-cast-effects.json').write_text(json.dumps(spec, indent=2) + '\n', encoding='utf-8')
+    save_transform_mist()
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ from unittest.mock import patch
 from src.boss import (DASH_DISTANCE, DASH_SECONDS, DEFEAT_SECONDS, FORMS, GATE_SECONDS,
                       GUARDIAN_DRAW_UNIT, GUARDIAN_SHOT_LIFT,
                       MIXED_INGEST_BITE, MIXED_INGEST_SECONDS, SUMMON_SECONDS, RITUAL,
+                      TRANSFORM_MIST_SECONDS, TRANSFORM_WARNING_SECONDS,
                       WATER_GAPS, WATER_RING_DELAY)
 from src.combat import Projectile
 from src.elements import WEAKNESS
@@ -214,17 +215,55 @@ class GuardianRoomTests(unittest.TestCase):
         self.assertTrue(room.damage(actor,160))
         self.assertEqual(actor.hp,290)
         self.assertLess(guardian.swap,0)
-        advance(room,guardian.spec['formSeconds']-.08)
-        self.assertIsNone(guardian.next_form)
-        room.projectiles.append(Projectile(15,12,0,1,'enemy',8,3,10,element='fire'))
+        advance(room, guardian.spec['formSeconds'] - TRANSFORM_WARNING_SECONDS - .08)
+        self.assertIsNone(guardian.warning_form)
         with patch('src.boss.random.choice',return_value='water') as choice:
-            advance(room,.09)
+            advance(room, .09)
+            self.assertEqual(guardian.warning_form, 'water')
+            self.assertEqual(guardian.element, 'fire')
+            self.assertIsNone(guardian.next_form)
+            advance(room, guardian.form_left - .08)
+            self.assertEqual(guardian.warning_form, 'water')
+            self.assertLess(guardian.swap, 0)
+            room.projectiles.append(Projectile(15,12,0,1,'enemy',8,3,10,element='fire'))
+            advance(room, .09)
         choice.assert_called_once_with(['wind','earth','lightning','water'])
+        self.assertIsNone(guardian.warning_form)
         self.assertEqual((guardian.next_form,actor.hp),('water',290))
         self.assertFalse(any(p.owner=='enemy' for p in room.projectiles))
         advance(room,guardian.clip('transform').duration)
         self.assertEqual((guardian.form,actor.element,actor.hp),('water','water',290))
         self.assertTrue(room.boss_exposed)
+
+    def test_mist_restores_target_and_starts_each_transform_on_arrival(self):
+        for current, target in zip(FORMS, FORMS[1:] + FORMS[:1]):
+            with self.subTest(target=target), TemporaryDirectory() as directory:
+                room = Room(stage=10)
+                guardian, actor = enter_battle(room)
+                guardian.form = actor.element = current
+                guardian.form_left = TRANSFORM_WARNING_SECONDS
+                with patch('src.boss.random.choice', return_value=target):
+                    advance(room, TRANSFORM_WARNING_SECONDS - TRANSFORM_MIST_SECONDS / 2)
+                self.assertEqual(guardian.warning_form, target)
+                self.assertLess(guardian.form_left, TRANSFORM_MIST_SECONDS)
+                self.assertTrue(guardian.vulnerable)
+
+                store = SaveStore(Path(directory) / 'continue.json')
+                store.write(room)
+                resumed = Room()
+                restore(store.load(), resumed)
+                g = resumed.guardian
+                self.assertEqual(g.warning_form, target)
+                self.assertEqual(g.form_left, guardian.form_left)
+                with patch('src.boss.random.choice') as choice:
+                    advance(resumed, g.form_left - 1/120)
+                    self.assertEqual(g.element, current)
+                    self.assertLess(g.swap, 0)
+                    resumed.update(set(), g.form_left)
+                    choice.assert_not_called()
+                self.assertEqual(g.swap, 0)
+                self.assertEqual(g.next_form, target)
+                self.assertIsNone(g.warning_form)
 
     def test_continue_after_burning_guardian_transforms_or_falls(self):
         for hp in (30, 450):

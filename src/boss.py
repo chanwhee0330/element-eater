@@ -22,6 +22,11 @@ WATER_RING_DELAY = .29
 EARTH_INTERVAL = .22
 EARTH_PIT_RADIUS = (.92, .63)
 STAGGER = .94
+TRANSFORM_FLASH_COUNT = 4
+TRANSFORM_FLASH_PERIOD = .42
+TRANSFORM_FLASH_SECONDS = TRANSFORM_FLASH_COUNT * TRANSFORM_FLASH_PERIOD
+TRANSFORM_MIST_SECONDS = 1.23
+TRANSFORM_WARNING_SECONDS = TRANSFORM_FLASH_SECONDS + TRANSFORM_MIST_SECONDS
 SUMMON_SECONDS = 1.92
 SUMMON_SHOCK_AT = 1.34
 SUMMON_SHOCK_SECONDS = .48
@@ -156,6 +161,7 @@ class Guardian:
         self.wind_y = spec['windStartY']
         self.wind_moving = False
         self.form = 'fire'
+        self.warning_form = None
         self.next_form = None
         self.form_left = spec['formSeconds']
         self.swap = -1.0
@@ -178,6 +184,10 @@ class Guardian:
     @property
     def vulnerable(self):
         return self.battle and self.swap < 0
+
+    @property
+    def warning_age(self):
+        return TRANSFORM_WARNING_SECONDS - self.form_left
 
     @property
     def gate_progress(self):
@@ -314,11 +324,16 @@ class Guardian:
         actor.burn_delay = 0
         actor.knockback_left = 0
         self.clear_attack(room)
+        self.warning_form = None
         self.fall = 0
+
+    def choose_form(self):
+        return random.choice([form for form in FORMS if form != self.form])
 
     def start_transform(self, room, actor):
         room.sound_events.append('transform')
-        self.next_form = random.choice([form for form in FORMS if form != self.form])
+        self.next_form = self.warning_form or self.choose_form()
+        self.warning_form = None
         self.swap = 0
         self.clear_attack(room)
         actor.burn_ticks = 0
@@ -334,6 +349,7 @@ class Guardian:
         self.wind_y = self.spec['windPlateY']
         self.wind_moving = False
         self.swap = -1
+        self.warning_form = None
         self.next_form = None
         self.clear_attack(room)
         actor.element = self.form
@@ -467,6 +483,8 @@ class Guardian:
                 self.cooldown = 1
             return
         self.form_left = max(0,self.form_left-dt)
+        if self.warning_form is None and self.form_left <= TRANSFORM_WARNING_SECONDS:
+            self.warning_form = self.choose_form()
         if self.form_left <= 1e-8:
             self.form_left = 0
             self.start_transform(room,actor)
@@ -568,7 +586,7 @@ class Guardian:
 
     def record(self):
         state = {key:getattr(self,key) for key in ('ritual','summon','wind_y','wind_moving',
-                                                  'form','next_form','form_left','swap',
+                                                  'form','warning_form','next_form','form_left','swap',
                                                   'attack_age','target','heading','cooldown','fall',
                                                   'reward_loaded','reward_tasted','reward_scene_elapsed')}
         state['placed'] = sorted(self.placed)

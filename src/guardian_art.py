@@ -7,7 +7,8 @@ from .acquisition_art import ROCKFALL_BOULDER, ROCKFALL_DEBRIS
 from .boss import (ATLAS_FOLDER, COLORS, DASH_DEBRIS_SECONDS, DASH_DISTANCE, DASH_SECONDS, EARTH_INTERVAL, EARTH_PIT_RADIUS,
                    FALL_SECONDS, FIRE_FAN, GATE_SECONDS, GATE_WATCH, GUARDIAN_DRAW_UNIT,
                    GUARDIAN_SHOT_LIFT, LIGHTNING_BEAT, LIGHTNING_REACH, RITUAL, SHATTER_AT, SUMMON_SECONDS,
-                   SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, WATER_GAPS, WATER_GAP_HALF,
+                   SUMMON_SHOCK_AT, SUMMON_SHOCK_SECONDS, TRANSFORM_FLASH_PERIOD, TRANSFORM_FLASH_SECONDS,
+                   TRANSFORM_MIST_SECONDS, WATER_GAPS, WATER_GAP_HALF,
                    WATER_RING_DELAY, water_wave_size)
 from .elements import NAMES, WEAKNESS
 from .element_master_aura import draw_master_aura
@@ -19,6 +20,12 @@ MIXER_REVEAL_AT = .53
 ALTAR_CELL = 128
 ALTAR_FLOOR_PIVOT = 106
 ALTAR_WIDTH = 2.65
+# 받침대 시트의 구슬 홈 중심과 반지름. 위에서 잰 y 좌표를 사용한다.
+ALTAR_SOCKETS = {'water': (63, 77, 22, 6), 'fire': (64, 74, 25, 6), 'wind': (63, 81, 21, 5),
+                 'earth': (64, 73, 27, 7), 'lightning': (63, 74, 24, 6)}
+TRANSFORM_MIST_COLORS = {'water': (58, 177, 251), 'fire': (255, 89, 33), 'wind': (113, 230, 153),
+                         'earth': (214, 163, 78), 'lightning': (176, 111, 255)}
+TRANSFORM_MIST_FADE = .44
 
 
 def ease(value):
@@ -40,6 +47,7 @@ class GuardianArt:
         self.attack_effects = self.p.load_image(str(folder/'guardian-attack-effects.png'))
         self.cast_spec = json.loads((ATLAS_FOLDER/'guardian-cast-effects.json').read_text(encoding='utf-8'))
         self.cast_image = self.p.load_image(str(ATLAS_FOLDER/self.cast_spec['image']))
+        self.mist_image = self.p.load_image(str(ATLAS_FOLDER/'guardian-transform-mist.png'))
         wheel_folder = folder.parent/'room-09'
         self.gate_meta = json.loads((wheel_folder/'trial-waterwheel.json').read_text(encoding='utf-8'))
         self.gate_image = self.p.load_image(str(wheel_folder/self.gate_meta['image']))
@@ -91,6 +99,20 @@ class GuardianArt:
         g = self.guardian
         return element in g.placed and g.summon < SUMMON_SHOCK_AT
 
+    def altar_diamond(self, point, color, alpha):
+        x, y = point
+        y += self.guardian.spec['deviceGlyphOffsetY']
+        diamond = [(x,y-.61),(x+.74,y),(x,y+.61),(x-.74,y)]
+        for start, end in zip(diamond, diamond[1:]+diamond[:1]):
+            self.line(start, end, color, alpha)
+
+    def transform_flash(self):
+        g = self.guardian
+        if g.warning_form is None or g.warning_age >= TRANSFORM_FLASH_SECONDS:
+            return 0
+        phase = g.warning_age % TRANSFORM_FLASH_PERIOD
+        return ease(phase / .046) * (1 - ease((phase - .14) / .12))
+
     def floor(self):
         g = self.guardian
         t = self.room.elapsed
@@ -111,10 +133,7 @@ class GuardianArt:
             alpha = 221 if on else 100+77*math.sin(t*5)**2
             x,y = point
             if loaded or current:
-                glyph_y = y + g.spec['deviceGlyphOffsetY']
-                diamond = [(x,glyph_y-.61),(x+.74,glyph_y),(x,glyph_y+.61),(x-.74,glyph_y)]
-                for start,end in zip(diamond,diamond[1:]+diamond[:1]):
-                    self.line(start,end,color,alpha)
+                self.altar_diamond(point, color, alpha)
             if on:
                 if loaded:
                     px, py = self.app.point(x, y)
@@ -166,6 +185,12 @@ class GuardianArt:
             self.earth_pit.draw(x, y, round(2.12 * rx * self.unit),
                                 round(2.12 * ry * self.app.view.tile_height))
         actor = self.room.enemies[0]
+        if pulse := self.transform_flash():
+            index = RITUAL.index(g.warning_form)
+            point, feed = g.spec['devices'][index], g.spec['feeds'][index]
+            color = COLORS[g.warning_form]
+            self.line(point, feed, color, 235 * pulse)
+            self.altar_diamond(point, color, 255 * pulse)
         self.cast_layer('behind', self.app.point(actor.x, actor.y))
         self.warnings()
 
@@ -347,6 +372,50 @@ class GuardianArt:
                     py = socket + (5 + 18 * math.sin(math.pi * phase)) * scale
                     self.app.ui.diamond(px, py, max(1, 2 * scale), (187, 246, 255, round(140*(1-phase))))
 
+    def altar_socket(self, element, x, y):
+        cx, cy, rx, ry = ALTAR_SOCKETS[element]
+        scale = ALTAR_WIDTH * self.unit / ALTAR_CELL
+        return (x + (cx - ALTAR_CELL / 2) * scale, y + (ALTAR_FLOOR_PIVOT - cy) * scale,
+                rx * scale, ry * scale)
+
+    def flash_socket(self, element, x, y, pulse):
+        x, y, rx, ry = self.altar_socket(element, x, y)
+        color = COLORS[element]
+        light = tuple(round(value * .70 + 255 * .30) for value in color)
+        self.app.ui.begin()
+        for inset, shade, opacity in ((1, color, 195), (0, light, 245)):
+            points = [(x + (rx - inset) * math.cos(i * math.tau / 24),
+                       y + (ry - inset) * math.sin(i * math.tau / 24))
+                      for i in range(25)]
+            for start, end in zip(points, points[1:]):
+                self.p.draw_line(*start, *end, *shade, round(pulse * opacity))
+
+    def transform_mist(self, element, age):
+        g, unit = self.guardian, self.unit
+        image = self.mist_image
+        point = g.spec['devices'][RITUAL.index(element)]
+        x, y, _, _ = self.altar_socket(element, *self.app.point(*point))
+        actor = self.room.enemies[0]
+        tx, ty = self.app.point(actor.x, actor.y, unit * 2.15)
+        fade = 1 - ease((age - TRANSFORM_MIST_SECONDS) / TRANSFORM_MIST_FADE)
+        self.p.SDL_SetTextureColorMod(image.texture, *TRANSFORM_MIST_COLORS[element])
+        for i in range(27, -1, -1):
+            progress = (age - i * .031) / TRANSFORM_MIST_SECONDS
+            if not 0 <= progress <= 1:
+                continue
+            mid = math.sin(math.pi * progress)
+            spread = math.sin(i * 2.13 + progress * 9) * .33 * mid
+            px = x + (tx - x) * progress + unit * spread
+            py = y + (ty - y) * progress + unit * (1.5 + spread) * mid
+            size = unit * (.65 + .8 * mid + .12 * (i % 4))
+            image.opacify(fade * ease((i + 1) / 4) * (1 - i / 30) * .89)
+            image.clip_composite_draw(0, 0, image.w, image.h, .38 * math.sin(i * 1.9), '',
+                                      px, py, size * 1.12, size)
+        if age >= TRANSFORM_MIST_SECONDS:
+            image.opacify(fade * .93)
+            image.draw(tx, ty, unit * (1.55 - .3 * fade), unit * 1.05)
+        image.opacify(1)
+
     def device(self, index):
         g=self.guardian
         x, y = g.spec['devices'][index]
@@ -358,6 +427,8 @@ class GuardianArt:
                                       px, py + lift, size, size)
         if self.altar_loaded(element):
             self.charged_altar(element, px, py, size / ALTAR_CELL)
+        if g.warning_form == element and (pulse := self.transform_flash()):
+            self.flash_socket(element, px, py, pulse)
 
     def loose_orb(self, element):
         x, y, phase = self.guardian.orb_flight(element)
@@ -382,6 +453,12 @@ class GuardianArt:
             if g.collapsing:
                 layers.append((self.room.enemies[0].y-.01, self.defeat_wave, ()))
             layers.append((self.room.enemies[0].y,self.actor,()))
+        mist_depth = max(self.room.enemies[0].y, *(y for _, y in g.spec['devices'])) + .01
+        if g.warning_form and g.warning_age >= TRANSFORM_FLASH_SECONDS:
+            layers.append((mist_depth, self.transform_mist,
+                           (g.warning_form, g.warning_age - TRANSFORM_FLASH_SECONDS)))
+        elif 0 <= g.swap < TRANSFORM_MIST_FADE:
+            layers.append((mist_depth, self.transform_mist, (g.next_form, TRANSFORM_MIST_SECONDS + g.swap)))
         point = self.room.final_reward
         if point is None and MIXER_REVEAL_AT <= g.fall < FALL_SECONDS:
             actor = self.room.enemies[0]
@@ -834,7 +911,7 @@ class GuardianArt:
             return
         self.app.ui.begin()
         y=self.app.height-129
-        width=430
+        width=540 if g.battle else 430
         x=(self.app.width-width)/2
         self.app.ui.panel(x,y,width,46,accent=True)
         if g.battle:
@@ -847,6 +924,9 @@ class GuardianArt:
             self.app.ui.text(f'{actor.hp} / {actor.max_hp}',x+width-14,y+28,14,align='right')
             self.app.ui.rounded(x+14,y+7,width-28,6,2,(73,59,72,255))
             self.app.ui.rounded(x+14,y+7,(width-28)*actor.hp/actor.max_hp,6,2,(*COLORS[form],255))
+            if element := g.warning_form:
+                hint = f'다음 형태 {NAMES[element]} · 약점 {NAMES[WEAKNESS[element]]}'
+                self.app.ui.text(hint, x + width - 95, y + 28, 13, COLORS[element], align='right')
             if g.placed:
                 self.app.ui.text(f'F · 떨어진 구슬 다시 먹기 ({len(g.placed)}개 남음)',
                                  self.app.width/2, y-16, 13)
